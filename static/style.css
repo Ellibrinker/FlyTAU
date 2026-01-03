@@ -1,0 +1,157 @@
+/* מאפסים מרווחים */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    direction: rtl;
+    background-image: url("/static/sky.jpg");
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+/* Header מלא רוחב עם לוגו ושם החברה */
+.company-header {
+    width: 100%;
+    background-color: #87cefa;
+    padding: 15px 20px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.company-logo-container {
+    display: flex;
+    align-items: center;
+}
+
+.company-logo {
+    width: 50px;
+    height: 50px;
+    margin-right: 10px;
+}
+
+.company-name {
+    font-size: 28px;
+    font-weight: bold;
+    color: white;
+}
+
+/* תוכן הדף מתחת ל-Header */
+.content-container {
+    padding: 100px 20px 20px 20px; /* מרווח עליון כדי לא לכסות את ה-header */
+}
+
+/* הודעות שגיאה */
+.errors {
+    background-color: #ffe0e0;
+    border: 1px solid #ff0000;
+    color: #a70000;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+}
+
+/* טופס חיפוש */
+.search-form {
+    margin-bottom: 20px;
+    background: rgba(255,255,255,0.9); /* שקוף קל לרקע */
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* שדות קלט עם אייקונים */
+.input-container {
+    position: relative;
+    margin-bottom: 15px;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    transition: border 0.3s;
+}
+
+.input-container:hover {
+    border: 2px solid #1e90ff; /* כחול בהיר בהקפצה */
+}
+
+.input-container input[type="text"],
+.input-container input[type="date"] {
+    width: 100%;
+    padding: 10px 10px 10px 40px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-size: 16px;
+}
+
+.input-container .icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+}
+
+/* כפתור חיפוש */
+button {
+    width: 100%;
+    padding: 12px;
+    background-color: #9BD2FD;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+button:hover {
+    background-color: #63ADE5;
+    transform: scale(1.05);
+}
+
+/* כותרת לטבלת טיסות */
+.table-header-box h1 {
+    text-align: center;
+    color: #fff;
+    background-color: rgba(0,123,255,0.9);
+    padding: 15px;
+    border-radius: 8px;
+    max-width: 600px;
+    margin: 30px auto 10px auto;
+}
+
+/* טבלה */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba(255,255,255,0.95);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+
+th, td {
+    padding: 12px;
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+    font-size: 16px;
+}
+
+th {
+    background-color: #007bff;
+    color: white;
+}
+
+tr:hover {
+    background-color: #f1f1f1;
+}
