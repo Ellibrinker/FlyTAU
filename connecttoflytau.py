@@ -1,0 +1,89 @@
+#import
+from flask import Flask,render_template, redirect,session, request
+from flask_session import Session
+import mysql.connector
+from contextlib import contextmanager
+from datetime import date
+
+app= Flask(__name__)
+app.secret_key='flytau123'
+
+#connecting mysql database with python
+@contextmanager
+def db_cur():
+    mydb = None
+    cursor = None
+    try:
+        mydb = mysql.connector.connect(
+            host="ellibrinker.mysql.pythonanywhere-services.com",
+            user="ellibrinker",
+            password="elli2003",
+            database="ellibrinker$flytau",
+            autocommit=True
+        )
+        cursor = mydb.cursor(dictionary=True)
+        yield cursor
+    except mysql.connector.Error as err:
+        raise err
+    finally:
+        if cursor:
+            cursor.close()
+        if mydb:
+            mydb.close()
+
+
+#opening session
+
+@app.route('/')
+def homepage():
+    return render_template('homepage.html')
+
+@app.route('/login', methods=['GET','POST'])
+def login_page():
+    if request.method=='POST':
+        user_email = request.form.get('email')
+        user_password = request.form.get('password')
+        with db_cur() as cursor:
+            sql = """
+                            SELECT c.first_name, rc.email 
+                            FROM Customer c
+                            JOIN RegisteredCustomer rc ON c.email = rc.email
+                            WHERE rc.email = %s AND rc.password = %s
+                        """
+            cursor.execute(sql, (user_email, user_password))
+            user = cursor.fetchone()
+            if user:
+                session['user_email'] = user['email']
+                session['user_name'] = user['first_name']
+                return redirect('/')
+            else:
+                return redirect('/')
+    return render_template('login.html')
+
+@app.route('/signup', methods=['GET', 'POST'])
+def sign_up_page():
+    if request.method == 'POST':
+        full_name = request.form.get('name')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        phones = request.form.getlist('phone')
+        name_parts = full_name.strip().split(' ', 1)
+        first_name = name_parts[0]
+        last_name = name_parts[1] if len(name_parts) > 1 else ""
+        with db_cur() as cursor:
+            sql_customer = "INSERT INTO Customer (email, first_name, last_name) VALUES (%s, %s, %s)"
+            cursor.execute(sql_customer, (email, first_name, last_name))
+            sql_reg = """INSERT INTO RegisteredCustomer 
+                                     (email, password, registration_date) 
+                                     VALUES (%s, %s, %s)"""
+            cursor.execute(sql_reg, (email, password, date.today()))
+            sql_phones = "INSERT INTO CustomerPhone (email, phone_number) VALUES (%s, %s)"
+            for phone in phones:
+                if phone.strip():
+                    cursor.execute(sql_phones, (email, phone))
+            return redirect('/login')
+    return render_template('signup.html')
+
+
+if __name__=="__main__":
+    app.run(debug=True)

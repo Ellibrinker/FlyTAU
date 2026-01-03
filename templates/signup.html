@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>signup</title>
+    <style>
+        body {
+            font-family: 'Assistant', sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 36px;
+            font-weight: 700;
+        }
+
+        .register-container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 380px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            font-weight: 700;
+            color: #555;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-family: 'Assistant', sans-serif;
+            font-size: 15px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #008B8B;
+            box-shadow: 0 0 5px rgba(0, 139, 139, 0.2);
+        }
+
+        .phone-input {
+            margin-bottom: 8px;
+        }
+
+        button {
+            background-color: #008B8B;
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 14px;
+            font-weight: 700;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #006666;
+            transform: translateY(-2px);
+        }
+
+        .footer-links {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .footer-links a {
+            color: #008B8B;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sign Up</h1>
+    <div class="signup-container">
+        <form action="/signup" method="POST">
+
+            <div class="input-group">
+                <label for="name">Full Name</label>
+                <input type="text" id="name" name="name" placeholder="Enter your full name" required>
+            </div>
+
+            <div class="input-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" placeholder="name@example.com" required>
+            </div>
+
+            <div class="input-group">
+                <label>Phone Numbers</label>
+                <input type="tel" name="phone" placeholder="Primary phone (Required)" required>
+
+    <input type="tel" name="phone" placeholder="Second phone (Optional)" style="margin-top: 8px;">
+    <input type="tel" name="phone" placeholder="Third phone (Optional)" style="margin-top: 8px;">
+</div>
+
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Create a strong password" required>
+            </div>
+
+            <button type="submit">Create Account</button>
+        </form>
+
+        <div class="footer-links">
+            Already have an account? <a href="/login">Login here</a>
+            <br><br>
+            <a href="/" style="color: #666; font-weight: 400;">Back to home</a>
+        </div>
+    </div>
+</body>
+</html>
