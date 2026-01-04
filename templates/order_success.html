@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Order Success</title></head>
+<body style="font-family:Assistant,sans-serif; background:#f4f7f6; padding:30px;">
+  <div style="max-width:700px; margin:0 auto; background:white; padding:20px; border-radius:12px;">
+    <h1>Booking Confirmed ✅</h1>
+    {% if order %}
+      <p><b>Order Code:</b> {{ order.order_id }}</p>
+      <p><b>Email:</b> {{ order.email }}</p>
+      <p><b>Flight:</b> {{ order.flight_id }}</p>
+      <p><b>Total:</b> ₪{{ "%.2f"|format(order.total_payment) }}</p>
+
+      <h3>Seats</h3>
+      <ul>
+        {% for s in seats %}
+          <li>Row {{ s.row_num }}, Col {{ s.column_number }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>Order not found.</p>
+    {% endif %}
+    <a href="/" style="display:inline-block;margin-top:12px;">Back to home</a>
+  </div>
+</body>
+</html>

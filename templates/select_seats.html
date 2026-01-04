@@ -1,10 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+  <meta charset="UTF-8" />
+  <title>Select Seats</title>
+  <style>
+    body { font-family: Assistant, sans-serif; background:#f4f7f6; margin:0; padding:30px; }
+    .card { max-width: 950px; margin: 0 auto; background:white; padding:20px; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.08); }
+    .title { font-size:26px; font-weight:800; margin:0; }
+    .sub { color:#555; margin:8px 0 0; }
+    .error { color:#b00020; font-weight:800; margin: 12px 0; }
+
+    .tabs { margin-top: 14px; display:flex; gap:10px; flex-wrap:wrap; }
+    .tab { padding:10px 14px; border-radius:999px; border:1px solid #ddd; text-decoration:none; color:#222; font-weight:800; background:#fafafa; }
+    .tab.active { border-color:#008B8B; background:#e8f6f6; }
+
+    .grid { margin-top:16px; display:grid; gap:10px; }
+    .seat {
+      width:54px; height:46px; border-radius:10px;
+      display:flex; align-items:center; justify-content:center;
+      font-weight:800; border:1px solid #ddd; cursor:pointer; user-select:none;
+    }
+    .available { background:#dff7df; border-color:#65c466; }
+    .booked { background:#ffd8d8; border-color:#e36a6a; cursor:not-allowed; opacity:0.75; }
+    .selected { background:#d9ecff; border-color:#4c8fe6; }
+
+    .row { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-top:16px; }
+    .btn { background:#008B8B; color:white; border:none; padding:12px 18px; border-radius:10px; font-weight:900; cursor:pointer; }
+    .btn.secondary { background:#666; text-decoration:none; display:inline-block; }
+    .small { font-weight:800; color:#444; }
+    input { padding:10px; border-radius:8px; border:1px solid #ccc; min-width:280px; }
+  </style>
 </head>
 <body>
+
+<div class="card">
+  {% if error %}
+    <div class="error">{{ error }}</div>
+  {% endif %}
+
+  {% if flight %}
+    <h1 class="title">Select Seats</h1>
+    <p class="sub">
+      Flight {{ flight.flight_id }} — {{ flight.origin_airport }} → {{ flight.destination_airport }}
+      | {{ flight.departure_date }} {{ flight.departure_time }}
+    </p>
+
+    <div class="tabs">
+      <a class="tab {% if class_type=='Regular' %}active{% endif %}"
+         href="/select_seats?flight_id={{ flight.flight_id }}&class_type=Regular">
+        Regular {% if flight.regular_price %}(₪{{ "%.2f"|format(flight.regular_price) }}){% endif %}
+      </a>
+
+      {% if flight.business_price %}
+        <a class="tab {% if class_type=='Business' %}active{% endif %}"
+           href="/select_seats?flight_id={{ flight.flight_id }}&class_type=Business">
+          Business (₪{{ "%.2f"|format(flight.business_price) }})
+        </a>
+      {% endif %}
+    </div>
+
+    <form method="POST" action="/select_seats">
+      <input type="hidden" name="flight_id" value="{{ flight.flight_id }}">
+
+      <div class="row">
+        <div class="small">Selected seats: <span id="count">0</span></div>
+
+        {% if not session.get('user_email') %}
+          <div>
+            <span class="small">Guest email:</span><br>
+            <input type="email" name="guest_email" placeholder="you@example.com" required>
+          </div>
+        {% endif %}
+      </div>
+
+      {% set cols = grid_meta.cols if grid_meta.cols else 6 %}
+      <div class="grid" style="grid-template-columns: repeat({{ cols }}, 54px);">
+        {% for s in seats %}
+          {% set st = s.status|lower %}
+          <div class="seat {% if st=='available' %}available{% else %}booked{% endif %}"
+               data-status="{{ st }}"
+               data-id="{{ s.flight_seat_id }}"
+               title="Row {{ s.row_num }} Col {{ s.column_number }}">
+            {{ s.row_num }}{{ s.column_number }}
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- hidden inputs will be added via JS -->
+      <div id="hiddenInputs"></div>
+
+      <div class="row">
+        <a class="btn secondary" href="/search_flights">Back</a>
+        <button class="btn" type="submit">Confirm booking</button>
+      </div>
+    </form>
+  {% else %}
+    <div class="error">Flight not found.</div>
+    <a class="btn secondary" href="/search_flights">Back</a>
+  {% endif %}
+</div>
+
+<script>
+  const selected = new Set();
+  const hidden = document.getElementById("hiddenInputs");
+  const count = document.getElementById("count");
+
+  function syncHiddenInputs() {
+    hidden.innerHTML = "";
+    Array.from(selected).forEach(id => {
+      const inp = document.createElement("input");
+      inp.type = "hidden";
+      inp.name = "flight_seat_id";
+      inp.value = id;
+      hidden.appendChild(inp);
+    });
+    count.innerText = selected.size;
+  }
+
+  document.querySelectorAll(".seat").forEach(el => {
+    el.addEventListener("click", () => {
+      if (el.dataset.status !== "available") return;
+
+      const id = el.dataset.id;
+      if (selected.has(id)) {
+        selected.delete(id);
+        el.classList.remove("selected");
+      } else {
+        selected.add(id);
+        el.classList.add("selected");
+      }
+      syncHiddenInputs();
+    });
+  });
+</script>
 
 </body>
 </html>

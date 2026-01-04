@@ -101,6 +101,31 @@ def select_seats():
     flight_id = request.args.get("flight_id")
     return f"Select seats page. flight_id={flight_id}"
 
+@app.route("/order_success")
+def order_success():
+    order_id = request.args.get("order_id", type=int)
+    email = request.args.get("email", "")
+
+    from main import db_cur
+    with db_cur() as cursor:
+        cursor.execute("""
+            SELECT fo.order_id, fo.flight_id, fo.email, fo.execution_date, fo.status, fo.total_payment
+            FROM FlightOrder fo
+            WHERE fo.order_id=%s AND fo.email=%s
+        """, (order_id, email))
+        order = cursor.fetchone()
+
+        cursor.execute("""
+            SELECT s.row_num, s.column_number
+            FROM OrderItem oi
+            JOIN FlightSeat fs ON fs.flight_seat_id = oi.flight_seat_id
+            JOIN Seat s ON s.seat_id = fs.seat_id
+            WHERE oi.order_id=%s
+            ORDER BY s.row_num, s.column_number
+        """, (order_id,))
+        seats = cursor.fetchall()
+
+    return render_template("order_success.html", order=order, seats=seats)
 
 from flights import flights_bp
 app.register_blueprint(flights_bp)
