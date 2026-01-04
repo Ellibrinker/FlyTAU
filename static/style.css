@@ -73,13 +73,14 @@ body {
 .input-container {
     position: relative;
     margin-bottom: 15px;
-    border: 2px solid transparent;
+    border: 2px solid #ccc;
     border-radius: 8px;
     transition: border 0.3s;
+    background: white;
 }
 
 .input-container:hover {
-    border: 2px solid #1e90ff; /* כחול בהיר בהקפצה */
+    border-color: #1e90ff;
 }
 
 .input-container input[type="text"],
@@ -87,8 +88,10 @@ body {
     width: 100%;
     padding: 10px 10px 10px 40px;
     border-radius: 5px;
-    border: 1px solid #ccc;
+    border: none;
+    outline: none;
     font-size: 16px;
+    box-sizing: border-box;
 }
 
 .input-container .icon {
