@@ -83,6 +83,10 @@
     </style>
 </head>
 <body>
+{% if error %}
+  <p style="color:red; font-weight:700;">{{ error }}</p>
+{% endif %}
+
   <h1>Welcome Back, Please Login</h1>
 <form action="/login" method="POST">
             <input type="email" name="email" placeholder="Email Address" required>

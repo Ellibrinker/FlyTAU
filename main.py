@@ -54,7 +54,7 @@ def login_page():
             session['user_name'] = user['first_name']
             return redirect('/')
         else:
-            return redirect('/login')
+            return render_template("login.html", error="Invalid email or password")
 
     return render_template('login.html')
 
@@ -102,7 +102,6 @@ def select_seats():
     return f"Select seats page. flight_id={flight_id}"
 
 
-# ===== register Blueprints (חייב להיות אחרי app נוצר) =====
 from flights import flights_bp
 app.register_blueprint(flights_bp)
 
