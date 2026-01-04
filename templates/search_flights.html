@@ -59,26 +59,51 @@
       <th>Destination</th>
       <th>Departure Date</th>
       <th>Time</th>
+      <th>Regular Price</th>
+      <th>Business Price</th>
       <th>Actions</th>
     </tr>
   </thead>
+
   <tbody>
-  {% for flight in flights %}
-    <tr>
-      <td>{{ flight.flight_id }}</td>
-      <td>{{ flight.origin_airport }}</td>
-      <td>{{ flight.destination_airport }}</td>
-      <td>{{ flight.departure_date }}</td>
-      <td>{{ flight.departure_time }}</td>
-      <td>
-        <a href="/select_seats?flight_id={{ flight.flight_id }}">
-          <button type="button">Book Now</button>
-        </a>
-      </td>
-    </tr>
-  {% endfor %}
+    {% for flight in flights %}
+      <tr>
+        <td>{{ flight.flight_id }}</td>
+        <td>{{ flight.origin_airport }}</td>
+        <td>{{ flight.destination_airport }}</td>
+        <td>{{ flight.departure_date }}</td>
+        <td>{{ flight.departure_time }}</td>
+
+        <!-- Regular price -->
+        <td>
+          {% if flight.regular_price %}
+            ₪{{ "%.2f"|format(flight.regular_price) }}
+          {% else %}
+            —
+          {% endif %}
+        </td>
+
+        <!-- Business price -->
+        <td>
+          {% if flight.business_price %}
+            ₪{{ "%.2f"|format(flight.business_price) }}
+          {% else %}
+            —
+          {% endif %}
+        </td>
+
+        <!-- Actions -->
+        <td>
+          <a href="/select_seats?flight_id={{ flight.flight_id }}">
+            <button type="button">Book Now</button>
+          </a>
+        </td>
+      </tr>
+    {% endfor %}
   </tbody>
 </table>
+
+
 
 {% endif %}
 

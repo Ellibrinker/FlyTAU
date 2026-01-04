@@ -79,12 +79,23 @@ def get_open_flights(origin, destination, departure_date):
     from main import db_cur
 
     query = """
-        SELECT flight_id, origin_airport, destination_airport, departure_date, departure_time
-        FROM Flight
-        WHERE origin_airport=%s
-          AND destination_airport=%s
-          AND departure_date=%s
-          AND LOWER(status) = 'open'
+        SELECT
+            f.flight_id,
+            f.origin_airport,
+            f.destination_airport,
+            f.departure_date,
+            f.departure_time,
+            reg.price AS regular_price,
+            bus.price AS business_price
+        FROM Flight f
+        LEFT JOIN FlightPricing reg
+          ON reg.flight_id = f.flight_id AND reg.class_type='Regular'
+        LEFT JOIN FlightPricing bus
+          ON bus.flight_id = f.flight_id AND bus.class_type='Business'
+        WHERE f.origin_airport=%s
+          AND f.destination_airport=%s
+          AND f.departure_date=%s
+          AND LOWER(f.status) = 'open'
     """
     with db_cur() as cursor:
         cursor.execute(query, (origin, destination, departure_date))
