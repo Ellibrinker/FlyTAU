@@ -30,7 +30,7 @@ def db_cur():
 
 @app.route('/')
 def homepage():
-    return render_template('homepage.html')
+    return render_template('homepage.html', user_name=session.get('user_name'))
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -41,7 +41,7 @@ def login_page():
 
         with db_cur() as cursor:
             sql = """
-                SELECT c.first_name, rc.email
+                SELECT c.first_name, rc.email AS email
                 FROM Customer c
                 JOIN RegisteredCustomer rc ON c.email = rc.email
                 WHERE rc.email = %s AND rc.password = %s
@@ -89,6 +89,11 @@ def sign_up_page():
         return redirect('/login')
 
     return render_template('signup.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect('/')
 
 
 @app.route("/select_seats")
