@@ -95,11 +95,10 @@ def logout():
     session.clear()
     return redirect('/')
 
-
 @app.route("/select_seats")
 def select_seats():
     flight_id = request.args.get("flight_id")
-    return f"Select seats page. flight_id={flight_id}"
+    return render_template("select_seats.html", flight_id=flight_id)
 
 @app.route("/order_success")
 def order_success():
