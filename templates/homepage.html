@@ -46,17 +46,13 @@
     </style>
 </head>
 <body>
-    <h1>Welcome to FLYTAU</h1>
-
     {% if user_name %}
         <!-- משתמש מחובר -->
-        <h2 style="margin-top: 10px;">
+        <h2 style="margin-top: 0;">
             👋 Hi {{ user_name }}
         </h2>
 
-        <p style="color: #666; font-size: 18px;">
-            We're happy to see you again
-        </p>
+        <h1>Welcome to FLYTAU</h1>
 
         <a href="/search_flights">
             <button>Search & Book Flights</button>
@@ -70,6 +66,8 @@
 
     {% else %}
         <!-- אורח -->
+        <h1>Welcome to FLYTAU</h1>
+
         <a href="/login">
             <button>Login</button>
         </a>
@@ -89,5 +87,6 @@
         </a>
     {% endif %}
 </body>
+
 
 </html>
