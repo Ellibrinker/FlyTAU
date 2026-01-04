@@ -1,5 +1,4 @@
-CREATE SCHEMA IF NOT EXISTS flytau;
-USE flytau;
+USE `ellibrinker$flytau`;
 
 CREATE TABLE Customer (
   email VARCHAR(255) NOT NULL,

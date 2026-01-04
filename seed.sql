@@ -1,4 +1,4 @@
-USE flytau;
+USE `ellibrinker$flytau`;
 
 -- =========================
 -- 1) Customers: 2 registered + 2 guests
