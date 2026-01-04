@@ -1,3 +1,4 @@
+CREATE DATABASE IF NOT EXISTS `ellibrinker$flytau`;
 USE `ellibrinker$flytau`;
 
 CREATE TABLE Customer (
@@ -25,7 +26,7 @@ CREATE TABLE RegisteredCustomer (
 );
 
 CREATE TABLE Worker (
-  id INT NOT NULL,
+  id INT NOT NULL AUTO_INCREMENT,
   first_name VARCHAR(50),
   last_name  VARCHAR(50),
   phone_number VARCHAR(20),
@@ -67,7 +68,7 @@ CREATE TABLE FlightAttendant (
 );
 
 CREATE TABLE Plane (
-  plane_id INT NOT NULL,
+  plane_id INT NOT NULL AUTO_INCREMENT,
   manufacturer VARCHAR(50) NOT NULL,
   purchase_date DATE NOT NULL,
   PRIMARY KEY (plane_id)
@@ -95,7 +96,7 @@ CREATE TABLE Class (
 );
 
 CREATE TABLE Seat (
-  seat_id INT NOT NULL,
+  seat_id INT NOT NULL AUTO_INCREMENT,
   row_num INT NOT NULL,
   column_number INT NOT NULL,
   plane_id INT NOT NULL,
@@ -113,7 +114,7 @@ CREATE TABLE Airway (
 );
 
 CREATE TABLE Flight (
-  flight_id INT NOT NULL,
+  flight_id INT NOT NULL AUTO_INCREMENT,
   plane_id INT NOT NULL,
   origin_airport VARCHAR(255) NOT NULL,
   destination_airport VARCHAR(255) NOT NULL,
@@ -134,7 +135,7 @@ CREATE TABLE FlightPricing (
 );
 
 CREATE TABLE FlightOrder (
-  order_id INT NOT NULL,
+  order_id INT NOT NULL AUTO_INCREMENT,
   flight_id INT NOT NULL,
   email VARCHAR(255) NOT NULL,
   execution_date DATE NOT NULL,
@@ -146,7 +147,7 @@ CREATE TABLE FlightOrder (
 );
 
 CREATE TABLE FlightSeat (
-  flight_seat_id INT NOT NULL,
+  flight_seat_id INT NOT NULL AUTO_INCREMENT,
   flight_id INT NOT NULL,
   seat_id INT NOT NULL,
   status VARCHAR(50) NOT NULL,
@@ -157,7 +158,7 @@ CREATE TABLE FlightSeat (
 );
 
 CREATE TABLE OrderItem (
-  item_id INT NOT NULL,
+  item_id INT NOT NULL AUTO_INCREMENT,
   order_id INT NOT NULL,
   flight_seat_id INT NOT NULL,
   PRIMARY KEY (item_id),
