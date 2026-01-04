@@ -26,7 +26,7 @@ CREATE TABLE RegisteredCustomer (
 );
 
 CREATE TABLE Worker (
-  id INT NOT NULL AUTO_INCREMENT,
+  id INT NOT NULL,
   first_name VARCHAR(50),
   last_name  VARCHAR(50),
   phone_number VARCHAR(20),
