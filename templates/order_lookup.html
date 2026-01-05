@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Find My Order</title></head>
+<body>
+  <h1>Find Your Active Tickets</h1>
+
+  {% if error %}
+    <p style="color:red; font-weight:700;">{{ error }}</p>
+  {% endif %}
+
+  <form method="POST" action="/order_lookup">
+    <input name="email" type="email" placeholder="Email" required>
+    <input name="order_id" type="number" placeholder="Order Code" required>
+    <button type="submit">Find Order</button>
+  </form>
+
+  {% if order %}
+    <hr>
+    <h2>Order #{{ order.order_id }}</h2>
+    <p>{{ order.origin_airport }} → {{ order.destination_airport }} | {{ order.departure_date }} {{ order.departure_time }}</p>
+    <p>Status: {{ order.status }} | Total: {{ order.total_payment }}</p>
+
+    <h3>Seats:</h3>
+    <ul>
+      {% for s in seats %}
+        <li>Row {{ s.row_num }}, Col {{ s.column_number }} ({{ s.class_type }})</li>
+      {% endfor %}
+    </ul>
+
+    {% set hours_left = (order.departure_dt - now).total_seconds() / 3600 %}
+    {% if order.status == 'paid' and hours_left >= 36 %}
+      <form method="POST" action="/cancel_order">
+        <input type="hidden" name="order_id" value="{{ order.order_id }}">
+        <input type="hidden" name="email" value="{{ order.email }}">
+        <button type="submit">Cancel Order (5% fee)</button>
+      </form>
+    {% endif %}
+  {% endif %}
+
+  <p><a href="/">Back</a></p>
+</body>
+</html>
