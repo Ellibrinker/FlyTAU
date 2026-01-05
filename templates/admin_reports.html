@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Reports</title>
+</head>
+<body>
+  <h1>Admin Reports</h1>
+  <p>Hi {{ session.get("manager_name") }} | <a href="/admin/flights">Flights</a> | <a href="/admin/logout">Logout</a></p>
+
+  <form method="GET" style="margin:16px 0;">
+    <label>From:</label>
+    <input type="date" name="date_from" value="{{ date_from }}" required />
+
+    <label>To:</label>
+    <input type="date" name="date_to" value="{{ date_to }}" required />
+
+    <label>Report:</label>
+    <select name="report">
+      <option value="revenue_route" {% if report=='revenue_route' %}selected{% endif %}>Revenue by Route</option>
+      <option value="occupancy_flight" {% if report=='occupancy_flight' %}selected{% endif %}>Occupancy by Flight</option>
+      <option value="cancellations" {% if report=='cancellations' %}selected{% endif %}>Cancellations</option>
+      <option value="crew_utilization" {% if report=='crew_utilization' %}selected{% endif %}>Crew Utilization</option>
+    </select>
+
+    <button type="submit">Run</button>
+  </form>
+
+  {% if kpis %}
+    <h3>KPIs</h3>
+    <ul>
+      {% for k,v in kpis.items() %}
+        <li><b>{{ k }}</b>: {{ v }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <hr />
+
+  {% if report == "revenue_route" %}
+    <h2>Revenue by Route</h2>
+    <table border="1" cellpadding="8">
+      <tr><th>Origin</th><th>Destination</th><th># Orders</th><th>Revenue</th></tr>
+      {% for r in data %}
+        <tr>
+          <td>{{ r.origin_airport }}</td>
+          <td>{{ r.destination_airport }}</td>
+          <td>{{ r.orders_count }}</td>
+          <td>{{ r.revenue }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+
+  {% elif report == "occupancy_flight" %}
+    <h2>Occupancy by Flight</h2>
+    <table border="1" cellpadding="8">
+      <tr>
+        <th>Flight</th><th>Route</th><th>Date</th><th>Time</th><th>Status</th>
+        <th>Sold</th><th>Total</th><th>%</th>
+      </tr>
+      {% for r in data %}
+        <tr>
+          <td>{{ r.flight_id }}</td>
+          <td>{{ r.origin_airport }} → {{ r.destination_airport }}</td>
+          <td>{{ r.departure_date }}</td>
+          <td>{{ r.departure_time }}</td>
+          <td>{{ r.flight_status }}</td>
+          <td>{{ r.sold_seats }}</td>
+          <td>{{ r.total_seats }}</td>
+          <td>{{ r.occupancy_percent }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+
+  {% elif report == "cancellations" %}
+    <h2>Cancellations</h2>
+    <table border="1" cellpadding="8">
+      <tr><th>Status</th><th># Orders</th><th>Amount Sum</th></tr>
+      {% for r in data %}
+        <tr>
+          <td>{{ r.status }}</td>
+          <td>{{ r.orders_count }}</td>
+          <td>{{ r.amount_sum }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+
+  {% elif report == "crew_utilization" %}
+    <h2>Crew Utilization</h2>
+    <table border="1" cellpadding="8">
+      <tr><th>Worker ID</th><th>Name</th><th># Flights Assigned</th></tr>
+      {% for r in data %}
+        <tr>
+          <td>{{ r.id }}</td>
+          <td>{{ r.full_name }}</td>
+          <td>{{ r.flights_assigned }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+
+</body>
+</html>

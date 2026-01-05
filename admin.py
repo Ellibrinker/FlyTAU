@@ -247,7 +247,8 @@ def admin_add_flight():
             """, (origin, destination))
             airway = cursor.fetchone()
         if not airway:
-            return render_template("admin_add_flight.html", step=1, error="No airway exists for this route.", data=None)
+            return render_template("admin_add_flight.html", step=1,
+                                   error="No airway exists for this route.", data=None)
 
         duration_min = airway["duration"]
         is_long = duration_min > 360
@@ -255,13 +256,16 @@ def admin_add_flight():
         fa_needed = 6 if is_long else 3
 
         if not plane_id:
-            return render_template("admin_add_flight.html", step=1, error="Plane is required.", data=None)
+            return render_template("admin_add_flight.html", step=1,
+                                   error="Plane is required.", data=None)
 
         if len(pilot_ids) != pilots_needed or len(fa_ids) != fa_needed:
-            return render_template("admin_add_flight.html", step=1, error="Crew selection count is incorrect.", data=None)
+            return render_template("admin_add_flight.html", step=1,
+                                   error="Crew selection count is incorrect.", data=None)
 
         if not regular_price or regular_price <= 0:
-            return render_template("admin_add_flight.html", step=1, error="Regular price is required.", data=None)
+            return render_template("admin_add_flight.html", step=1,
+                                   error="Regular price is required.", data=None)
 
         # האם למטוס יש Business class?
         with db_cur() as cursor:
@@ -272,17 +276,62 @@ def admin_add_flight():
             has_business = cursor.fetchone() is not None
 
         if has_business and (business_price is None or business_price <= 0):
-            return render_template("admin_add_flight.html", step=1, error="Business price is required for big planes.", data=None)
+            return render_template("admin_add_flight.html", step=1,
+                                   error="Business price is required for big planes.", data=None)
 
-        if (not has_business):
+        if not has_business:
             business_price = None
 
-        # יצירת טיסה + pricing + crew + flightseat
-        from main import db_cur
+        # =====================================================
+        # ✅ אימות CREW (Pilot / FlightAttendant / לא Manager)
+        # =====================================================
+        with db_cur() as cursor:
+            for pid in pilot_ids:
+                cursor.execute("SELECT 1 FROM Pilot WHERE id=%s", (pid,))
+                if not cursor.fetchone():
+                    return render_template(
+                        "admin_add_flight.html",
+                        step=1,
+                        error=f"Worker {pid} is not a Pilot",
+                        data=None
+                    )
+
+                cursor.execute("SELECT 1 FROM Manager WHERE id=%s", (pid,))
+                if cursor.fetchone():
+                    return render_template(
+                        "admin_add_flight.html",
+                        step=1,
+                        error=f"Worker {pid} is a Manager and cannot be assigned as Pilot",
+                        data=None
+                    )
+
+            for fid in fa_ids:
+                cursor.execute("SELECT 1 FROM FlightAttendant WHERE id=%s", (fid,))
+                if not cursor.fetchone():
+                    return render_template(
+                        "admin_add_flight.html",
+                        step=1,
+                        error=f"Worker {fid} is not a Flight Attendant",
+                        data=None
+                    )
+
+                cursor.execute("SELECT 1 FROM Manager WHERE id=%s", (fid,))
+                if cursor.fetchone():
+                    return render_template(
+                        "admin_add_flight.html",
+                        step=1,
+                        error=f"Worker {fid} is a Manager and cannot be assigned as Attendant",
+                        data=None
+                    )
+
+        # =====================================================
+        # יצירת טיסה + pricing + crew + seats
+        # =====================================================
         with db_cur() as cursor:
             # 1) Flight
             cursor.execute("""
-                INSERT INTO Flight (plane_id, origin_airport, destination_airport, departure_date, departure_time, status)
+                INSERT INTO Flight (plane_id, origin_airport, destination_airport,
+                                    departure_date, departure_time, status)
                 VALUES (%s, %s, %s, %s, %s, 'open')
             """, (plane_id, origin, destination, dep_date, dep_time))
             cursor.execute("SELECT LAST_INSERT_ID() AS flight_id")
@@ -307,7 +356,7 @@ def admin_add_flight():
                 VALUES (%s, %s)
             """, [(flight_id, cid) for cid in crew_ids])
 
-            # 4) Create FlightSeat for all plane seats
+            # 4) FlightSeat
             cursor.execute("SELECT seat_id FROM Seat WHERE plane_id=%s", (plane_id,))
             seat_ids = [r["seat_id"] for r in cursor.fetchall()]
             if seat_ids:
@@ -317,6 +366,7 @@ def admin_add_flight():
                 """, [(flight_id, sid) for sid in seat_ids])
 
         return redirect("/admin/flights")
+
 
 @admin_bp.route("/flights/cancel/<int:flight_id>", methods=["GET", "POST"])
 def admin_cancel_flight(flight_id):
@@ -376,3 +426,158 @@ def admin_cancel_flight(flight_id):
         """, (flight_id,))
 
     return redirect("/admin/flights")
+
+
+
+def _require_admin():
+    if not session.get("is_manager"):
+        return redirect("/admin/login")
+    return None
+
+
+@admin_bp.route("/reports", methods=["GET"])
+def admin_reports():
+    guard = _require_admin()
+    if guard: return guard
+
+    # ברירת מחדל: החודש הנוכחי
+    today = date.today()
+    date_from = request.args.get("date_from") or today.replace(day=1).isoformat()
+    date_to = request.args.get("date_to") or today.isoformat()
+
+    report = request.args.get("report", "revenue_route")  # default
+
+    from main import db_cur
+    data = []
+    kpis = {}
+
+    with db_cur() as cursor:
+        # -------------------------
+        # 1) Revenue by route (net)
+        # -------------------------
+        if report == "revenue_route":
+            cursor.execute("""
+                SELECT
+                    f.origin_airport,
+                    f.destination_airport,
+                    COUNT(*) AS orders_count,
+                    ROUND(SUM(fo.total_payment), 2) AS revenue
+                FROM FlightOrder fo
+                JOIN Flight f ON f.flight_id = fo.flight_id
+                WHERE fo.execution_date BETWEEN %s AND %s
+                GROUP BY f.origin_airport, f.destination_airport
+                ORDER BY revenue DESC
+            """, (date_from, date_to))
+            data = cursor.fetchall()
+
+            cursor.execute("""
+                SELECT
+                    COUNT(*) AS orders_count,
+                    ROUND(SUM(total_payment), 2) AS revenue
+                FROM FlightOrder
+                WHERE execution_date BETWEEN %s AND %s
+            """, (date_from, date_to))
+            kpis = cursor.fetchone() or {}
+
+        # -----------------------------------------
+        # 2) Flight occupancy (sold vs total seats)
+        # -----------------------------------------
+        elif report == "occupancy_flight":
+            cursor.execute("""
+                SELECT
+                    f.flight_id,
+                    f.origin_airport,
+                    f.destination_airport,
+                    f.departure_date,
+                    f.departure_time,
+                    LOWER(f.status) AS flight_status,
+                    -- sold seats = booked
+                    SUM(CASE WHEN LOWER(fs.status)='booked' THEN 1 ELSE 0 END) AS sold_seats,
+                    COUNT(*) AS total_seats,
+                    ROUND(100 * SUM(CASE WHEN LOWER(fs.status)='booked' THEN 1 ELSE 0 END) / COUNT(*), 1) AS occupancy_percent
+                FROM Flight f
+                JOIN FlightSeat fs ON fs.flight_id = f.flight_id
+                WHERE f.departure_date BETWEEN %s AND %s
+                GROUP BY f.flight_id, f.origin_airport, f.destination_airport, f.departure_date, f.departure_time, f.status
+                ORDER BY f.departure_date, f.departure_time
+            """, (date_from, date_to))
+            data = cursor.fetchall()
+
+            cursor.execute("""
+                SELECT
+                    ROUND(AVG(100 * sold.cnt / totals.cnt), 1) AS avg_occupancy_percent
+                FROM
+                    (SELECT flight_id, SUM(CASE WHEN LOWER(status)='booked' THEN 1 ELSE 0 END) AS cnt
+                     FROM FlightSeat GROUP BY flight_id) sold
+                JOIN
+                    (SELECT flight_id, COUNT(*) AS cnt FROM FlightSeat GROUP BY flight_id) totals
+                ON totals.flight_id = sold.flight_id
+            """)
+            kpis = cursor.fetchone() or {}
+
+        # -----------------------------------------
+        # 3) Orders cancellation stats (customer/system)
+        # -----------------------------------------
+        elif report == "cancellations":
+            cursor.execute("""
+                SELECT
+                    status,
+                    COUNT(*) AS orders_count,
+                    ROUND(SUM(total_payment), 2) AS amount_sum
+                FROM FlightOrder
+                WHERE execution_date BETWEEN %s AND %s
+                  AND LOWER(status) IN ('customer_cancelled','system_cancelled')
+                GROUP BY status
+                ORDER BY orders_count DESC
+            """, (date_from, date_to))
+            data = cursor.fetchall()
+
+            # KPI: כמה “קנס ביטול” נגבה (customer_cancelled = 5% אצלך)
+            cursor.execute("""
+                SELECT
+                    COUNT(*) AS customer_cancelled_count,
+                    ROUND(SUM(total_payment), 2) AS cancellation_fees_sum
+                FROM FlightOrder
+                WHERE execution_date BETWEEN %s AND %s
+                  AND LOWER(status)='customer_cancelled'
+            """, (date_from, date_to))
+            kpis = cursor.fetchone() or {}
+
+        # -----------------------------------------
+        # 4) Crew utilization (how many flights per worker)
+        # -----------------------------------------
+        elif report == "crew_utilization":
+            cursor.execute("""
+                SELECT
+                    w.id,
+                    CONCAT(w.first_name, ' ', w.last_name) AS full_name,
+                    COUNT(*) AS flights_assigned
+                FROM FlightCrewPlacement fcp
+                JOIN Worker w ON w.id = fcp.id
+                JOIN Flight f ON f.flight_id = fcp.flight_id
+                WHERE f.departure_date BETWEEN %s AND %s
+                GROUP BY w.id, w.first_name, w.last_name
+                ORDER BY flights_assigned DESC, w.id
+            """, (date_from, date_to))
+            data = cursor.fetchall()
+
+            cursor.execute("""
+                SELECT COUNT(*) AS total_assignments
+                FROM FlightCrewPlacement fcp
+                JOIN Flight f ON f.flight_id = fcp.flight_id
+                WHERE f.departure_date BETWEEN %s AND %s
+            """, (date_from, date_to))
+            kpis = cursor.fetchone() or {}
+
+        else:
+            report = "revenue_route"
+            return redirect(f"/admin/reports?report={report}&date_from={date_from}&date_to={date_to}")
+
+    return render_template(
+        "admin_reports.html",
+        report=report,
+        date_from=date_from,
+        date_to=date_to,
+        data=data,
+        kpis=kpis
+    )
