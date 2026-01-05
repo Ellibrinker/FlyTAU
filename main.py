@@ -62,33 +62,67 @@ def login_page():
 @app.route('/signup', methods=['GET', 'POST'])
 def sign_up_page():
     if request.method == 'POST':
-        full_name = request.form.get('name')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        phones = request.form.getlist('phone')
+        full_name = request.form.get('name', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        passport_number = request.form.get('passport_number', '').strip()
+        date_of_birth = request.form.get('date_of_birth', '').strip()  # yyyy-mm-dd
+        phones = request.form.getlist('phone')  # מגיע מרשימה דינאמית
 
-        name_parts = full_name.strip().split(' ', 1)
+        # ---- basic validations ----
+        if not full_name or not email or not password or not passport_number or not date_of_birth:
+            return render_template('signup.html', error="Please fill in all required fields.")
+
+        # split name
+        name_parts = full_name.split(' ', 1)
         first_name = name_parts[0]
         last_name = name_parts[1] if len(name_parts) > 1 else ""
 
-        with db_cur() as cursor:
-            sql_customer = "INSERT INTO Customer (email, first_name, last_name) VALUES (%s, %s, %s)"
-            cursor.execute(sql_customer, (email, first_name, last_name))
+        # clean phones: remove blanks + duplicates (keep order)
+        clean_phones = []
+        seen = set()
+        for p in phones:
+            p = (p or "").strip()
+            if not p:
+                continue
+            if p in seen:
+                continue
+            seen.add(p)
+            clean_phones.append(p)
 
-            sql_reg = """
-                INSERT INTO RegisteredCustomer (email, password, registration_date)
-                VALUES (%s, %s, %s)
-            """
-            cursor.execute(sql_reg, (email, password, date.today()))
+        # at least one phone required (because UI says required)
+        if len(clean_phones) == 0:
+            return render_template('signup.html', error="Please enter at least one phone number.")
 
-            sql_phones = "INSERT INTO CustomerPhone (email, phone_number) VALUES (%s, %s)"
-            for phone in phones:
-                if phone.strip():
+        try:
+            with db_cur() as cursor:
+                # 1) Customer
+                sql_customer = "INSERT INTO Customer (email, first_name, last_name) VALUES (%s, %s, %s)"
+                cursor.execute(sql_customer, (email, first_name, last_name))
+
+                # 2) RegisteredCustomer (כולל דרכון + תאריך לידה)
+                sql_reg = """
+                    INSERT INTO RegisteredCustomer (email, passport_number, date_of_birth, registration_date, password)
+                    VALUES (%s, %s, %s, %s, %s)
+                """
+                cursor.execute(sql_reg, (email, passport_number, date_of_birth, date.today(), password))
+
+                # 3) Phones (בלי הגבלה)
+                sql_phones = "INSERT INTO CustomerPhone (email, phone_number) VALUES (%s, %s)"
+                for phone in clean_phones:
                     cursor.execute(sql_phones, (email, phone))
+
+        except mysql.connector.Error as e:
+            # נפוץ: מייל כבר קיים (Duplicate entry)
+            msg = str(e).lower()
+            if "duplicate" in msg:
+                return render_template('signup.html', error="This email is already registered. Please log in.")
+            return render_template('signup.html', error="Database error. Please try again.")
 
         return redirect('/login')
 
-    return render_template('signup.html')
+    return render_template('signup.html', error=None)
+
 
 @app.route('/logout')
 def logout():

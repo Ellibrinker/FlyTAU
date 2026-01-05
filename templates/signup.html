@@ -81,6 +81,16 @@
             transform: translateY(-2px);
         }
 
+        .add-phone-btn {
+            background-color: #6c757d;
+            margin-top: 8px;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .add-phone-btn:hover {
+            background-color: #5a6268;
+        }
+
         .footer-links {
             margin-top: 20px;
             text-align: center;
@@ -96,11 +106,27 @@
         .footer-links a:hover {
             text-decoration: underline;
         }
+
+        .error-box {
+            background: #ffe5e5;
+            color: #b00020;
+            border: 1px solid #ffb3b3;
+            padding: 10px 12px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-weight: 700;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <h1>Sign Up</h1>
-    <div class="signup-container">
+
+    <div class="register-container">
+        {% if error %}
+            <div class="error-box">{{ error }}</div>
+        {% endif %}
+
         <form action="/signup" method="POST">
 
             <div class="input-group">
@@ -114,12 +140,24 @@
             </div>
 
             <div class="input-group">
-                <label>Phone Numbers</label>
-                <input type="tel" name="phone" placeholder="Primary phone (Required)" required>
+                <label for="passport_number">Passport Number</label>
+                <input type="text" id="passport_number" name="passport_number" placeholder="Passport number" required>
+            </div>
 
-    <input type="tel" name="phone" placeholder="Second phone (Optional)" style="margin-top: 8px;">
-    <input type="tel" name="phone" placeholder="Third phone (Optional)" style="margin-top: 8px;">
-</div>
+            <div class="input-group">
+                <label for="date_of_birth">Date of Birth</label>
+                <input type="date" id="date_of_birth" name="date_of_birth" required>
+            </div>
+
+            <div class="input-group">
+                <label>Phone Numbers</label>
+
+                <div id="phones">
+                    <input class="phone-input" type="tel" name="phone" placeholder="Phone number (Required)" required>
+                </div>
+
+                <button class="add-phone-btn" type="button" onclick="addPhone()">+ Add another phone</button>
+            </div>
 
             <div class="input-group">
                 <label for="password">Password</label>
@@ -135,5 +173,19 @@
             <a href="/" style="color: #666; font-weight: 400;">Back to home</a>
         </div>
     </div>
+
+    <script>
+        function addPhone() {
+            const container = document.getElementById("phones");
+
+            const input = document.createElement("input");
+            input.type = "tel";
+            input.name = "phone"; // חשוב כדי ש-request.form.getlist('phone') יעבוד
+            input.placeholder = "Phone number (Optional)";
+            input.className = "phone-input";
+
+            container.appendChild(input);
+        }
+    </script>
 </body>
 </html>
