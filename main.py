@@ -297,7 +297,7 @@ def cancel_order():
 
 def _require_admin():
     if not session.get("is_manager"):
-        return redirect("/admin/login")
+        return redirect("/admin_login")
     return None
 
 from flights import flights_bp

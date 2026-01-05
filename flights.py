@@ -141,21 +141,22 @@ def select_seats():
     if class_type == "Business" and not flight["business_price"]:
         class_type = "Regular"
 
+    # חסימת מנהלים מרכישה - גם ב-GET וגם ב-POST
+    if session.get("is_manager"):
+        seats, grid_meta = _get_seats_and_grid(flight_id, flight["plane_id"], class_type)
+        return render_template(
+            "select_seats.html",
+            flight=flight,
+            seats=seats,
+            class_type=class_type,
+            grid_meta=grid_meta,
+            error="Managers are not allowed to purchase tickets."
+        )
+
     # 2) אם זו בקשת POST = אישור הזמנה
     if request.method == "POST":
         # טוענים מושבים כדי שנוכל להציג את הדף עם הודעת שגיאה
         seats, grid_meta = _get_seats_and_grid(flight_id, flight["plane_id"], class_type)
-
-        # חסימת מנהלים מרכישה (גם אם הגיעו לעמוד)
-        if session.get("is_manager"):
-            return render_template(
-                "select_seats.html",
-                flight=flight,
-                seats=seats,
-                class_type=class_type,
-                grid_meta=grid_meta,
-                error="Managers are not allowed to purchase tickets."
-            )
 
         selected_ids = request.form.getlist("flight_seat_id")
         guest_email = request.form.get("guest_email", "").strip()
