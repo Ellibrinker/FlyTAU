@@ -155,17 +155,17 @@ def select_seats():
 
     # 2) אם זו בקשת POST = אישור הזמנה
     if request.method == "POST":
-        # טוענים מושבים כדי שנוכל להציג את הדף עם הודעת שגיאה
-        seats, grid_meta = _get_seats_and_grid(flight_id, flight["plane_id"], class_type)
+        seats, grid_meta = _get_seats_and_grid(
+            flight_id,
+            flight["plane_id"],
+            class_type
+        )
 
         selected_ids = request.form.getlist("flight_seat_id")
         guest_email = request.form.get("guest_email", "").strip()
 
-        # אימייל להזמנה: מחובר -> מהסשן, אחרת מהטופס
         email = session.get("user_email") or guest_email
         if not email:
-            # להחזיר לדף עם שגיאה
-            seats, grid_meta = _get_seats_and_grid(flight_id, flight["plane_id"], class_type)
             return render_template(
                 "select_seats.html",
                 flight=flight,
@@ -176,7 +176,6 @@ def select_seats():
             )
 
         if not selected_ids:
-            seats, grid_meta = _get_seats_and_grid(flight_id, flight["plane_id"], class_type)
             return render_template(
                 "select_seats.html",
                 flight=flight,
@@ -190,7 +189,7 @@ def select_seats():
         with db_cur() as cursor:
             format_strings = ",".join(["%s"] * len(selected_ids))
             cursor.execute(f"""
-                SELECT fs.flight_seat_id, fs.status, s.class_type
+                SELECT fs.flight_seat_id, fs.status, s.class_type, s.plane_id
                 FROM FlightSeat fs
                 JOIN Seat s ON s.seat_id = fs.seat_id
                 WHERE fs.flight_id=%s AND fs.flight_seat_id IN ({format_strings})
@@ -201,7 +200,11 @@ def select_seats():
             return redirect(f"/select_seats?flight_id={flight_id}&class_type={class_type}")
 
         for r in rows:
-            if str(r["status"]).lower() != "available" or r["class_type"] != class_type:
+            if str(r["status"]).lower() != "available":
+                return redirect(f"/select_seats?flight_id={flight_id}&class_type={class_type}")
+            if r["class_type"] != class_type:
+                return redirect(f"/select_seats?flight_id={flight_id}&class_type={class_type}")
+            if int(r["plane_id"]) != int(flight["plane_id"]):
                 return redirect(f"/select_seats?flight_id={flight_id}&class_type={class_type}")
 
         # מחיר לפי מחלקה
@@ -258,6 +261,15 @@ def select_seats():
 def _get_seats_and_grid(flight_id, plane_id, class_type):
     from main import db_cur
 
+    # מוחקים FlightSeat לא חוקיים: כאלה שה-seat שלהם לא שייך למטוס של הטיסה
+    with db_cur() as cursor:
+        cursor.execute("""
+            DELETE fs
+            FROM FlightSeat fs
+            JOIN Seat s ON s.seat_id = fs.seat_id
+            WHERE fs.flight_id=%s AND s.plane_id<>%s
+        """, (flight_id, plane_id))
+
     # אם אין FlightSeat לטיסה — ניצור לפי כל מושבי המטוס
     with db_cur() as cursor:
         cursor.execute("SELECT COUNT(*) AS cnt FROM FlightSeat WHERE flight_id=%s", (flight_id,))
@@ -286,9 +298,12 @@ def _get_seats_and_grid(flight_id, plane_id, class_type):
               s.column_number
             FROM FlightSeat fs
             JOIN Seat s ON s.seat_id = fs.seat_id
-            WHERE fs.flight_id=%s AND s.class_type=%s
+            WHERE fs.flight_id=%s
+              AND s.class_type=%s
+              AND s.plane_id=%s
             ORDER BY s.row_num, s.column_number
-        """, (flight_id, class_type))
+        """, (flight_id, class_type, plane_id))
+
         seats = cursor.fetchall()
 
     return seats, {"rows": meta["rows_number"], "cols": meta["columns_number"]}

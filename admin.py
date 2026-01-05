@@ -27,6 +27,15 @@ def admin_login():
             """, (tz, password))
             manager = cursor.fetchone()
 
+        # דיסג'וינט: מנהל לא יכול להיות גם AirCrew
+        with db_cur() as cursor:
+            cursor.execute("SELECT 1 FROM AirCrew WHERE id=%s", (manager["id"],))
+            if cursor.fetchone():
+                return render_template(
+                    "admin_login.html",
+                    error="Invalid role configuration: this ID is both Manager and AirCrew."
+                )
+
         if not manager:
             return render_template("admin_login.html", error="Invalid ID or password.")
 
@@ -151,9 +160,11 @@ def admin_add_flight():
                 cursor.execute("""
                     SELECT w.id, w.first_name, w.last_name
                     FROM Pilot p
-                    JOIN AirCrew ac ON ac.id=p.id
-                    JOIN Worker w ON w.id=ac.id
-                    WHERE ac.long_flight_training=1
+                    JOIN AirCrew ac ON ac.id = p.id
+                    JOIN Worker w ON w.id = ac.id
+                    LEFT JOIN Manager m ON m.id = w.id
+                    WHERE ac.long_flight_training = 1
+                        AND m.id IS NULL
                     ORDER BY w.id
                 """)
                 pilots = cursor.fetchall()
@@ -161,9 +172,11 @@ def admin_add_flight():
                 cursor.execute("""
                     SELECT w.id, w.first_name, w.last_name
                     FROM FlightAttendant fa
-                    JOIN AirCrew ac ON ac.id=fa.id
-                    JOIN Worker w ON w.id=ac.id
-                    WHERE ac.long_flight_training=1
+                    JOIN AirCrew ac ON ac.id = fa.id
+                    JOIN Worker w ON w.id = ac.id
+                    LEFT JOIN Manager m ON m.id = w.id
+                    WHERE ac.long_flight_training = 1
+                        AND m.id IS NULL
                     ORDER BY w.id
                 """)
                 attendants = cursor.fetchall()
@@ -171,7 +184,9 @@ def admin_add_flight():
                 cursor.execute("""
                     SELECT w.id, w.first_name, w.last_name
                     FROM Pilot p
-                    JOIN Worker w ON w.id=p.id
+                    JOIN Worker w ON w.id = p.id
+                    LEFT JOIN Manager m ON m.id = w.id
+                    WHERE m.id IS NULL
                     ORDER BY w.id
                 """)
                 pilots = cursor.fetchall()
@@ -179,7 +194,9 @@ def admin_add_flight():
                 cursor.execute("""
                     SELECT w.id, w.first_name, w.last_name
                     FROM FlightAttendant fa
-                    JOIN Worker w ON w.id=fa.id
+                    JOIN Worker w ON w.id = fa.id
+                    LEFT JOIN Manager m ON m.id = w.id
+                    WHERE m.id IS NULL
                     ORDER BY w.id
                 """)
                 attendants = cursor.fetchall()
