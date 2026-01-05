@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, session
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -319,7 +319,13 @@ def admin_cancel_flight(flight_id):
         return "Flight not found", 404
 
     # זמן יציאה
-    dep_dt = datetime.combine(flight["departure_date"], flight["departure_time"])
+    dep_time = flight["departure_time"]
+
+    # אם הגיע כ־timedelta — ממירים ל־time
+    if isinstance(dep_time, timedelta):
+        dep_time = (datetime.min + dep_time).time()
+
+    dep_dt = datetime.combine(flight["departure_date"], dep_time)
 
     if request.method == "GET":
         return render_template("admin_cancel_flight.html", flight=flight)
