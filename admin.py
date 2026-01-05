@@ -3,6 +3,10 @@ from datetime import datetime, date
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
+def _require_admin():
+    if not session.get("is_manager"):
+        return redirect("/admin_login")
+    return None
 
 @admin_bp.route("/login", methods=["GET", "POST"])
 def admin_login():

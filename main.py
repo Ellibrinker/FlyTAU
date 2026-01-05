@@ -295,10 +295,6 @@ def cancel_order():
         return redirect("/my_orders")
     return redirect("/order_lookup")
 
-def _require_admin():
-    if not session.get("is_manager"):
-        return redirect("/admin_login")
-    return None
 
 from flights import flights_bp
 app.register_blueprint(flights_bp)
