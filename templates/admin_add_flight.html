@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Add Flight</title>
+</head>
+<body>
+  <h1>Add New Flight</h1>
+  <p><a href="/admin/flights">Back</a></p>
+
+  {% if error %}
+    <p style="color:red; font-weight:700;">{{ error }}</p>
+  {% endif %}
+
+  {% if step == 1 %}
+    <form method="POST">
+      <input type="hidden" name="step" value="1" />
+
+      <input name="origin" placeholder="Origin (e.g. TLV)" required />
+      <input name="destination" placeholder="Destination (e.g. ATH)" required />
+      <input type="date" name="departure_date" required />
+      <input type="time" name="departure_time" required />
+
+      <button type="submit">Next</button>
+    </form>
+
+  {% else %}
+    <h3>Route: {{ data.origin }} → {{ data.destination }}</h3>
+    <p>Departure: {{ data.departure_date }} {{ data.departure_time }}</p>
+    <p>Duration: {{ data.duration_min }} minutes |
+       Type: {% if data.is_long %}Long{% else %}Short{% endif %}
+    </p>
+
+    <form method="POST">
+      <input type="hidden" name="step" value="2" />
+      <input type="hidden" name="origin" value="{{ data.origin }}" />
+      <input type="hidden" name="destination" value="{{ data.destination }}" />
+      <input type="hidden" name="departure_date" value="{{ data.departure_date }}" />
+      <input type="hidden" name="departure_time" value="{{ data.departure_time }}" />
+
+      <h3>Select plane</h3>
+      <select name="plane_id" required>
+        {% for p in data.planes %}
+          <option value="{{ p.plane_id }}">Plane {{ p.plane_id }} ({{ p.manufacturer }})</option>
+        {% endfor %}
+      </select>
+
+      <h3>Select pilots ({{ data.pilots_needed }})</h3>
+      {% for pl in data.pilots %}
+        <label>
+          <input type="checkbox" name="pilot_ids" value="{{ pl.id }}">
+          {{ pl.id }} - {{ pl.first_name }} {{ pl.last_name }}
+        </label><br>
+      {% endfor %}
+
+      <h3>Select attendants ({{ data.fa_needed }})</h3>
+      {% for fa in data.attendants %}
+        <label>
+          <input type="checkbox" name="fa_ids" value="{{ fa.id }}">
+          {{ fa.id }} - {{ fa.first_name }} {{ fa.last_name }}
+        </label><br>
+      {% endfor %}
+
+      <h3>Pricing</h3>
+      <input type="number" step="0.01" name="regular_price" placeholder="Regular price" required />
+
+      <!-- Business רק אם יש, אצלנו נדרוש בקוד לפי Class -->
+      <input type="number" step="0.01" name="business_price" placeholder="Business price (if applicable)" />
+
+      <button type="submit">Create Flight</button>
+    </form>
+  {% endif %}
+</body>
+</html>

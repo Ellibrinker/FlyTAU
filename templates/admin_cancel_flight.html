@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Cancel Flight</title></head>
+<body>
+  <h1>Cancel Flight {{ flight.flight_id }}</h1>
+
+  {% if error %}
+    <p style="color:red; font-weight:700;">{{ error }}</p>
+  {% endif %}
+
+  <p>Date: {{ flight.departure_date }} | Time: {{ flight.departure_time }} | Status: {{ flight.status }}</p>
+
+  <form method="POST">
+    <button type="submit">Confirm Cancel</button>
+  </form>
+
+  <p><a href="/admin/flights">Back</a></p>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin - Flights</title>
+</head>
+<body>
+  <h1>Flights Management</h1>
+  <p>Hi {{ session.get('manager_name') }}</p>
+
+  <p>
+    <a href="/admin/flights/new">+ Add New Flight</a> |
+    <a href="/admin/logout">Logout</a>
+  </p>
+
+  <form method="GET" style="margin: 16px 0;">
+    <input name="origin" placeholder="Origin" />
+    <input name="destination" placeholder="Destination" />
+    <input type="date" name="departure_date" />
+    <select name="status">
+      <option value="">All statuses</option>
+      <option value="open">open</option>
+      <option value="cancelled">cancelled</option>
+      <option value="full">full</option>
+      <option value="done">done</option>
+    </select>
+    <button type="submit">Search</button>
+  </form>
+
+  <table border="1" cellpadding="8">
+    <tr>
+      <th>Flight ID</th><th>Origin</th><th>Destination</th><th>Date</th><th>Time</th><th>Status</th><th>Actions</th>
+    </tr>
+    {% for f in flights %}
+      <tr>
+        <td>{{ f.flight_id }}</td>
+        <td>{{ f.origin_airport }}</td>
+        <td>{{ f.destination_airport }}</td>
+        <td>{{ f.departure_date }}</td>
+        <td>{{ f.departure_time }}</td>
+        <td>{{ f.status }}</td>
+        <td>
+          <a href="/admin/flights/cancel/{{ f.flight_id }}">Cancel</a>
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+</body>
+</html>
