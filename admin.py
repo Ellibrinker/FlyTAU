@@ -5,7 +5,7 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 def _require_admin():
     if not session.get("is_manager"):
-        return redirect("/admin_login")
+        return redirect("/admin/login")   # שימי לב: זה ה-route שלך בתוך ה-blueprint
     return None
 
 @admin_bp.route("/login", methods=["GET", "POST"])
