@@ -40,7 +40,7 @@
         <td>{{ f.departure_time }}</td>
         <td>{{ f.status }}</td>
         <td>
-          <a href="/admin/flights/cancel/{{ f.flight_id }}">Cancel</a>
+          <a href="{{ url_for('admin.admin_cancel_flight', flight_id=f.flight_id) }}">Cancel</a>
         </td>
       </tr>
     {% endfor %}
