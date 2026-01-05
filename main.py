@@ -30,6 +30,8 @@ def db_cur():
 
 @app.route('/')
 def homepage():
+    if session.get("is_manager"):
+        return redirect("/admin/")
     return render_template('homepage.html', user_name=session.get('user_name'))
 
 

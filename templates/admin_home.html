@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Panel - FLYTAU</title>
+  <style>
+    body {
+      font-family: 'Assistant', sans-serif;
+      background-color: #f4f7f6;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+    }
+    h2 {
+      font-size: 26px;
+      font-weight: normal;
+      color: #555;
+      margin-bottom: 10px;
+    }
+    h1 {
+      font-size: 40px;
+      font-weight: bold;
+      margin-bottom: 40px;
+    }
+    button {
+      background-color: #008B8B;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 10px;
+      transition: 0.3s;
+      width: 260px;
+    }
+    button:hover {
+      background-color: #00CED1;
+      transform: scale(1.05);
+    }
+    .secondary-btn {
+      background-color: #6c757d;
+    }
+    .secondary-btn:hover {
+      background-color: #5a6268;
+    }
+  </style>
+</head>
+<body>
+  <h2>Hi {{ session.get("manager_name") }} 👋</h2>
+  <h1>Admin Panel</h1>
+
+  <a href="/admin/flights">
+    <button>Flights Management</button>
+  </a>
+
+  <a href="/admin/reports">
+    <button>Management Reports</button>
+  </a>
+
+  <br><br>
+
+  <a href="/admin/logout">
+    <button class="secondary-btn">Log Out</button>
+  </a>
+</body>
+</html>

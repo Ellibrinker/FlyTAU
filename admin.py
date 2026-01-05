@@ -1,11 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, session
 from datetime import datetime, date, timedelta
 
-admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
+admin_bp = Blueprint("admin", __name__)  # <-- בלי url_prefix כאן
 
 def _require_admin():
     if not session.get("is_manager"):
-        return redirect("/admin/login")   # שימי לב: זה ה-route שלך בתוך ה-blueprint
+        return redirect("/admin/login")
     return None
 
 @admin_bp.route("/login", methods=["GET", "POST"])
@@ -27,7 +27,11 @@ def admin_login():
             """, (tz, password))
             manager = cursor.fetchone()
 
-        # דיסג'וינט: מנהל לא יכול להיות גם AirCrew
+        # קודם בודקים שהמנהל קיים
+        if not manager:
+            return render_template("admin_login.html", error="Invalid ID or password.")
+
+        # רק עכשיו בודקים דיסג'וינט
         with db_cur() as cursor:
             cursor.execute("SELECT 1 FROM AirCrew WHERE id=%s", (manager["id"],))
             if cursor.fetchone():
@@ -36,16 +40,14 @@ def admin_login():
                     error="Invalid role configuration: this ID is both Manager and AirCrew."
                 )
 
-        if not manager:
-            return render_template("admin_login.html", error="Invalid ID or password.")
-
         session.clear()
         session["is_manager"] = True
         session["manager_id"] = manager["id"]
         session["manager_name"] = f'{manager["first_name"]} {manager["last_name"]}'.strip()
-        return redirect("/admin/flights")
+        return redirect("/admin/")
 
     return render_template("admin_login.html", error=None)
+
 
 
 @admin_bp.route("/logout")
@@ -428,12 +430,12 @@ def admin_cancel_flight(flight_id):
     return redirect("/admin/flights")
 
 
-
-def _require_admin():
-    if not session.get("is_manager"):
-        return redirect("/admin/login")
-    return None
-
+@admin_bp.route("/", methods=["GET"])
+def admin_home():
+    guard = _require_admin()
+    if guard:
+        return guard
+    return render_template("admin_home.html")
 
 @admin_bp.route("/reports", methods=["GET"])
 def admin_reports():

@@ -103,14 +103,16 @@
         </a>
     {% endif %}
 
-<!-- Admin access -->
-<div style="margin-top: 80px;">
-    <a href="/admin/login">
-        <button class="secondary-btn">
-            Admin Login
-        </button>
-    </a>
-</div>
+{% if not user_name and not session.get("is_manager") %}
+    <!-- Admin access (only for guests) -->
+    <div style="margin-top: 80px;">
+        <a href="/admin/login">
+            <button class="secondary-btn">
+                Admin Login
+            </button>
+        </a>
+    </div>
+{% endif %}
 
 </body>
 </html>
