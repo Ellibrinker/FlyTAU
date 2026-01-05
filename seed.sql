@@ -20,7 +20,6 @@ INSERT INTO CustomerPhone (email, phone_number) VALUES
 
 -- =========================
 -- 2) Workers: 2 managers + 10 pilots + 20 flight attendants
---    ✅ Worker.id = ת"ז INT אמיתי => מכניסים ידנית
 -- =========================
 
 -- ---- Managers (Workers -> Manager)
@@ -89,18 +88,23 @@ INSERT INTO FlightAttendant (id) VALUES
 (400000016),(400000017),(400000018),(400000019),(400000020);
 
 -- =========================
--- 3) Planes + classes + seats (minimal)
+-- 3) Planes + classes + seats
 --    plane_id AUTO_INCREMENT => שומרים משתנים
 -- =========================
-INSERT INTO Plane (manufacturer, purchase_date) VALUES ('Boeing','2018-01-01');  SET @pl1 = LAST_INSERT_ID();
-INSERT INTO Plane (manufacturer, purchase_date) VALUES ('Airbus','2019-01-01');  SET @pl2 = LAST_INSERT_ID();
-INSERT INTO Plane (manufacturer, purchase_date) VALUES ('Boeing','2020-01-01');  SET @pl3 = LAST_INSERT_ID();
-INSERT INTO Plane (manufacturer, purchase_date) VALUES ('Airbus','2021-01-01');  SET @pl4 = LAST_INSERT_ID();
-INSERT INTO Plane (manufacturer, purchase_date) VALUES ('Dassault','2022-01-01');SET @pl5 = LAST_INSERT_ID();
-INSERT INTO Plane (manufacturer, purchase_date) VALUES ('Dassault','2023-01-01');SET @pl6 = LAST_INSERT_ID();
+INSERT INTO Plane (manufacturer, purchase_date) VALUES ('Boeing','2018-01-01');   SET @pl1 = LAST_INSERT_ID();
+INSERT INTO Plane (manufacturer, purchase_date) VALUES ('Airbus','2019-01-01');   SET @pl2 = LAST_INSERT_ID();
+INSERT INTO Plane (manufacturer, purchase_date) VALUES ('Boeing','2020-01-01');   SET @pl3 = LAST_INSERT_ID();
+INSERT INTO Plane (manufacturer, purchase_date) VALUES ('Airbus','2021-01-01');   SET @pl4 = LAST_INSERT_ID();
+INSERT INTO Plane (manufacturer, purchase_date) VALUES ('Dassault','2022-01-01'); SET @pl5 = LAST_INSERT_ID();
+INSERT INTO Plane (manufacturer, purchase_date) VALUES ('Dassault','2023-01-01'); SET @pl6 = LAST_INSERT_ID();
 
-INSERT INTO BigPlane (plane_id) VALUES (@pl1),(@pl2),(@pl3);
-INSERT INTO SmallPlane (plane_id) VALUES (@pl4),(@pl5),(@pl6);
+-- NEW planes (extra)
+INSERT INTO Plane (manufacturer, purchase_date) VALUES ('Boeing','2020-06-01');   SET @pl7 = LAST_INSERT_ID();
+INSERT INTO Plane (manufacturer, purchase_date) VALUES ('Airbus','2021-06-01');   SET @pl8 = LAST_INSERT_ID();
+INSERT INTO Plane (manufacturer, purchase_date) VALUES ('Dassault','2024-01-01'); SET @pl9 = LAST_INSERT_ID();
+
+INSERT INTO BigPlane (plane_id) VALUES (@pl1),(@pl2),(@pl3),(@pl7),(@pl8);
+INSERT INTO SmallPlane (plane_id) VALUES (@pl4),(@pl5),(@pl6),(@pl9);
 
 INSERT INTO Class (plane_id, class_type, rows_number, columns_number) VALUES
 (@pl1,'Regular',20,6),(@pl1,'Business',5,4),
@@ -108,37 +112,94 @@ INSERT INTO Class (plane_id, class_type, rows_number, columns_number) VALUES
 (@pl3,'Regular',18,6),(@pl3,'Business',4,4),
 (@pl4,'Regular',15,4),
 (@pl5,'Regular',12,4),
-(@pl6,'Regular',10,4);
+(@pl6,'Regular',10,4),
 
--- Seats: seat_id AUTO_INCREMENT => לא מציינים seat_id
+-- NEW classes
+(@pl7,'Regular',20,6),(@pl7,'Business',5,4),
+(@pl8,'Regular',22,6),(@pl8,'Business',6,4),
+(@pl9,'Regular',12,4);
+
+-- Seats (sample seats – enough to show the structure clearly)
+-- plane 1: 6 seats
 INSERT INTO Seat (row_num, column_number, plane_id, class_type) VALUES
-(1,1,@pl1,'Regular'),
-(1,2,@pl1,'Regular'),
-(1,3,@pl1,'Regular');
+(1,1,@pl1,'Regular'), (1,2,@pl1,'Regular'), (1,3,@pl1,'Regular'),
+(2,1,@pl1,'Regular'), (2,2,@pl1,'Regular'), (2,3,@pl1,'Regular');
 
 SELECT seat_id INTO @s_pl1_1_1 FROM Seat WHERE plane_id=@pl1 AND row_num=1 AND column_number=1;
 SELECT seat_id INTO @s_pl1_1_2 FROM Seat WHERE plane_id=@pl1 AND row_num=1 AND column_number=2;
-SELECT seat_id INTO @s_pl1_1_3 FROM Seat WHERE plane_id=@pl1 AND row_num=1 AND column_number=3;
+SELECT seat_id INTO @s_pl1_2_1 FROM Seat WHERE plane_id=@pl1 AND row_num=2 AND column_number=1;
+SELECT seat_id INTO @s_pl1_2_2 FROM Seat WHERE plane_id=@pl1 AND row_num=2 AND column_number=2;
 
+-- plane 2: 6 seats
 INSERT INTO Seat (row_num, column_number, plane_id, class_type) VALUES
-(1,1,@pl2,'Regular'),
-(1,2,@pl2,'Regular'),
-(1,3,@pl2,'Regular');
+(1,1,@pl2,'Regular'), (1,2,@pl2,'Regular'), (1,3,@pl2,'Regular'),
+(2,1,@pl2,'Regular'), (2,2,@pl2,'Regular'), (2,3,@pl2,'Regular');
 
 SELECT seat_id INTO @s_pl2_1_1 FROM Seat WHERE plane_id=@pl2 AND row_num=1 AND column_number=1;
 SELECT seat_id INTO @s_pl2_1_2 FROM Seat WHERE plane_id=@pl2 AND row_num=1 AND column_number=2;
-SELECT seat_id INTO @s_pl2_1_3 FROM Seat WHERE plane_id=@pl2 AND row_num=1 AND column_number=3;
+SELECT seat_id INTO @s_pl2_2_1 FROM Seat WHERE plane_id=@pl2 AND row_num=2 AND column_number=1;
+SELECT seat_id INTO @s_pl2_2_2 FROM Seat WHERE plane_id=@pl2 AND row_num=2 AND column_number=2;
+
+-- NEW plane 7: 4 seats
+INSERT INTO Seat (row_num, column_number, plane_id, class_type) VALUES
+(1,1,@pl7,'Regular'), (1,2,@pl7,'Regular'),
+(2,1,@pl7,'Regular'), (2,2,@pl7,'Regular');
+
+SELECT seat_id INTO @s_pl7_1_1 FROM Seat WHERE plane_id=@pl7 AND row_num=1 AND column_number=1;
+SELECT seat_id INTO @s_pl7_1_2 FROM Seat WHERE plane_id=@pl7 AND row_num=1 AND column_number=2;
 
 -- =========================
--- 4) Airway + Flights (4 open flights)
---    flight_id AUTO_INCREMENT => שומרים @f1..@f4
+-- 4) Airway + Flights
 -- =========================
 INSERT INTO Airway (origin_airport, destination_airport, duration) VALUES
+-- original
 ('TLV','ATH',120),
 ('TLV','ROM',180),
 ('TLV','PAR',300),
-('TLV','LON',330);
+('TLV','LON',330),
 
+-- added (full list)
+('TLV','LCA',60),  ('LCA','TLV',60),
+('TLV','IST',150), ('IST','TLV',150),
+('TLV','FCO',210), ('FCO','TLV',210),
+('TLV','MXP',240), ('MXP','TLV',240),
+('TLV','CDG',300), ('CDG','TLV',300),
+('TLV','AMS',315), ('AMS','TLV',315),
+('TLV','FRA',285), ('FRA','TLV',285),
+('TLV','MUC',270), ('MUC','TLV',270),
+('TLV','VIE',240), ('VIE','TLV',240),
+('TLV','ZRH',255), ('ZRH','TLV',255),
+('TLV','BCN',270), ('BCN','TLV',270),
+('TLV','MAD',300), ('MAD','TLV',300),
+('TLV','LIS',330), ('LIS','TLV',330),
+('TLV','LHR',330), ('LHR','TLV',330),
+('TLV','BRU',315), ('BRU','TLV',315),
+('TLV','CPH',270), ('CPH','TLV',270),
+('TLV','ARN',300), ('ARN','TLV',300),
+('TLV','OSL',330), ('OSL','TLV',330),
+('TLV','HEL',330), ('HEL','TLV',330),
+('TLV','WAW',240), ('WAW','TLV',240),
+('TLV','PRG',255), ('PRG','TLV',255),
+('TLV','BUD',240), ('BUD','TLV',240),
+('TLV','OTP',180), ('OTP','TLV',180),
+('TLV','SOF',165), ('SOF','TLV',165),
+('TLV','BEG',150), ('BEG','TLV',150),
+('TLV','SKG',120), ('SKG','TLV',120),
+('CDG','AMS',75), ('AMS','CDG',75),
+('CDG','FRA',80), ('FRA','CDG',80),
+('AMS','FRA',70), ('FRA','AMS',70),
+('FRA','VIE',80), ('VIE','FRA',80),
+('VIE','ZRH',85), ('ZRH','VIE',85),
+('BCN','MAD',75), ('MAD','BCN',75),
+('LHR','CDG',75), ('CDG','LHR',75),
+('FCO','MXP',70), ('MXP','FCO',70),
+('PRG','WAW',75), ('WAW','PRG',75),
+('BUD','VIE',45), ('VIE','BUD',45),
+('CPH','ARN',60), ('ARN','CPH',60),
+('ARN','OSL',55), ('OSL','ARN',55),
+('HEL','ARN',60), ('ARN','HEL',60);
+
+-- Flights (original 4)
 INSERT INTO Flight (plane_id, origin_airport, destination_airport, departure_date, departure_time, status)
 VALUES (@pl1,'TLV','ATH','2026-01-10','10:00:00','open'); SET @f1 = LAST_INSERT_ID();
 
@@ -151,26 +212,48 @@ VALUES (@pl3,'TLV','PAR','2026-01-12','09:15:00','open'); SET @f3 = LAST_INSERT_
 INSERT INTO Flight (plane_id, origin_airport, destination_airport, departure_date, departure_time, status)
 VALUES (@pl4,'TLV','LON','2026-01-13','14:45:00','open'); SET @f4 = LAST_INSERT_ID();
 
+-- NEW Flights (extra)
+INSERT INTO Flight (plane_id, origin_airport, destination_airport, departure_date, departure_time, status)
+VALUES (@pl7,'TLV','LCA','2026-01-14','08:00:00','open'); SET @f5 = LAST_INSERT_ID();
+
+INSERT INTO Flight (plane_id, origin_airport, destination_airport, departure_date, departure_time, status)
+VALUES (@pl8,'TLV','FCO','2026-01-15','16:15:00','open'); SET @f6 = LAST_INSERT_ID();
+
 INSERT INTO FlightPricing (flight_id, class_type, price) VALUES
 (@f1,'Regular',500.00),(@f1,'Business',900.00),
 (@f2,'Regular',600.00),(@f2,'Business',1100.00),
 (@f3,'Regular',750.00),(@f3,'Business',1400.00),
-(@f4,'Regular',800.00);
+(@f4,'Regular',800.00),
+(@f5,'Regular',350.00),(@f5,'Business',650.00),
+(@f6,'Regular',900.00),(@f6,'Business',1600.00);
 
 -- =========================
--- 5) FlightSeat + Orders + OrderItems (4 orders)
+-- 5) FlightSeat + Orders + OrderItems
 -- =========================
+-- original flight seats
 INSERT INTO FlightSeat (flight_id, seat_id, status) VALUES
 (@f1, @s_pl1_1_1, 'available'),
 (@f1, @s_pl1_1_2, 'available'),
 (@f2, @s_pl2_1_1, 'available'),
 (@f2, @s_pl2_1_2, 'available');
 
+-- NEW flight seats for new flights (using plane 1/2/7 sample seats)
+INSERT INTO FlightSeat (flight_id, seat_id, status) VALUES
+(@f5, @s_pl7_1_1, 'available'),
+(@f5, @s_pl7_1_2, 'available'),
+(@f6, @s_pl2_2_1, 'available'),
+(@f6, @s_pl2_2_2, 'available');
+
+-- fetch flight_seat_ids for orders
 SELECT flight_seat_id INTO @fs1 FROM FlightSeat WHERE flight_id=@f1 AND seat_id=@s_pl1_1_1;
 SELECT flight_seat_id INTO @fs2 FROM FlightSeat WHERE flight_id=@f1 AND seat_id=@s_pl1_1_2;
 SELECT flight_seat_id INTO @fs3 FROM FlightSeat WHERE flight_id=@f2 AND seat_id=@s_pl2_1_1;
 SELECT flight_seat_id INTO @fs4 FROM FlightSeat WHERE flight_id=@f2 AND seat_id=@s_pl2_1_2;
 
+SELECT flight_seat_id INTO @fs5 FROM FlightSeat WHERE flight_id=@f5 AND seat_id=@s_pl7_1_1;
+SELECT flight_seat_id INTO @fs6 FROM FlightSeat WHERE flight_id=@f6 AND seat_id=@s_pl2_2_1;
+
+-- Orders (original 4 + 2 new)
 INSERT INTO FlightOrder (flight_id, email, execution_date, status, total_payment) VALUES
 (@f1,'elli.brinker@example.com',CURDATE(),'paid',500.00); SET @o1 = LAST_INSERT_ID();
 
@@ -183,17 +266,29 @@ INSERT INTO FlightOrder (flight_id, email, execution_date, status, total_payment
 INSERT INTO FlightOrder (flight_id, email, execution_date, status, total_payment) VALUES
 (@f2,'guest2@example.com',CURDATE(),'paid',600.00); SET @o4 = LAST_INSERT_ID();
 
+-- NEW orders
+INSERT INTO FlightOrder (flight_id, email, execution_date, status, total_payment) VALUES
+(@f5,'elli.brinker@example.com',CURDATE(),'paid',350.00); SET @o5 = LAST_INSERT_ID();
+
+INSERT INTO FlightOrder (flight_id, email, execution_date, status, total_payment) VALUES
+(@f6,'guest1@example.com',CURDATE(),'paid',900.00); SET @o6 = LAST_INSERT_ID();
+
 INSERT INTO OrderItem (order_id, flight_seat_id) VALUES
 (@o1, @fs1),
 (@o2, @fs2),
 (@o3, @fs3),
-(@o4, @fs4);
+(@o4, @fs4),
+(@o5, @fs5),
+(@o6, @fs6);
 
-UPDATE FlightSeat SET status='booked' WHERE flight_seat_id IN (@fs1,@fs2,@fs3,@fs4);
+UPDATE FlightSeat
+SET status='booked'
+WHERE flight_seat_id IN (@fs1,@fs2,@fs3,@fs4,@fs5,@fs6);
 
 -- =========================
 -- 6) Crew placements (optional)
 -- =========================
 INSERT INTO FlightCrewPlacement (flight_id, id) VALUES
 (@f1, 300000001),(@f1, 400000001),(@f1, 400000002),
-(@f2, 300000002),(@f2, 400000003),(@f2, 400000004);
+(@f2, 300000002),(@f2, 400000003),(@f2, 400000004),
+(@f5, 300000003),(@f5, 400000005),(@f5, 400000006);
