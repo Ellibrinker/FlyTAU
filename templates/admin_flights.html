@@ -3,48 +3,135 @@
 <head>
   <meta charset="UTF-8" />
   <title>Admin - Flights</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; }
+    a { color: #008B8B; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .box { border: 1px solid #ddd; padding: 14px; border-radius: 10px; margin: 14px 0; }
+    .muted { color: #666; }
+
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    input, select, button {
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button { cursor: pointer; border: none; background: #008B8B; color: white; font-weight: 700; }
+    button:hover { opacity: 0.92; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #e5e5e5; padding: 10px; text-align: left; vertical-align: top; }
+    th { background: #f7f7f7; }
+
+    .pill { display: inline-block; padding: 4px 10px; border-radius: 999px; background: #f4f7f6; border: 1px solid #ddd; font-size: 13px; }
+    .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+    .status { font-weight: 700; }
+    .status-open { color: #0b6e4f; }
+    .status-cancelled { color: #b00020; }
+    .status-full { color: #6b4e00; }
+    .status-done { color: #444; }
+
+    .danger-link { color: #b00020; font-weight: 700; }
+    .disabled-link { color: #999; pointer-events: none; cursor: not-allowed; text-decoration: none; }
+
+    .empty { padding: 18px; border: 1px dashed #ccc; border-radius: 10px; }
+  </style>
 </head>
 <body>
-  <h1>Flights Management</h1>
-  <p>Hi {{ session.get('manager_name') }}</p>
+  <div class="topbar">
+    <div>
+      <h1 style="margin:0;">Flights Management</h1>
+      <p class="muted" style="margin:6px 0 0;">Hi {{ session.get('manager_name') }}</p>
+    </div>
 
-  <p>
-    <a href="/admin/flights/new">+ Add New Flight</a> |
-    <a href="/admin/logout">Logout</a>
-    <a href="/admin/reports">Reports</a>
-  </p>
+    <div class="row">
+      <a class="pill" href="/admin/flights/new">+ Add New Flight</a>
+      <a class="pill" href="/admin/reports">Reports</a>
+      <a class="pill" href="/admin/logout">Logout</a>
+    </div>
+  </div>
 
-  <form method="GET" style="margin: 16px 0;">
-    <input name="origin" placeholder="Origin" />
-    <input name="destination" placeholder="Destination" />
-    <input type="date" name="departure_date" />
-    <select name="status">
-      <option value="">All statuses</option>
-      <option value="open">open</option>
-      <option value="cancelled">cancelled</option>
-      <option value="full">full</option>
-      <option value="done">done</option>
-    </select>
-    <button type="submit">Search</button>
-  </form>
+  <div class="box">
+    <h3 style="margin:0 0 10px;">Search</h3>
+    <form method="GET">
+      <div class="row">
+        <input name="origin" placeholder="Origin (e.g. TLV)" value="{{ request.args.get('origin','') }}" />
+        <input name="destination" placeholder="Destination (e.g. ATH)" value="{{ request.args.get('destination','') }}" />
+        <input type="date" name="departure_date" value="{{ request.args.get('departure_date','') }}" />
+        <select name="status">
+          {% set s = (request.args.get('status','')|lower) %}
+          <option value="" {% if not s %}selected{% endif %}>All statuses</option>
+          <option value="open" {% if s=='open' %}selected{% endif %}>open</option>
+          <option value="cancelled" {% if s=='cancelled' %}selected{% endif %}>cancelled</option>
+          <option value="full" {% if s=='full' %}selected{% endif %}>full</option>
+          <option value="done" {% if s=='done' %}selected{% endif %}>done</option>
+        </select>
 
-  <table border="1" cellpadding="8">
-    <tr>
-      <th>Flight ID</th><th>Origin</th><th>Destination</th><th>Date</th><th>Time</th><th>Status</th><th>Actions</th>
-    </tr>
-    {% for f in flights %}
-      <tr>
-        <td>{{ f.flight_id }}</td>
-        <td>{{ f.origin_airport }}</td>
-        <td>{{ f.destination_airport }}</td>
-        <td>{{ f.departure_date }}</td>
-        <td>{{ f.departure_time }}</td>
-        <td>{{ f.status }}</td>
-        <td>
-          <a href="{{ url_for('admin.admin_cancel_flight', flight_id=f.flight_id) }}">Cancel</a>
-        </td>
-      </tr>
-    {% endfor %}
-  </table>
+        <button type="submit">Search</button>
+        <a class="pill" href="/admin/flights">Clear</a>
+      </div>
+      <p class="muted" style="margin:10px 0 0;">
+        Tip: “Cancel” is available only for flights with status <b>open</b>. Cancelled/done flights can’t be cancelled again.
+      </p>
+    </form>
+  </div>
+
+  {% if not flights or flights|length == 0 %}
+    <div class="empty">
+      <b>No flights found.</b>
+      <div class="muted" style="margin-top:6px;">Try changing filters or add a new flight.</div>
+    </div>
+  {% else %}
+    <div class="box">
+      <div class="row" style="justify-content: space-between;">
+        <h3 style="margin:0;">Results</h3>
+        <span class="pill">Total: <b>{{ flights|length }}</b></span>
+      </div>
+
+      <table>
+        <tr>
+          <th style="width:90px;">Flight ID</th>
+          <th>Route</th>
+          <th style="width:140px;">Date</th>
+          <th style="width:110px;">Time</th>
+          <th style="width:120px;">Status</th>
+          <th style="width:140px;">Actions</th>
+        </tr>
+
+        {% for f in flights %}
+          {% set st = (f.status|string)|lower %}
+          <tr>
+            <td><b>{{ f.flight_id }}</b></td>
+
+            <td>
+              <span class="pill"><b>{{ f.origin_airport }}</b> → <b>{{ f.destination_airport }}</b></span>
+            </td>
+
+            <td>{{ f.departure_date }}</td>
+            <td>{{ f.departure_time }}</td>
+
+            <td class="status
+              {% if st=='open' %}status-open{% elif st=='cancelled' %}status-cancelled{% elif st=='full' %}status-full{% elif st=='done' %}status-done{% endif %}
+            ">
+              {{ st }}
+            </td>
+
+            <td>
+              <div class="actions">
+                {% if st == 'open' %}
+                  <a class="danger-link" href="{{ url_for('admin.admin_cancel_flight', flight_id=f.flight_id) }}">Cancel</a>
+                {% else %}
+                  <span class="disabled-link" title="Only open flights can be cancelled">Cancel</span>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+  {% endif %}
 </body>
 </html>

@@ -1,19 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><title>Cancel Flight</title></head>
+<head>
+  <meta charset="UTF-8" />
+  <title>Cancel Flight</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; }
+    .box { border: 1px solid #ddd; padding: 14px; border-radius: 10px; margin: 14px 0; }
+    .error { color: #b00020; font-weight: 700; }
+    .muted { color: #666; }
+    .pill { display: inline-block; padding: 4px 10px; border-radius: 999px; background: #f4f7f6; border: 1px solid #ddd; font-size: 13px; margin-right: 6px; }
+    a { color: #008B8B; text-decoration: none; }
+    button { cursor: pointer; border: none; background: #b00020; color: #fff; font-weight: 700; padding: 10px 14px; border-radius: 8px; }
+    button:hover { opacity: 0.92; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .warn { color: #7a1b1b; }
+  </style>
+</head>
 <body>
-  <h1>Cancel Flight {{ flight.flight_id }}</h1>
+  <h1>Cancel Flight</h1>
+  <p><a href="/admin/flights">← Back to flights</a></p>
 
   {% if error %}
-    <p style="color:red; font-weight:700;">{{ error }}</p>
+    <p class="error">{{ error }}</p>
   {% endif %}
 
-  <p>Date: {{ flight.departure_date }} | Time: {{ flight.departure_time }} | Status: {{ flight.status }}</p>
+  <div class="box">
+    <div class="row">
+      <span class="pill">Flight ID: <b>{{ flight.flight_id }}</b></span>
+      <span class="pill">Date: <b>{{ flight.departure_date }}</b></span>
+      <span class="pill">Time: <b>{{ flight.departure_time }}</b></span>
+      <span class="pill">Status: <b>{{ flight.status }}</b></span>
+    </div>
 
-  <form method="POST">
-    <button type="submit">Confirm Cancel</button>
-  </form>
+    <p class="muted" style="margin-top: 10px;">
+      This action will mark the flight as <b>cancelled</b>.
+      Customers’ active/paid orders will be <b>system-cancelled</b> (refunded in your DB logic),
+      and seats will be released for this flight.
+    </p>
 
-  <p><a href="/admin/flights">Back</a></p>
+    <p class="warn" style="margin-top: 8px;">
+      Note: If the flight is less than <b>72 hours</b> from departure, cancellation is blocked by policy.
+    </p>
+  </div>
+
+  <div class="box">
+    <h3 style="margin: 0 0 10px;">Confirm cancellation</h3>
+    <p class="muted" style="margin: 0 0 12px;">
+      Please confirm you want to cancel this flight.
+    </p>
+
+    <form method="POST">
+      <button type="submit">Confirm Cancel</button>
+    </form>
+  </div>
 </body>
 </html>
