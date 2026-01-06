@@ -718,146 +718,174 @@ def admin_reports():
     if guard:
         return guard
 
+    # Date filter (default: current month)
     today = date.today()
     date_from = request.args.get("date_from") or today.replace(day=1).isoformat()
     date_to = request.args.get("date_to") or today.isoformat()
 
-    report = request.args.get("report", "revenue_route")
+    # Report selector (aligned with the real requirements)
+    report = request.args.get("report", "avg_occupancy_completed")
 
     from main import db_cur
+
     data = []
     kpis = {}
+    meta = {
+        "title": "",
+        "subtitle": "",
+        "columns": [],  # list of {"key": "...", "label": "..."}
+        "notes": [],
+    }
+
+    def _set_table(columns):
+        meta["columns"] = columns
+
+    def _set_title(title, subtitle=""):
+        meta["title"] = title
+        meta["subtitle"] = subtitle
 
     with db_cur() as cursor:
-        if report == "revenue_route":
-            cursor.execute(
-                """
-                SELECT
-                    f.origin_airport,
-                    f.destination_airport,
-                    COUNT(*) AS orders_count,
-                    ROUND(SUM(fo.total_payment), 2) AS revenue
-                FROM FlightOrder fo
-                JOIN Flight f ON f.flight_id = fo.flight_id
-                WHERE fo.execution_date BETWEEN %s AND %s
-                GROUP BY f.origin_airport, f.destination_airport
-                ORDER BY revenue DESC
-                """,
-                (date_from, date_to),
+        # =========================================================
+        # 1) Average occupancy of flights that took place
+        #    (ממוצע תפוסת טיסות שהתקיימו)
+        # =========================================================
+        if report == "avg_occupancy_completed":
+            _set_title(
+                "Average Occupancy (Completed Flights)",
+                "Average occupancy percent for flights that actually took place (exclude cancelled)."
             )
-            data = cursor.fetchall()
+            _set_table([
+                {"key": "month", "label": "Month"},
+                {"key": "avg_occupancy_percent", "label": "Avg Occupancy %"},
+                {"key": "flights_count", "label": "# Flights"},
+            ])
+            meta["notes"] = [
+                "TODO: Define what counts as 'completed' (status='done' / departure in past + not cancelled).",
+                "TODO: Ensure cancellations are excluded."
+            ]
 
-            cursor.execute(
-                """
-                SELECT
-                    COUNT(*) AS orders_count,
-                    ROUND(SUM(total_payment), 2) AS revenue
-                FROM FlightOrder
-                WHERE execution_date BETWEEN %s AND %s
-                """,
-                (date_from, date_to),
-            )
-            kpis = cursor.fetchone() or {}
+            # TODO: Replace with real SQL
+            # cursor.execute(""" ... """, (date_from, date_to))
+            # data = cursor.fetchall()
+            # cursor.execute(""" ... """, (date_from, date_to))
+            # kpis = cursor.fetchone() or {}
 
-        elif report == "occupancy_flight":
-            cursor.execute(
-                """
-                SELECT
-                    f.flight_id,
-                    f.origin_airport,
-                    f.destination_airport,
-                    f.departure_date,
-                    f.departure_time,
-                    LOWER(f.status) AS flight_status,
-                    SUM(CASE WHEN LOWER(fs.status)='booked' THEN 1 ELSE 0 END) AS sold_seats,
-                    COUNT(*) AS total_seats,
-                    ROUND(100 * SUM(CASE WHEN LOWER(fs.status)='booked' THEN 1 ELSE 0 END) / COUNT(*), 1) AS occupancy_percent
-                FROM Flight f
-                JOIN FlightSeat fs ON fs.flight_id = f.flight_id
-                WHERE f.departure_date BETWEEN %s AND %s
-                GROUP BY f.flight_id, f.origin_airport, f.destination_airport, f.departure_date, f.departure_time, f.status
-                ORDER BY f.departure_date, f.departure_time
-                """,
-                (date_from, date_to),
+        # =========================================================
+        # 2) Revenue by plane size, manufacturer, and class
+        #    (הכנסות בחתך גודל מטוס, יצרנית מטוס ומחלקה)
+        # =========================================================
+        elif report == "revenue_plane_size_manu_class":
+            _set_title(
+                "Revenue by Plane Size / Manufacturer / Class",
+                "Revenue breakdown by aircraft size, manufacturer and ticket class."
             )
-            data = cursor.fetchall()
+            _set_table([
+                {"key": "plane_size", "label": "Plane Size (Big/Regular)"},
+                {"key": "manufacturer", "label": "Manufacturer"},
+                {"key": "class_type", "label": "Class"},
+                {"key": "orders_count", "label": "# Orders"},
+                {"key": "revenue", "label": "Revenue"},
+            ])
+            meta["notes"] = [
+                "TODO: Decide revenue source: FlightOrder.total_payment (net) vs derived from pricing table.",
+                "TODO: Handle cancelled orders/flight cancellations explicitly per project policy."
+            ]
 
-            cursor.execute(
-                """
-                SELECT
-                    ROUND(AVG(100 * sold.cnt / totals.cnt), 1) AS avg_occupancy_percent
-                FROM
-                    (SELECT flight_id, SUM(CASE WHEN LOWER(status)='booked' THEN 1 ELSE 0 END) AS cnt
-                     FROM FlightSeat GROUP BY flight_id) sold
-                JOIN
-                    (SELECT flight_id, COUNT(*) AS cnt FROM FlightSeat GROUP BY flight_id) totals
-                ON totals.flight_id = sold.flight_id
-                """
-            )
-            kpis = cursor.fetchone() or {}
+            # TODO: Replace with real SQL
+            # cursor.execute(""" ... """, (date_from, date_to))
+            # data = cursor.fetchall()
+            # cursor.execute(""" ... """, (date_from, date_to))
+            # kpis = cursor.fetchone() or {}
 
-        elif report == "cancellations":
-            cursor.execute(
-                """
-                SELECT
-                    status,
-                    COUNT(*) AS orders_count,
-                    ROUND(SUM(total_payment), 2) AS amount_sum
-                FROM FlightOrder
-                WHERE execution_date BETWEEN %s AND %s
-                  AND LOWER(status) IN ('customer_cancelled','system_cancelled')
-                GROUP BY status
-                ORDER BY orders_count DESC
-                """,
-                (date_from, date_to),
+        # =========================================================
+        # 3) Accumulated flight hours per worker, split long/short
+        #    (שעות טיסה מצטברות של העובדים, בהפרדה לטיסות ארוכות/קצרות)
+        # =========================================================
+        elif report == "crew_hours_long_short":
+            _set_title(
+                "Crew Flight Hours (Long vs Short)",
+                "Total accumulated flight minutes/hours per worker, split by long/short flights."
             )
-            data = cursor.fetchall()
+            _set_table([
+                {"key": "worker_id", "label": "Worker ID"},
+                {"key": "full_name", "label": "Name"},
+                {"key": "role", "label": "Role"},
+                {"key": "short_minutes", "label": "Short Minutes"},
+                {"key": "long_minutes", "label": "Long Minutes"},
+                {"key": "total_minutes", "label": "Total Minutes"},
+            ])
+            meta["notes"] = [
+                "TODO: Define long flight threshold (currently: duration > 360 minutes).",
+                "TODO: Join via FlightCrewPlacement + Flight + Airway.duration.",
+                "TODO: Exclude cancelled flights."
+            ]
 
-            cursor.execute(
-                """
-                SELECT
-                    COUNT(*) AS customer_cancelled_count,
-                    ROUND(SUM(total_payment), 2) AS cancellation_fees_sum
-                FROM FlightOrder
-                WHERE execution_date BETWEEN %s AND %s
-                  AND LOWER(status)='customer_cancelled'
-                """,
-                (date_from, date_to),
-            )
-            kpis = cursor.fetchone() or {}
+            # TODO: Replace with real SQL
+            # cursor.execute(""" ... """, (date_from, date_to))
+            # data = cursor.fetchall()
+            # cursor.execute(""" ... """, (date_from, date_to))
+            # kpis = cursor.fetchone() or {}
 
-        elif report == "crew_utilization":
-            cursor.execute(
-                """
-                SELECT
-                    w.id,
-                    CONCAT(w.first_name, ' ', w.last_name) AS full_name,
-                    COUNT(*) AS flights_assigned
-                FROM FlightCrewPlacement fcp
-                JOIN Worker w ON w.id = fcp.id
-                JOIN Flight f ON f.flight_id = fcp.flight_id
-                WHERE f.departure_date BETWEEN %s AND %s
-                GROUP BY w.id, w.first_name, w.last_name
-                ORDER BY flights_assigned DESC, w.id
-                """,
-                (date_from, date_to),
+        # =========================================================
+        # 4) Purchase cancellation rate by month
+        #    (שיעור ביטולי רכישות לפי חודש)
+        # =========================================================
+        elif report == "purchase_cancel_rate_monthly":
+            _set_title(
+                "Purchase Cancellation Rate (Monthly)",
+                "Cancellation rate of purchases/orders by month."
             )
-            data = cursor.fetchall()
+            _set_table([
+                {"key": "month", "label": "Month"},
+                {"key": "total_orders", "label": "Total Orders"},
+                {"key": "cancelled_orders", "label": "Cancelled Orders"},
+                {"key": "cancel_rate_percent", "label": "Cancel Rate %"},
+            ])
+            meta["notes"] = [
+                "TODO: Decide which statuses count as cancellation (customer_cancelled/system_cancelled).",
+                "TODO: Use execution_date (or order_date if exists) consistently."
+            ]
 
-            cursor.execute(
-                """
-                SELECT COUNT(*) AS total_assignments
-                FROM FlightCrewPlacement fcp
-                JOIN Flight f ON f.flight_id = fcp.flight_id
-                WHERE f.departure_date BETWEEN %s AND %s
-                """,
-                (date_from, date_to),
+            # TODO: Replace with real SQL
+            # cursor.execute(""" ... """, (date_from, date_to))
+            # data = cursor.fetchall()
+            # cursor.execute(""" ... """, (date_from, date_to))
+            # kpis = cursor.fetchone() or {}
+
+        # =========================================================
+        # 5) Monthly activity summary per plane
+        #    (סיכום פעילות חודשית לכל מטוס: #performed, #cancelled, utilization%, dominant route)
+        # =========================================================
+        elif report == "monthly_plane_activity":
+            _set_title(
+                "Monthly Plane Activity Summary",
+                "Per aircraft: performed flights, cancelled flights, utilization % (assume 30 days), dominant route."
             )
-            kpis = cursor.fetchone() or {}
+            _set_table([
+                {"key": "month", "label": "Month"},
+                {"key": "plane_id", "label": "Plane ID"},
+                {"key": "manufacturer", "label": "Manufacturer"},
+                {"key": "plane_size", "label": "Plane Size (Big/Regular)"},
+                {"key": "performed_flights", "label": "Performed Flights"},
+                {"key": "cancelled_flights", "label": "Cancelled Flights"},
+                {"key": "utilization_percent", "label": "Utilization % (30 days)"},
+                {"key": "dominant_route", "label": "Dominant Route"},
+            ])
+            meta["notes"] = [
+                "TODO: Define utilization calculation clearly (e.g., total flight time / (30*24*60)).",
+                "TODO: Dominant route = most frequent origin-destination pair for that plane in month.",
+                "TODO: Separate performed vs cancelled flights."
+            ]
+
+            # TODO: Replace with real SQL
+            # cursor.execute(""" ... """, (date_from, date_to))
+            # data = cursor.fetchall()
+            # cursor.execute(""" ... """, (date_from, date_to))
+            # kpis = cursor.fetchone() or {}
 
         else:
-            report = "revenue_route"
-            return redirect(f"/admin/reports?report={report}&date_from={date_from}&date_to={date_to}")
+            # fallback to a valid report key
+            return redirect(f"/admin/reports?report=avg_occupancy_completed&date_from={date_from}&date_to={date_to}")
 
     return render_template(
         "admin_reports.html",
@@ -866,4 +894,6 @@ def admin_reports():
         date_to=date_to,
         data=data,
         kpis=kpis,
+        meta=meta,
     )
+

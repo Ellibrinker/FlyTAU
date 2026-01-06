@@ -3,101 +3,160 @@
 <head>
   <meta charset="UTF-8" />
   <title>Admin Reports</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; }
+    a { color: #008B8B; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .box { border: 1px solid #ddd; padding: 14px; border-radius: 10px; margin: 14px 0; }
+    .muted { color: #666; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+    input, select, button { padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
+    button { cursor: pointer; border: none; background: #008B8B; color: white; font-weight: 700; }
+    button:hover { opacity: 0.92; }
+
+    .pill { display: inline-block; padding: 4px 10px; border-radius: 999px; background: #f4f7f6; border: 1px solid #ddd; font-size: 13px; }
+    .title { margin: 0; }
+    .subtitle { margin: 6px 0 0; color: #666; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #e5e5e5; padding: 10px; text-align: left; vertical-align: top; }
+    th { background: #f7f7f7; }
+
+    .kpis { display: grid; grid-template-columns: repeat(4, minmax(180px, 1fr)); gap: 12px; }
+    @media (max-width: 1000px) { .kpis { grid-template-columns: repeat(2, minmax(180px, 1fr)); } }
+    @media (max-width: 520px) { .kpis { grid-template-columns: 1fr; } }
+
+    .kpi { border: 1px solid #e5e5e5; border-radius: 10px; padding: 12px; background: #fff; }
+    .kpi .label { color: #666; font-size: 13px; margin-bottom: 6px; }
+    .kpi .value { font-size: 18px; font-weight: 700; }
+
+    .empty { padding: 18px; border: 1px dashed #ccc; border-radius: 10px; }
+    .notes { margin: 0; padding-left: 18px; }
+    .notes li { margin: 6px 0; }
+  </style>
 </head>
+
 <body>
-  <h1>Admin Reports</h1>
-  <p>Hi {{ session.get("manager_name") }} | <a href="/admin/flights">Flights</a> | <a href="/admin/logout">Logout</a></p>
+  <div class="topbar">
+    <div>
+      <h1 class="title">Admin Reports</h1>
+      <p class="subtitle">Hi {{ session.get("manager_name") }}</p>
+    </div>
+    <div class="row">
+      <a class="pill" href="/admin/flights">Flights</a>
+      <a class="pill" href="/admin/logout">Logout</a>
+    </div>
+  </div>
 
-  <form method="GET" style="margin:16px 0;">
-    <label>From:</label>
-    <input type="date" name="date_from" value="{{ date_from }}" required />
+  <div class="box">
+    <h3 style="margin:0 0 10px;">Run Report</h3>
+    <form method="GET">
+      <div class="row">
+        <label class="muted">From</label>
+        <input type="date" name="date_from" value="{{ date_from }}" required />
 
-    <label>To:</label>
-    <input type="date" name="date_to" value="{{ date_to }}" required />
+        <label class="muted">To</label>
+        <input type="date" name="date_to" value="{{ date_to }}" required />
 
-    <label>Report:</label>
-    <select name="report">
-      <option value="revenue_route" {% if report=='revenue_route' %}selected{% endif %}>Revenue by Route</option>
-      <option value="occupancy_flight" {% if report=='occupancy_flight' %}selected{% endif %}>Occupancy by Flight</option>
-      <option value="cancellations" {% if report=='cancellations' %}selected{% endif %}>Cancellations</option>
-      <option value="crew_utilization" {% if report=='crew_utilization' %}selected{% endif %}>Crew Utilization</option>
-    </select>
+        <label class="muted">Report</label>
+        <select name="report">
+          <option value="avg_occupancy_completed" {% if report=='avg_occupancy_completed' %}selected{% endif %}>
+            Avg occupancy (completed flights)
+          </option>
+          <option value="revenue_plane_size_manu_class" {% if report=='revenue_plane_size_manu_class' %}selected{% endif %}>
+            Revenue by plane size / manufacturer / class
+          </option>
+          <option value="crew_hours_long_short" {% if report=='crew_hours_long_short' %}selected{% endif %}>
+            Crew accumulated flight hours (long vs short)
+          </option>
+          <option value="purchase_cancel_rate_monthly" {% if report=='purchase_cancel_rate_monthly' %}selected{% endif %}>
+            Purchase cancellation rate by month
+          </option>
+          <option value="monthly_plane_activity" {% if report=='monthly_plane_activity' %}selected{% endif %}>
+            Monthly activity summary per plane
+          </option>
+        </select>
 
-    <button type="submit">Run</button>
-  </form>
+        <button type="submit">Run</button>
+        <a class="pill" href="/admin/reports">Reset</a>
+      </div>
+    </form>
+  </div>
 
-  {% if kpis %}
-    <h3>KPIs</h3>
-    <ul>
-      {% for k,v in kpis.items() %}
-        <li><b>{{ k }}</b>: {{ v }}</li>
-      {% endfor %}
-    </ul>
+  <div class="box">
+    <div class="row" style="justify-content: space-between;">
+      <div>
+        <h2 style="margin:0;">{{ meta.title }}</h2>
+        {% if meta.subtitle %}
+          <div class="muted" style="margin-top:6px;">{{ meta.subtitle }}</div>
+        {% endif %}
+      </div>
+      <span class="pill">Range: <b>{{ date_from }}</b> → <b>{{ date_to }}</b></span>
+    </div>
+
+    {% if meta.notes and meta.notes|length > 0 %}
+      <div style="margin-top:12px;">
+        <div class="muted" style="margin-bottom:6px;"><b>Notes / TODOs for SQL</b></div>
+        <ul class="notes">
+          {% for n in meta.notes %}
+            <li class="muted">{{ n }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  </div>
+
+  {% if kpis and kpis|length > 0 %}
+    <div class="box">
+      <div class="row" style="justify-content: space-between;">
+        <h3 style="margin:0;">KPIs</h3>
+        <span class="pill">Total KPI fields: <b>{{ kpis|length }}</b></span>
+      </div>
+
+      <div class="kpis" style="margin-top:12px;">
+        {% for k, v in kpis.items() %}
+          <div class="kpi">
+            <div class="label">{{ k }}</div>
+            <div class="value">{{ v }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
   {% endif %}
 
-  <hr />
+  <div class="box">
+    <div class="row" style="justify-content: space-between;">
+      <h3 style="margin:0;">Results</h3>
+      <span class="pill">Rows: <b>{{ data|length if data else 0 }}</b></span>
+    </div>
 
-  {% if report == "revenue_route" %}
-    <h2>Revenue by Route</h2>
-    <table border="1" cellpadding="8">
-      <tr><th>Origin</th><th>Destination</th><th># Orders</th><th>Revenue</th></tr>
-      {% for r in data %}
+    {% if not data or data|length == 0 %}
+      <div class="empty" style="margin-top:12px;">
+        <b>No data yet.</b>
+        <div class="muted" style="margin-top:6px;">
+          Once the SQL queries are implemented, the result rows will appear here.
+        </div>
+      </div>
+    {% else %}
+      <table>
         <tr>
-          <td>{{ r.origin_airport }}</td>
-          <td>{{ r.destination_airport }}</td>
-          <td>{{ r.orders_count }}</td>
-          <td>{{ r.revenue }}</td>
+          {% for col in meta.columns %}
+            <th>{{ col.label }}</th>
+          {% endfor %}
         </tr>
-      {% endfor %}
-    </table>
 
-  {% elif report == "occupancy_flight" %}
-    <h2>Occupancy by Flight</h2>
-    <table border="1" cellpadding="8">
-      <tr>
-        <th>Flight</th><th>Route</th><th>Date</th><th>Time</th><th>Status</th>
-        <th>Sold</th><th>Total</th><th>%</th>
-      </tr>
-      {% for r in data %}
-        <tr>
-          <td>{{ r.flight_id }}</td>
-          <td>{{ r.origin_airport }} → {{ r.destination_airport }}</td>
-          <td>{{ r.departure_date }}</td>
-          <td>{{ r.departure_time }}</td>
-          <td>{{ r.flight_status }}</td>
-          <td>{{ r.sold_seats }}</td>
-          <td>{{ r.total_seats }}</td>
-          <td>{{ r.occupancy_percent }}</td>
-        </tr>
-      {% endfor %}
-    </table>
-
-  {% elif report == "cancellations" %}
-    <h2>Cancellations</h2>
-    <table border="1" cellpadding="8">
-      <tr><th>Status</th><th># Orders</th><th>Amount Sum</th></tr>
-      {% for r in data %}
-        <tr>
-          <td>{{ r.status }}</td>
-          <td>{{ r.orders_count }}</td>
-          <td>{{ r.amount_sum }}</td>
-        </tr>
-      {% endfor %}
-    </table>
-
-  {% elif report == "crew_utilization" %}
-    <h2>Crew Utilization</h2>
-    <table border="1" cellpadding="8">
-      <tr><th>Worker ID</th><th>Name</th><th># Flights Assigned</th></tr>
-      {% for r in data %}
-        <tr>
-          <td>{{ r.id }}</td>
-          <td>{{ r.full_name }}</td>
-          <td>{{ r.flights_assigned }}</td>
-        </tr>
-      {% endfor %}
-    </table>
-  {% endif %}
-
+        {% for row in data %}
+          <tr>
+            {% for col in meta.columns %}
+              <td>{{ row[col.key] }}</td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </table>
+    {% endif %}
+  </div>
 </body>
 </html>
