@@ -7,9 +7,7 @@ admin_bp = Blueprint("admin", __name__)  # <-- בלי url_prefix כאן
 # =========================
 # Availability buffers (industry-ish defaults)
 # =========================
-# מטוס: turnaround (ניקיון/תחזוקה/boarding)
 PLANE_BUFFER_MIN = 60
-# צוות: briefing / check-in / debriefing / rest
 CREW_BUFFER_MIN = 120
 
 
@@ -104,7 +102,6 @@ def _fetch_step2_lists(cursor, *, is_long: bool, new_start_dt: datetime, new_end
     crew_padded_start = new_start_dt - timedelta(minutes=CREW_BUFFER_MIN)
 
     if is_long:
-        # Pilots (long flight training)
         cursor.execute(
             """
             SELECT w.id, w.first_name, w.last_name
@@ -132,7 +129,6 @@ def _fetch_step2_lists(cursor, *, is_long: bool, new_start_dt: datetime, new_end
         )
         pilots = cursor.fetchall()
 
-        # Attendants (long flight training)
         cursor.execute(
             """
             SELECT w.id, w.first_name, w.last_name
@@ -160,7 +156,6 @@ def _fetch_step2_lists(cursor, *, is_long: bool, new_start_dt: datetime, new_end
         )
         attendants = cursor.fetchall()
     else:
-        # Pilots (short flights: no long training requirement)
         cursor.execute(
             """
             SELECT w.id, w.first_name, w.last_name
@@ -186,7 +181,6 @@ def _fetch_step2_lists(cursor, *, is_long: bool, new_start_dt: datetime, new_end
         )
         pilots = cursor.fetchall()
 
-        # Attendants
         cursor.execute(
             """
             SELECT w.id, w.first_name, w.last_name
@@ -237,11 +231,9 @@ def admin_login():
             )
             manager = cursor.fetchone()
 
-        # ✅ קודם לוודא שהמנהל קיים
         if not manager:
             return render_template("admin_login.html", error="Invalid ID or password.")
 
-        # ✅ רק עכשיו לבדוק דיסג'וינט: Manager לא יכול להיות גם AirCrew
         with db_cur() as cursor:
             cursor.execute("SELECT 1 FROM AirCrew WHERE id=%s", (manager["id"],))
             if cursor.fetchone():
@@ -276,6 +268,8 @@ def admin_flights():
     dep_date = request.args.get("departure_date", "").strip()
     status = request.args.get("status", "").strip().lower()
 
+    created = request.args.get("created", "").strip()  # ✅ success flag
+
     from main import db_cur
     query = """
         SELECT flight_id, origin_airport, destination_airport, departure_date, departure_time, status
@@ -303,7 +297,7 @@ def admin_flights():
         cursor.execute(query, tuple(params))
         flights = cursor.fetchall()
 
-    return render_template("admin_flights.html", flights=flights)
+    return render_template("admin_flights.html", flights=flights, created=created)
 
 
 @admin_bp.route("/flights/new", methods=["GET", "POST"])
@@ -331,7 +325,6 @@ def admin_add_flight():
         if not origin or not destination or not dep_date or not dep_time:
             return render_template("admin_add_flight.html", step=1, error="All fields are required.", data=None)
 
-        # duration from Airway
         with db_cur() as cursor:
             cursor.execute(
                 """
@@ -347,7 +340,7 @@ def admin_add_flight():
             return render_template("admin_add_flight.html", step=1, error="No airway exists for this route.", data=None)
 
         duration_min = airway["duration"]
-        is_long = duration_min > 360  # מעל 6 שעות
+        is_long = duration_min > 360
 
         pilots_needed = 3 if is_long else 2
         fa_needed = 6 if is_long else 3
@@ -359,7 +352,6 @@ def admin_add_flight():
                 cursor, is_long=is_long, new_start_dt=new_start_dt, new_end_dt=new_end_dt
             )
 
-        # UI expects graceful "no available..." messaging:
         data = {
             "origin": origin,
             "destination": destination,
@@ -374,8 +366,6 @@ def admin_add_flight():
             "attendants": attendants,
         }
 
-        # If not enough resources, still go to Step 2 so HTML can show "No available ..."
-        # (and disable submit nicely). This matches the UX you built.
         return render_template("admin_add_flight.html", step=2, error=None, data=data)
 
     # =========================
@@ -394,7 +384,6 @@ def admin_add_flight():
         regular_price = request.form.get("regular_price", type=float)
         business_price = request.form.get("business_price", type=float)
 
-        # duration from Airway
         with db_cur() as cursor:
             cursor.execute(
                 """
@@ -416,7 +405,6 @@ def admin_add_flight():
 
         new_start_dt, new_end_dt = _flight_window(dep_date, dep_time, duration_min)
 
-        # Rebuild Step 2 lists (availability filtered!) so rerender stays consistent
         with db_cur() as cursor:
             planes, pilots, attendants = _fetch_step2_lists(
                 cursor, is_long=is_long, new_start_dt=new_start_dt, new_end_dt=new_end_dt
@@ -434,7 +422,6 @@ def admin_add_flight():
             "planes": planes,
             "pilots": pilots,
             "attendants": attendants,
-            # keep selections for re-render
             "selected_plane_id": plane_id,
             "selected_pilot_ids": set(str(x) for x in pilot_ids),
             "selected_fa_ids": set(str(x) for x in fa_ids),
@@ -442,7 +429,6 @@ def admin_add_flight():
             "business_price": business_price,
         }
 
-        # ---- Basic validations first
         if not plane_id:
             return render_template("admin_add_flight.html", step=2, error="Plane is required.", data=data)
 
@@ -452,7 +438,6 @@ def admin_add_flight():
         if not regular_price or regular_price <= 0:
             return render_template("admin_add_flight.html", step=2, error="Regular price is required.", data=data)
 
-        # ---- Business validation
         with db_cur() as cursor:
             cursor.execute(
                 """
@@ -475,7 +460,6 @@ def admin_add_flight():
             business_price = None
             data["business_price"] = None
 
-        # ---- Crew role validation (Pilot/FA and not Manager)
         with db_cur() as cursor:
             for pid in pilot_ids:
                 cursor.execute("SELECT 1 FROM Pilot WHERE id=%s", (pid,))
@@ -510,9 +494,7 @@ def admin_add_flight():
                         data=data,
                     )
 
-        # ---- Availability re-check (race-safe)
         with db_cur() as cursor:
-            # Plane overlap
             if _overlap_exists(
                 cursor,
                 start_dt=new_start_dt,
@@ -528,7 +510,6 @@ def admin_add_flight():
                     data=data,
                 )
 
-            # Crew overlap
             for pid in pilot_ids:
                 if _overlap_exists(
                     cursor,
@@ -575,62 +556,79 @@ def admin_add_flight():
                         data=data,
                     )
 
-        # ---- Create flight + pricing + crew + seats
-        with db_cur() as cursor:
-            cursor.execute(
-                """
-                INSERT INTO Flight (plane_id, origin_airport, destination_airport,
-                                    departure_date, departure_time, status)
-                VALUES (%s, %s, %s, %s, %s, 'open')
-                """,
-                (plane_id, origin, destination, dep_date, dep_time),
-            )
-            cursor.execute("SELECT LAST_INSERT_ID() AS flight_id")
-            flight_id = cursor.fetchone()["flight_id"]
+        # ✅ Transaction-safe create
+        from main import db_cur
+        try:
+            with db_cur() as cursor:
+                conn = cursor.connection
+                conn.autocommit(False)
 
-            # Pricing
-            cursor.execute(
-                """
-                INSERT INTO FlightPricing (flight_id, class_type, price)
-                VALUES (%s, 'Regular', %s)
-                """,
-                (flight_id, regular_price),
-            )
+                cursor.execute(
+                    """
+                    INSERT INTO Flight (plane_id, origin_airport, destination_airport,
+                                        departure_date, departure_time, status)
+                    VALUES (%s, %s, %s, %s, %s, 'open')
+                    """,
+                    (plane_id, origin, destination, dep_date, dep_time),
+                )
+                cursor.execute("SELECT LAST_INSERT_ID() AS flight_id")
+                flight_id = cursor.fetchone()["flight_id"]
 
-            if has_business:
                 cursor.execute(
                     """
                     INSERT INTO FlightPricing (flight_id, class_type, price)
-                    VALUES (%s, 'Business', %s)
+                    VALUES (%s, 'Regular', %s)
                     """,
-                    (flight_id, business_price),
+                    (flight_id, regular_price),
                 )
 
-            # Crew placement
-            crew_ids = [int(x) for x in pilot_ids] + [int(x) for x in fa_ids]
-            cursor.executemany(
-                """
-                INSERT INTO FlightCrewPlacement (flight_id, id)
-                VALUES (%s, %s)
-                """,
-                [(flight_id, cid) for cid in crew_ids],
-            )
+                if has_business:
+                    cursor.execute(
+                        """
+                        INSERT INTO FlightPricing (flight_id, class_type, price)
+                        VALUES (%s, 'Business', %s)
+                        """,
+                        (flight_id, business_price),
+                    )
 
-            # FlightSeat
-            cursor.execute("SELECT seat_id FROM Seat WHERE plane_id=%s", (plane_id,))
-            seat_ids = [r["seat_id"] for r in cursor.fetchall()]
-            if seat_ids:
+                crew_ids = [int(x) for x in pilot_ids] + [int(x) for x in fa_ids]
                 cursor.executemany(
                     """
-                    INSERT INTO FlightSeat (flight_id, seat_id, status)
-                    VALUES (%s, %s, 'available')
+                    INSERT INTO FlightCrewPlacement (flight_id, id)
+                    VALUES (%s, %s)
                     """,
-                    [(flight_id, sid) for sid in seat_ids],
+                    [(flight_id, cid) for cid in crew_ids],
                 )
 
-        return redirect("/admin/flights")
+                cursor.execute("SELECT seat_id FROM Seat WHERE plane_id=%s", (plane_id,))
+                seat_ids = [r["seat_id"] for r in cursor.fetchall()]
+                if seat_ids:
+                    cursor.executemany(
+                        """
+                        INSERT INTO FlightSeat (flight_id, seat_id, status)
+                        VALUES (%s, %s, 'available')
+                        """,
+                        [(flight_id, sid) for sid in seat_ids],
+                    )
 
-    # fallback
+                conn.commit()
+        except Exception:
+            # rollback if anything failed
+            try:
+                with db_cur() as cursor:
+                    cursor.connection.rollback()
+            except Exception:
+                pass
+            return render_template(
+                "admin_add_flight.html",
+                step=2,
+                error="Failed to create flight due to an internal error. Please try again.",
+                data=data,
+            )
+
+        # ✅ success flag
+        return redirect("/admin/flights?created=1")
+
     return render_template("admin_add_flight.html", step=1, error="Invalid step.", data=None)
 
 
@@ -655,16 +653,23 @@ def admin_cancel_flight(flight_id):
     if not flight:
         return "Flight not found", 404
 
+    # ✅ Only allow cancellation for OPEN flights
+    if request.method == "GET":
+        return render_template("admin_cancel_flight.html", flight=flight, error=None)
+
+    # POST - confirm cancel
+    if str(flight.get("status", "")).lower() != "open":
+        return render_template(
+            "admin_cancel_flight.html",
+            flight=flight,
+            error="Only flights with status 'open' can be cancelled.",
+        )
+
     dep_time = flight["departure_time"]
     if isinstance(dep_time, timedelta):
         dep_time = (datetime.min + dep_time).time()
 
     dep_dt = datetime.combine(flight["departure_date"], dep_time)
-
-    if request.method == "GET":
-        return render_template("admin_cancel_flight.html", flight=flight, error=None)
-
-    # POST - confirm cancel
     now = datetime.now()
     hours_left = (dep_dt - now).total_seconds() / 3600
 
@@ -676,10 +681,7 @@ def admin_cancel_flight(flight_id):
         )
 
     with db_cur() as cursor:
-        # 1) cancel flight
         cursor.execute("UPDATE Flight SET status='cancelled' WHERE flight_id=%s", (flight_id,))
-
-        # 2) system-cancel orders (refund logic simplified: set to 0)
         cursor.execute(
             """
             UPDATE FlightOrder
@@ -690,8 +692,6 @@ def admin_cancel_flight(flight_id):
             """,
             (flight_id,),
         )
-
-        # 3) optional: release seats
         cursor.execute(
             """
             UPDATE FlightSeat

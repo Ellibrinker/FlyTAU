@@ -38,6 +38,17 @@
     .disabled-link { color: #999; pointer-events: none; cursor: not-allowed; text-decoration: none; }
 
     .empty { padding: 18px; border: 1px dashed #ccc; border-radius: 10px; }
+
+    /* ✅ NEW: success banner */
+    .success {
+      background: #e8f7f2;
+      border: 1px solid #bfe8d7;
+      color: #0b6e4f;
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-weight: 700;
+      margin: 14px 0;
+    }
   </style>
 </head>
 <body>
@@ -53,6 +64,11 @@
       <a class="pill" href="/admin/logout">Logout</a>
     </div>
   </div>
+
+  <!-- ✅ NEW: show success when redirected with ?created=1 -->
+  {% if created %}
+    <div class="success">✅ Flight created successfully.</div>
+  {% endif %}
 
   <div class="box">
     <h3 style="margin:0 0 10px;">Search</h3>
