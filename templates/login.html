@@ -30,7 +30,6 @@
 
         body {
             font-family: 'Assistant', sans-serif;
-            background-color: #a7caea;
             margin: 0;
             display: flex;
             flex-direction: column;
@@ -38,6 +37,9 @@
             align-items: center;
             min-height: 100vh;
             height: 100vh;
+            background: url('{{ url_for("static", filename="sky.jpg") }}') no-repeat;
+            background-size: cover;
+            background-position: center;
         }
 
         .wrapper{
@@ -66,6 +68,7 @@
         }
 
         .input-box input{
+            font-family: 'Assistant', sans-serif;
             width: 100%;
             height: 50px; 
             background: transparent;
@@ -115,16 +118,6 @@
             font-size: 14px;
         }
 
-        input {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-sizing: border-box;
-            font-family: 'Assistant', sans-serif;
-            font-size: 16px;
-        }
 
         input:focus {
             outline: none;
