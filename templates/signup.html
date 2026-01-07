@@ -2,109 +2,162 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>signup</title>
+    <title>Sign Up</title>
     <style>
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .top-bar .logo-link {
+            display: flex;
+            align-items: center;
+        }
+
+        .top-bar .company-logo {
+            height: 40px;
+            cursor: pointer;
+        }
+
         body {
             font-family: 'Assistant', sans-serif;
-            background-color: #f4f7f6;
+            margin: 0;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            min-height: 100vh;
             height: 100vh;
-            margin: 0;
+            background: url('{{ url_for("static", filename="sky.jpg") }}') no-repeat;
+            background-size: cover;
+            background-position: center;
         }
 
-        h1 {
-            color: #333;
-            margin-bottom: 20px;
-            font-size: 36px;
+        .wrapper {
+            width: 520px;
+            background: transparent;
+            border: 2px solid rgba(37, 34, 99, 0.2);
+            backdrop-filter: blur(10px);
+            color: #9b3b3b;
+            border-radius: 12px;
+            padding: 30px 40px;
+            margin-top: 80px;
+        }
+
+        .wrapper h1 {
+            color: #252264;
+            margin-bottom: 30px;
+            text-align: center;
             font-weight: 700;
         }
 
-        .register-container {
-            background: white;
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            width: 380px;
-        }
-
-        .input-group {
-            margin-bottom: 15px;
-            text-align: left;
-        }
-
-        label {
-            display: block;
-            font-weight: 700;
-            color: #555;
-            margin-bottom: 5px;
-            font-size: 14px;
-        }
-
-        input {
+        .input-box {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-sizing: border-box;
+            max-width: 320px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            margin: 15px auto;
+        }
+
+        .input-box input {
+            width: 100%;
+            height: 50px;
+            background: transparent;
+            outline: none;
+            border: 2px solid rgba(37, 34, 99, 0.2);
+            border-radius: 40px;
+            font-size: 16px;
+            color: #252264;
+            padding: 0 20px;
             font-family: 'Assistant', sans-serif;
-            font-size: 15px;
+        }
+
+        .input-box input::placeholder {
+            color: #252264;
+        }
+
+        .input-box i {
+            position: relative;
+            right: 30px;
+            transform: translate(-50%);
+            font-size: 20px;
+            color: #252264;
         }
 
         input:focus {
             outline: none;
-            border-color: #008B8B;
+            border-color: #252264;
             box-shadow: 0 0 5px rgba(0, 139, 139, 0.2);
+        }
+
+        button {
+            background-color: rgb(37, 34, 99);
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #130f42;
+            transform: translateY(-2px);
+        }
+
+        .link {
+            text-align: center;
+            color: #252264;
+            margin: 20px 0 15px;
+        }
+
+        .link a {
+            color: #252264;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .link a:hover {
+            text-decoration: underline;
         }
 
         .phone-input {
             margin-bottom: 8px;
         }
 
-        button {
-            background-color: #008B8B;
-            color: white;
-            border: none;
-            width: 100%;
-            padding: 14px;
-            font-weight: 700;
-            border-radius: 50px;
-            cursor: pointer;
-            margin-top: 15px;
-            transition: 0.3s ease;
-        }
-
-        button:hover {
-            background-color: #006666;
-            transform: translateY(-2px);
-        }
-
         .add-phone-btn {
-            background-color: #6c757d;
-            margin-top: 8px;
-            padding: 10px;
-            border-radius: 10px;
-        }
+        background-color: rgba(37, 34, 99, 0.2);
+        color: #252264;
+        padding: 0 20px;      
+        height: 50px;           
+        border-radius: 40px;   
+        border: none;
+        cursor: pointer;
+        width: 60%;
+        margin: 100px;          
+        margin-top: 15px;   
+        margin-bottom: 15px;   
+        font-size: 16px;
+        font-weight: 600;
+        display: block;     
+    }
+        
         .add-phone-btn:hover {
-            background-color: #5a6268;
-        }
-
-        .footer-links {
-            margin-top: 20px;
-            text-align: center;
-            font-size: 14px;
-        }
-
-        .footer-links a {
-            color: #008B8B;
-            text-decoration: none;
-            font-weight: 700;
-        }
-
-        .footer-links a:hover {
-            text-decoration: underline;
+            background-color: rgba(37, 34, 99, 0.3);
         }
 
         .error-box {
@@ -116,74 +169,77 @@
             margin-bottom: 15px;
             font-weight: 700;
             font-size: 14px;
+            text-align: center;
         }
+
     </style>
+    <link href='https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css' rel='stylesheet'>
 </head>
 <body>
-    <h1>Sign Up</h1>
+    <header class="top-bar">
+        <a href="/" class="logo-link">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Company Logo" class="company-logo">
+        </a>
+    </header>
 
-    <div class="register-container">
+    <div class="wrapper">
         {% if error %}
             <div class="error-box">{{ error }}</div>
         {% endif %}
 
+        <h1>Sign Up</h1>
+
         <form action="/signup" method="POST">
-
-            <div class="input-group">
-                <label for="name">Full Name</label>
-                <input type="text" id="name" name="name" placeholder="Enter your full name" required>
+            <div class="input-box">
+                <input type="text" name="name" placeholder="Full Name" required>
+                <i class='bx bx-user'></i>
             </div>
 
-            <div class="input-group">
-                <label for="email">Email Address</label>
-                <input type="email" id="email" name="email" placeholder="name@example.com" required>
+            <div class="input-box">
+                <input type="email" name="email" placeholder="Email Address" required>
+                <i class='bx bx-envelope'></i>
             </div>
 
-            <div class="input-group">
-                <label for="passport_number">Passport Number</label>
-                <input type="text" id="passport_number" name="passport_number" placeholder="Passport number" required>
+            <div class="input-box">
+                <input type="text" name="passport_number" placeholder="Passport Number" required>
+                <i class='bx bx-user-id-card'></i>
             </div>
 
-            <div class="input-group">
-                <label for="date_of_birth">Date of Birth</label>
-                <input type="date" id="date_of_birth" name="date_of_birth" required>
+            <div class="input-box">
+                <input type="date" name="date_of_birth" required>
+                <i class='bx bx-calendar'></i>
             </div>
 
-            <div class="input-group">
-                <label>Phone Numbers</label>
-
-                <div id="phones">
-                    <input class="phone-input" type="tel" name="phone" placeholder="Phone number (Required)" required>
-                </div>
-
-                <button class="add-phone-btn" type="button" onclick="addPhone()">+ Add another phone</button>
+            <div class="input-box" id="phones">
+                <input class="phone-input" type="tel" name="phone" placeholder="Phone number (Required)" required>
+                <i class='bx bx-phone'></i>
             </div>
 
-            <div class="input-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" placeholder="Create a strong password" required>
+            <button type="button" class="add-phone-btn" onclick="addPhone()">+ Add another phone</button>
+
+            <div class="input-box">
+                <input type="password" name="password" placeholder="Password" required>
+                <i class='bx bx-lock'></i>
             </div>
 
             <button type="submit">Create Account</button>
         </form>
 
-        <div class="footer-links">
+        <div class="link">
             Already have an account? <a href="/login">Login here</a>
             <br><br>
-            <a href="/" style="color: #666; font-weight: 400;">Back to home</a>
+            <a href="/" style="font-weight: 500;">Back to home</a>
         </div>
     </div>
 
     <script>
         function addPhone() {
             const container = document.getElementById("phones");
-
             const input = document.createElement("input");
             input.type = "tel";
             input.name = "phone"; // חשוב כדי ש-request.form.getlist('phone') יעבוד
             input.placeholder = "Phone number (Optional)";
             input.className = "phone-input";
-
             container.appendChild(input);
         }
     </script>
