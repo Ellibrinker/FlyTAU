@@ -1,5 +1,4 @@
 .top-bar {
-    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
@@ -18,7 +17,7 @@
 }
 
 .top-bar .company-logo {
-    height: 40px;
+    height: 60px;
     cursor: pointer;
 }
 
@@ -26,7 +25,7 @@ body {
     font-family: 'Assistant', sans-serif;
     margin: 0;
     min-height: 100vh;
-    background: url('{{ url_for("static", filename="sky.jpg") }}') no-repeat;
+    background: url("/static/sky.jpg") no-repeat;
     background-size: cover;
     background-position: center;
 }
