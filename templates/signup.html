@@ -94,12 +94,13 @@
             color: #252264;
         }
 
-        input:focus {
-            outline: none;
-            border-color: #252264;
-            box-shadow: 0 0 5px rgba(0, 139, 139, 0.2);
+        .input-box input:hover,
+        .input-box input:focus {
+            border-color: #252264; /* כחול אתר */
+            box-shadow: 0 0 5px rgba(37, 34, 100, 0.4);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
         }
-
+        
         button {
             background-color: rgb(37, 34, 99);
             color: white;
