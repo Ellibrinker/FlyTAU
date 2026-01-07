@@ -2,27 +2,110 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>login</title>
-  <style>
+    <title>Login</title>
+    <style>
+        .top-bar {
+            position: fixed;       
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;          
+            background-color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+            z-index: 1000;         
+        }
+
+        .top-bar .logo-link {
+            display: flex;
+            align-items: center;
+        }
+
+        .top-bar .company-logo {
+            height: 40px;           
+            cursor: pointer;
+        }
+
         body {
             font-family: 'Assistant', sans-serif;
-            background-color: #f4f7f6;
+            background-color: #a7caea;
             margin: 0;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            min-height: 100vh;
             height: 100vh;
         }
-        h1 {
-            color: #333;
+
+        .wrapper{
+            width: 520px;
+            background: transparent;
+            border: 2px solid rgba(37, 34, 99, 0.2);
+            backdrop-filter: blur(10px);
+            color: #9b3b3b;
+            border-radius: 12px;
+            padding: 30px 40px;
+        }
+
+        .wrapper h1 {
+            color: #252264;
             margin-bottom: 30px;
+            text-align: center;
             font-weight: 700;
         }
-        .input-group {
-            margin-bottom: 20px;
-            text-align: left;
+        .wrapper .input-box {
+            width: 100%;
+            max-width: 320px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            margin: 15px auto; 
         }
+
+        .input-box input{
+            width: 100%;
+            height: 50px; 
+            background: transparent;
+            outline: none;
+            border: 2px solid rgba(37, 34, 99, 0.2); 
+            border-radius: 40px;
+            font-size: 16px;
+            color: #252264; 
+            padding: 0 20px 0 20px;
+        }
+
+        .input-box input::placeholder{
+            color: #252264;
+        }
+
+        .input-box i{
+            position: relative;
+            right: 30px;
+            transform: translate(-50%);
+            font-size: 20px;
+            color: #252264;
+        }
+        
+        .link {
+            text-align: center;
+            color: #252264;
+            margin: 20px 0 15px;
+        }
+
+        .link a{
+            color: #252264;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .link a:hover{
+            text-decoration: underline;
+        }
+
+
         label {
             display: block;
             text-align: left;
@@ -45,12 +128,12 @@
 
         input:focus {
             outline: none;
-            border-color: #008B8B;
+            border-color: #252264;
             box-shadow: 0 0 5px rgba(0, 139, 139, 0.2);
         }
 
         button {
-            background-color: #008B8B;
+            background-color: rgb(37, 34, 99);
             color: white;
             border: none;
             width: 100%;
@@ -64,7 +147,7 @@
         }
 
         button:hover {
-            background-color: #006666;
+            background-color: #130f42;
             transform: translateY(-2px);
         }
 
@@ -81,21 +164,38 @@
         }
 
     </style>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link href='https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css' rel='stylesheet'>
 </head>
 <body>
-{% if error %}
-  <p style="color:red; font-weight:700;">{{ error }}</p>
-{% endif %}
+    <header class="top-bar">
+        <a href="/" class="logo-link">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Company Logo" class="company-logo">
+        </a>
+    </header>
+    <div class="wrapper">
+        {% if error %}
+        <p style="color:rgb(157, 0, 0); font-weight:700;">{{ error }}</p>
+        {% endif %}
 
-  <h1>Welcome Back, Please Login</h1>
-<form action="/login" method="POST">
-            <input type="email" name="email" placeholder="Email Address" required>
-            <input type="password" name="password" placeholder="Password" required>
-
-            <button type="submit">Login</button>
-        </form>
-<div class="footer-links">
-            <a href="/" style="color: #666; font-weight: 400;">Back to home</a>
+        <h1>Welcome Back, Please Login</h1>
+            <form action="/login" method="POST">
+                <div class="input-box">
+                    <input type="email" name="email" placeholder="Email Address" required>
+                    <i class='bxr  bx-user'></i> 
+                </div>
+                <div class="input-box">
+                    <input type="password" name="password" placeholder="Password" required>
+                    <i class='bxr  bx-lock'></i>
+                </div>
+                    <button type="submit">Login</button> 
+            </form>
+        <div class="link">
+            <p>Don't have an account? <a href="/signup"> Sign Up</a></p>
         </div>
+        <div class="link">
+            <a href="/" style="font-weight: 400;">Back to home</a>
+        </div>
+    </div>
 </body>
 </html>
