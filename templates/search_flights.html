@@ -4,20 +4,18 @@
     <meta charset="UTF-8">
     <title>Flight Booking</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link href='https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css' rel='stylesheet'>
 </head>
 <body>
-    <!-- Header עם לוגו ושם החברה -->
-    <header class="company-header">
-        <div class="company-logo-container">
+
+    <header class="top-bar">
+        <a href="/" class="logo-link">
             <img src="{{ url_for('static', filename='logo.png') }}" alt="Company Logo" class="company-logo">
-            <span class="company-name">Fly TAU</span>
-        </div>
+        </a>
     </header>
 
-    <!-- רווח מעל הדף אחרי ה-Header -->
     <div class="content-container">
 
-        <!-- הודעות שגיאה -->
         {% if errors %}
         <div class="errors">
             <ul>
@@ -30,86 +28,67 @@
 
         <!-- טופס חיפוש טיסות -->
         <form action="/search_flights" method="GET" class="search-form">
-            <div class="input-container">
-                <img src="{{ url_for('static', filename='takeoff.png') }}" alt="Origin" class="icon">
+            <div class="input-box">
                 <input type="text" name="origin" placeholder="Input Origin" value="{{ request.args.get('origin', '') }}">
+                <i class='bxr  bx-plane-take-off'></i> 
             </div>
 
-            <div class="input-container">
-                <img src="{{ url_for('static', filename='landing.png') }}" alt="Destination" class="icon">
+            <div class="input-box">
                 <input type="text" name="destination" placeholder="Input Destination" value="{{ request.args.get('destination', '') }}">
+                <i class='bxr  bx-plane-land'></i> 
             </div>
 
-            <input type="date" name="departure_date" value="{{ departure_date or '' }}" required>
+            <div class="input-box">
+                <input type="date" name="departure_date" value="{{ departure_date or '' }}" required>
+            </div>
+
             <button type="submit">Search Flights</button>
         </form>
 
-        <!-- כותרת לטבלה -->
+        <!-- טבלת טיסות -->
         {% if flights %}
         <div class="table-header-box">
             <h1>Available Flights</h1>
         </div>
 
-        <!-- טבלת טיסות -->
-<table>
-  <thead>
-    <tr>
-      <th>Flight Number</th>
-      <th>Origin</th>
-      <th>Destination</th>
-      <th>Departure Date</th>
-      <th>Time</th>
-      <th>Regular Price</th>
-      <th>Business Price</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
+        <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Flight Number</th>
+              <th>Origin</th>
+              <th>Destination</th>
+              <th>Departure Date</th>
+              <th>Time</th>
+              <th>Regular Price</th>
+              <th>Business Price</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
 
-  <tbody>
-    {% for flight in flights %}
-      <tr>
-        <td>{{ flight.flight_id }}</td>
-        <td>{{ flight.origin_airport }}</td>
-        <td>{{ flight.destination_airport }}</td>
-        <td>{{ flight.departure_date }}</td>
-        <td>{{ flight.departure_time }}</td>
+          <tbody>
+            {% for flight in flights %}
+              <tr>
+                <td>{{ flight.flight_id }}</td>
+                <td>{{ flight.origin_airport }}</td>
+                <td>{{ flight.destination_airport }}</td>
+                <td>{{ flight.departure_date }}</td>
+                <td>{{ flight.departure_time }}</td>
+                <td>{% if flight.regular_price %}₪{{ "%.2f"|format(flight.regular_price) }}{% else %}—{% endif %}</td>
+                <td>{% if flight.business_price %}₪{{ "%.2f"|format(flight.business_price) }}{% else %}—{% endif %}</td>
+                <td>
+                  <a href="/select_seats?flight_id={{ flight.flight_id }}">
+                    <button type="button">Book Now</button>
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+        {% endif %}
 
-        <!-- Regular price -->
-        <td>
-          {% if flight.regular_price %}
-            ₪{{ "%.2f"|format(flight.regular_price) }}
-          {% else %}
-            —
-          {% endif %}
-        </td>
-
-        <!-- Business price -->
-        <td>
-          {% if flight.business_price %}
-            ₪{{ "%.2f"|format(flight.business_price) }}
-          {% else %}
-            —
-          {% endif %}
-        </td>
-
-        <!-- Actions -->
-        <td>
-          <a href="/select_seats?flight_id={{ flight.flight_id }}">
-            <button type="button">Book Now</button>
-          </a>
-        </td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-
-
-{% endif %}
-
-
-
-    </div> <!-- סיום content-container -->
+    </div>
 
 </body>
 </html>
