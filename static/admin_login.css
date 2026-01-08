@@ -1,0 +1,159 @@
+.top-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background-color: white;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    z-index: 1000;
+}
+
+.top-bar .logo-link {
+    display: flex;
+    align-items: center;
+}
+
+.top-bar .company-logo {
+    height: 60px;
+    cursor: pointer;
+}
+
+body {
+    font-family: 'Assistant', sans-serif;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: url("/static/sky.jpg") no-repeat;
+    background-size: cover;
+    background-position: center;
+}
+
+.wrapper{
+    width: 480px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(37, 34, 99, 0.2);
+    backdrop-filter: blur(10px);
+    color: #252264;
+    border-radius: 12px;
+    padding: 30px 40px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    margin-top: 0px;
+}
+
+.wrapper h1 {
+    color: #252264;
+    margin-bottom: 10px;
+    text-align: center;
+    font-weight: 700;
+}
+
+.pill {
+    display: inline-block;
+    padding: 4px 12px;
+    width: 23%;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.3);
+    border: 1px solid rgba(37, 34, 99, 0.2);
+    font-size: 13px;
+    margin: 0 auto 20px auto;  /* מרכז אופקית ומוסיף מרווח למטה */
+    text-align: center;         /* וודא שהטקסט במרכז */
+    color: #252264;
+    display: block;             /* כדי שהmargin auto יעבוד */
+}
+
+.muted {
+    color: #252264;
+    font-size: 14px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.input-box {
+    width: 100%;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    margin: 12px 0;
+    position: relative; /* חשוב לאייקון */
+}
+
+.input-box input {
+    width: 100%;
+    height: 50px;
+    background: transparent;
+    outline: none;
+    border: 2px solid rgba(37, 34, 99, 0.2);
+    border-radius: 40px;
+    font-size: 16px;
+    color: #252264;
+    padding: 0 45px 0 20px; /* מוסיף מקום לאייקון מימין */
+}
+
+.input-box i {
+    position: absolute;
+    right: 20px;          /* מרחק מהקצה הימני */
+    font-size: 20px;
+    color: #252264;
+    pointer-events: none;  /* מונע מהאייקון להפריע לקליק בשדה */
+}
+
+
+.input-box input::placeholder{
+    color: #252264;
+}
+
+.input-box input:hover,
+.input-box input:focus {
+    border-color: #252264;
+    box-shadow: 0 0 5px rgba(37, 34, 100, 0.4);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+button {
+    background-color: rgb(37, 34, 99);
+    color: white;
+    border: none;
+    width: 100%;
+    padding: 12px;
+    font-size: 18px;
+    font-weight: 700;
+    border-radius: 50px;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: all 0.3s ease;
+}
+
+button:hover {
+    background-color: #130f42;
+    transform: translateY(-2px);
+}
+
+.error {
+    color: #b00020;
+    font-weight: 700;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.footer {
+    margin-top: 16px;
+    font-size: 16px;
+    text-align: center;
+}
+
+.footer a {
+    color: #252264;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.footer a:hover {
+    text-decoration: underline;
+}
