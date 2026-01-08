@@ -1,0 +1,266 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: 'Assistant', sans-serif;
+    color: #252264;
+}
+
+header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 64px;
+    background: rgba(255,255,255,0.95);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    z-index: 1000;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* רווח בין הלוגו לפסקה */
+}
+
+.welcome-text {
+font-family: 'Playfair Display', serif;
+font-size: 18px;
+font-weight: 400;
+color: #252264;
+margin: 0;
+opacity: 0.8; /* קצת שקוף למראה עדין */
+}
+
+.welcome-text {
+transform: translateY(-10px);
+opacity: 0;
+animation: fadeSlideIn 0.8s forwards 0.3s;
+}
+@keyframes fadeSlideIn {
+to {
+    transform: translateY(0);
+    opacity: 1;
+}
+}
+
+.logo img {
+    height: 62px; 
+    object-fit: cover;
+    margin: 45px;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    font-size: 15px;
+}
+
+.header-actions a {
+    text-decoration: none;
+    color: #252264;
+    font-weight: 600;
+}
+
+.header-actions a:hover {
+    text-decoration: underline;
+}
+
+
+.header-actions .logout,
+.header-actions .admin-btn {
+width: 100%;
+max-width: 120px;     
+height: 40px;          
+border-radius: 40px; 
+border: 2px solid rgba(37, 34, 99, 0.2); 
+color: #252264; 
+font-weight: 600;
+font-family: 'Assistant', sans-serif;
+font-size: 16px;
+display: flex;
+justify-content: center;
+align-items: center;
+cursor: pointer;
+text-decoration: none;
+transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+
+.header-actions .logout:hover,
+.header-actions .admin-btn:hover {
+border-color: #252264; 
+box-shadow: 0 0 5px rgba(37, 34, 100, 0.4);
+background: rgba(37, 34, 99, 0.05);
+}
+
+.main {
+    position: relative;
+    height: 100vh;
+    padding-top: 64px;
+    display: flex;
+    align-items: flex-start;
+    background: url("/static/sky.jpg") no-repeat center / cover;
+    overflow: hidden;
+}
+
+.main::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 62%;
+    background: url("/static/city.avif") no-repeat center;
+    background-size: cover;
+    opacity: 0.90;
+    z-index: 1;
+}
+
+.main::before {
+    top: 0;
+}
+
+.main-content {
+    width: 100%;
+    display: grid;
+    padding: 0 8%;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    margin-top: 40px;
+}
+
+.main-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: 0.5px;
+    max-width: 420px;
+}
+
+
+.main-cta {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 10px;
+}
+
+.main-cta button {
+    background: #252264;
+    color: #fff;
+    border: none;
+    padding: 16px 34px;
+    font-size: 18px;
+    font-weight: 700;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: 0.3s ease;
+    margin: 0px;
+}
+
+.main-cta button:hover {
+    background: #130f42;
+    transform: translateY(-2px);
+}
+
+
+.featured-destinations {
+    position: absolute;
+    bottom: 5px;
+    width: 100%;          /* רוחב קונטיינר */
+    align-items: center;
+    margin: 0 auto; 
+    z-index: 2;
+    text-align: center;
+    padding: 60px 20px;
+    
+    margin: 20px auto 35px auto; /* 60px כדי להשאיר מקום ללוגואים */
+}
+
+.featured-destinations h2 {
+    position: relative;
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    margin-bottom: 15px;
+}
+
+.destinations-grid {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+}
+
+.destination-card {
+    width: 160px;
+    height: auto; 
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    transition: transform 0.3s;
+    background: #f4f7f6;
+    height: 150px;
+}
+
+.destination-card:hover {
+    transform: translateY(-3px);
+}
+
+.destination-card img {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+}
+
+.destination-card h3 {
+font-size: 16px;
+margin: 0 0 2px 0;
+}
+
+.destination-card p {
+font-size: 13px;
+opacity: 0.7;
+margin: 0 0 2px 0;
+}
+
+.trust-logos-wrapper {
+    position: absolute;
+    bottom: 20px; /* מיקום מתחת לתמונה של העיר */
+    width: 100%;
+    text-align: center;
+    z-index: 2; /* מעל רקע העיר */
+}
+
+.trust-title {
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    opacity: 0.6;
+    margin-bottom: 10px;
+}
+
+.trust-logos {
+    display: flex;
+    justify-content: center;
+    gap: 26px;
+    align-items: center;
+}
+
+.trust-logos i {
+    font-size: 34px;
+    color: #252264;
+    opacity: 0.6;
+    transition: 0.3s ease;
+}
+
+.trust-logos i:hover {
+    opacity: 1;
+    transform: translateY(-2px);
+}
