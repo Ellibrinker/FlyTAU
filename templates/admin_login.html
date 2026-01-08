@@ -1,116 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Admin Login</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 24px;
-      background: #fafafa;
-    }
-
-    h1 { margin-bottom: 6px; }
-
-    a { color: #008B8B; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    .box {
-      max-width: 420px;
-      border: 1px solid #ddd;
-      padding: 20px;
-      border-radius: 12px;
-      background: #fff;
-      margin-top: 20px;
-    }
-
-    .error {
-      color: #b00020;
-      font-weight: 700;
-      margin-bottom: 12px;
-    }
-
-    .muted {
-      color: #666;
-      font-size: 14px;
-      margin-bottom: 14px;
-    }
-
-    .row {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    input {
-      padding: 12px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 15px;
-    }
-
-    button {
-      cursor: pointer;
-      border: none;
-      background: #008B8B;
-      color: #fff;
-      font-weight: 700;
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 15px;
-    }
-
-    button:hover { opacity: 0.92; }
-
-    .footer {
-      margin-top: 14px;
-      font-size: 14px;
-    }
-
-    .pill {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: #f4f7f6;
-      border: 1px solid #ddd;
-      font-size: 13px;
-      margin-bottom: 10px;
-    }
-  </style>
+  <link rel="stylesheet" href="/static/admin_login.css">
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href='https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css' rel='stylesheet'>
 </head>
 
 <body>
-  <h1>Admin Login</h1>
-  <span class="pill">Managers only</span>
+  <header class="top-bar">
+    <a href="/" class="logo-link">
+      <img src="/static/logo.png" alt="Company Logo" class="company-logo">
+    </a>
+  </header>
 
-  <div class="box">
+  <div class="wrapper">
+    <h1>Admin Login</h1>
+    <span class="pill">Managers only</span>
+
     {% if error %}
       <div class="error">{{ error }}</div>
     {% endif %}
 
     <p class="muted">
-      Please sign in using your manager ID and password.
+      Please sign in using your manager ID and password
     </p>
 
     <form method="POST" action="/admin/login">
-      <div class="row">
-        <input
-          type="number"
-          name="tz"
-          placeholder="Manager ID"
-          required
-        />
+    <div class="input-box">
+        <input type="number" name="tz" placeholder="Manager ID" required>
+        <i class='bx bx-user'></i>
+    </div>
 
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          required
-        />
+    <div class="input-box">
+        <input type="password" name="password" placeholder="Password" required>
+        <i class='bx bx-lock'></i>
+    </div>
 
-        <button type="submit">Login</button>
-      </div>
+    <button type="submit">Login</button>
     </form>
+
 
     <div class="footer">
       <a href="/">← Back to home</a>
