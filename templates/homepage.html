@@ -1,118 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Welcome To FLYTAU</title>
-    <style>
-        body {
-            font-family: 'Assistant', sans-serif;
-            background-color: #f4f7f6;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            text-align: center;
-        }
-        h1 {
-            font-size: 40px;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        h2 {
-            font-size: 25px;
-            font-weight: normal;
-            color: #555;
-            margin-bottom: 30px; /* קצת פחות רווח כדי לפנות מקום לכפתורים */
-        }
-        button {
-            background-color: #008B8B;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 18px;
-            font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-            margin: 10px;
-            transition: 0.3s;
-        }
-
-        button:hover {
-            background-color: #00CED1;
-            transform: scale(1.05);
-        }
-
-        /* כפתור משני (אפור) */
-        .secondary-btn {
-            background-color: #6c757d;
-        }
-        .secondary-btn:hover {
-            background-color: #5a6268;
-        }
-    </style>
-</head>
 <body>
-    {% if user_name %}
-        <!-- משתמש מחובר -->
-        <h2 style="margin-top: 0;">
-            Hi {{ user_name }} 👋
-        </h2>
-
-        <h1>Welcome to FLYTAU</h1>
-
-        <a href="/search_flights">
-            <button>Search & Book Flights</button>
+    <title>FlyTAU</title>
+    <link rel="stylesheet" href="/static/homepage.css">
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+<header>
+    <div class="logo">
+        <a href="/" class="logo-link">
+            <img src="/static/logo.png" alt="FLYTAU">
         </a>
+        <p class="welcome-text">Welcome to FlyTAU</p>
+    </div>    
 
-        <a href="/my_orders">
-            <button class="secondary-btn">My Orders</button>
-        </a>
-
-        <br><br>
-
-        <a href="/logout">
-            <button>Log Out</button>
-        </a>
-
-    {% else %}
-        <!-- אורח -->
-        <h1>Welcome to FLYTAU</h1>
-
-        <a href="/login">
-            <button>Login</button>
-        </a>
-
-        <a href="/signup">
-            <button>Sign Up</button>
-        </a>
-
-        <br><br>
-
-        <p style="color: #666; font-size: 18px;">
-            or continue as a guest
-        </p>
-
-        <a href="/search_flights">
-            <button>Search & Book Flights</button>
-        </a>
-
-        <a href="/order_lookup">
-            <button class="secondary-btn">Find My Order</button>
-        </a>
-    {% endif %}
-
-{% if not user_name and not session.get("is_manager") %}
-    <!-- Admin access (only for guests) -->
-    <div style="margin-top: 80px;">
-        <a href="/admin/login">
-            <button class="secondary-btn">
-                Admin Login
-            </button>
-        </a>
+    <div class="header-actions">
+        {% if user_name %}
+            <span>Hi {{ user_name }} 👋</span>
+            <a href="/logout" class="logout">Logout</a>
+        {% else %}
+            <a href="/login">Login</a>
+            <a href="/signup">Sign up</a>
+            <p>or continue as guest</p>
+            <a href="/order_lookup">Find my order</a>
+        {% endif %}
+        {% if not session.get("is_manager") %}
+            <a href="/admin/login" class="admin-btn">Admin Login</a>
+        {% endif %}
     </div>
-{% endif %}
+</header>
+
+<section class="main">
+    <div class="main-content">
+        <div class="main-text">
+            Book your next flight<br>
+            with confidence ✈️
+
+            <div class="main-cta">
+                <a href="/search_flights">
+                    <button>Search & Book Flights</button>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="trust-logos-wrapper">
+        <p class="trust-title">Trusted payment & partners</p>
+        <div class="trust-logos">
+            <i class='bx bxl-visa'></i>
+            <i class='bx bxl-mastercard'></i>
+            <i class='bx bxl-paypal'></i>
+            <i class='bx bxl-apple'></i>
+            <i class='bx bxl-google'></i>
+        </div>
+    </div>
+</section>
+
+<section class="featured-destinations">
+    <h2>Popular Destinations</h2>
+    <div class="destinations-grid">
+        <div class="destination-card">
+            <img src="/static/paris.avif" alt="Paris">
+            <h3>Paris</h3>
+            <p>Flights from $199</p>
+        </div>
+        <div class="destination-card">
+            <img src="/static/newyork.jpg" alt="New York">
+            <h3>New York</h3>
+            <p>Flights from $249</p>
+        </div>
+    </div>
+</section>
 
 </body>
 </html>
