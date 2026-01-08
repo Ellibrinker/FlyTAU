@@ -1,0 +1,118 @@
+body {
+    font-family: 'Assistant', sans-serif;
+    margin: 0;
+    min-height: 100vh;
+    background: url("/static/sky.jpg") no-repeat;
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    }
+
+.top-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background-color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    z-index: 1000;
+}
+
+.top-bar .logo-link img {
+    height: 50px;
+    cursor: pointer;
+}
+
+.wrapper {
+    width: 480px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(37, 34, 99, 0.2);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 40px 30px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    color: #252264;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* לוגואים/אייקונים מעל הכותרת */
+.logo-row {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.logo-row i {
+    font-size: 36px;
+    color: #252264;
+    transition: transform 0.3s, color 0.3s;
+}
+
+.logo-row i:hover {
+    transform: scale(1.2);
+    color: #130f42;
+}
+
+h2 {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+h1 {
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 30px;
+}
+
+/* כפתורים בעיצוב header-actions */
+.header-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    font-size: 15px;
+    width: 100%;
+}
+
+.header-actions a {
+    text-decoration: none;
+    color: #252264;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    max-width: 260px;
+    height: 50px;
+    border-radius: 40px;
+    border: 2px solid rgba(37, 34, 99, 0.2);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+    flex-direction: row-reverse;
+    padding-right: 20px;
+    padding-left: 25px;
+}
+
+.header-actions a:hover {
+    border-color: #252264;
+    box-shadow: 0 0 5px rgba(37, 34, 100, 0.4);
+    background: rgba(37, 34, 99, 0.05);
+}
+
+/* אייקונים בתוך הכפתורים */
+.header-actions i {
+    font-size: 20px;
+    flex-shrink: 0;
+}
