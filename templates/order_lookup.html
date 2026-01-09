@@ -1,42 +1,74 @@
 <!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><title>Find My Order</title></head>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Find My Order | FlyTAU</title>
+   <link rel="stylesheet" href="/static/order_lookup.css">
+  <link href='https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css' rel='stylesheet'>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
 <body>
-  <h1>Find Your Active Tickets</h1>
 
-  {% if error %}
-    <p style="color:red; font-weight:700;">{{ error }}</p>
-  {% endif %}
+  <!-- Top Bar -->
+  <header class="top-bar">
+    <a href="/" class="logo-link">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Company Logo" class="company-logo">
+    </a>
+  </header>
 
-  <form method="POST" action="/order_lookup">
-    <input name="email" type="email" placeholder="Email" required>
-    <input name="order_id" type="number" placeholder="Order Code" required>
-    <button type="submit">Find Order</button>
-  </form>
+  <div class="wrapper">
 
-  {% if order %}
-    <hr>
-    <h2>Order #{{ order.order_id }}</h2>
-    <p>{{ order.origin_airport }} → {{ order.destination_airport }} | {{ order.departure_date }} {{ order.departure_time }}</p>
-    <p>Status: {{ order.status }} | Total: {{ order.total_payment }}</p>
+    <h1>Find Your Active Tickets</h1>
 
-    <h3>Seats:</h3>
-    <ul>
-      {% for s in seats %}
-        <li>Row {{ s.row_num }}, Col {{ s.column_number }} ({{ s.class_type }})</li>
-      {% endfor %}
-    </ul>
-
-    {% set hours_left = (order.departure_dt - now).total_seconds() / 3600 %}
-    {% if order.status == 'paid' and hours_left >= 36 %}
-      <form method="POST" action="/cancel_order">
-        <input type="hidden" name="order_id" value="{{ order.order_id }}">
-        <input type="hidden" name="email" value="{{ order.email }}">
-        <button type="submit">Cancel Order (5% fee)</button>
-      </form>
+    {% if error %}
+      <div class="error-box">{{ error }}</div>
     {% endif %}
-  {% endif %}
 
-  <p><a href="/">Back</a></p>
+    <form method="POST" action="/order_lookup">
+      <div class="input-box">
+        <input name="email" type="email" placeholder="Email" required>
+        <i class='bx bx-envelope'></i>
+      </div>
+      <div class="input-box">
+        <input name="order_id" type="number" placeholder="Order Code" required>
+        <i class='bxr  bx-hashtag'></i>
+      </div>
+      <button type="submit">Find Order</button>
+    </form>
+
+    {% if order %}
+      <div class="order-info">
+        <hr>
+        <p><strong>Order #{{ order.order_id }}</strong></p>
+        <p>{{ order.origin_airport }} → {{ order.destination_airport }} | {{ order.departure_date }} {{ order.departure_time }}</p>
+        <p>Status: {{ order.status }} | Total: {{ order.total_payment }}</p>
+
+        <h3>Seats:</h3>
+        <ul>
+          {% for s in seats %}
+            <li>Row {{ s.row_num }}, Col {{ s.column_number }} ({{ s.class_type }})</li>
+          {% endfor %}
+        </ul>
+
+        {% set hours_left = (order.departure_dt - now).total_seconds() / 3600 %}
+        {% if order.status == 'paid' and hours_left >= 36 %}
+          <form method="POST" action="/cancel_order">
+            <input type="hidden" name="order_id" value="{{ order.order_id }}">
+            <input type="hidden" name="email" value="{{ order.email }}">
+            <button type="submit" class="cancel-btn">
+              Cancel Order (5% fee)
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <div class="link">
+      <a href="/" class="back-home">
+        <i class='bx bx-arrow-left'></i> Back to home
+      </a>
+    </div>
+
+  </div>
 </body>
 </html>
