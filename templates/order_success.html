@@ -1,14 +1,32 @@
 <!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><title>Order Success</title></head>
-<body style="font-family:Assistant,sans-serif; background:#f4f7f6; padding:30px;">
-  <div style="max-width:700px; margin:0 auto; background:white; padding:20px; border-radius:12px;">
-    <h1>Booking Confirmed ✅</h1>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Order Success | FlyTAU</title>
+   <link rel="stylesheet" href="/static/order_success.css">
+  <link href='https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css' rel='stylesheet'>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="top-bar">
+    <a href="/" class="logo-link">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Company Logo" class="company-logo">
+    </a>
+  </header>
+
+  <div class="wrapper">
+    <h1 class="success-title">
+      Booking Confirmed
+      <i class='bx bx-check-circle'></i>
+    </h1>
+
     {% if order %}
-      <p><b>Order Code:</b> {{ order.order_id }}</p>
-      <p><b>Email:</b> {{ order.email }}</p>
-      <p><b>Flight:</b> {{ order.flight_id }}</p>
-      <p><b>Total:</b> ₪{{ "%.2f"|format(order.total_payment) }}</p>
+      <div class="order-info">
+        <p><b>Order Code:</b> {{ order.order_id }}</p>
+        <p><b>Email:</b> {{ order.email }}</p>
+        <p><b>Flight:</b> {{ order.flight_id }}</p>
+        <p><b>Total:</b> ₪{{ "%.2f"|format(order.total_payment) }}</p>
+      </div>
 
       <h3>Seats</h3>
       <ul>
@@ -17,9 +35,15 @@
         {% endfor %}
       </ul>
     {% else %}
-      <p>Order not found.</p>
+      <div class="error-box">Order not found.</div>
     {% endif %}
-    <a href="/" style="display:inline-block;margin-top:12px;">Back to home</a>
+
+    <div style="text-align:center; margin-top: 20px;">
+      <a href="/" class="back-home">
+        <i class='bx bx-arrow-left'></i> Back to home
+      </a>
+    </div>
   </div>
+
 </body>
 </html>
