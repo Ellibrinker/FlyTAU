@@ -1,0 +1,206 @@
+.top-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  background-color: white;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  z-index: 1000;
+}
+
+.top-bar .logo-link {
+  display: flex;
+  align-items: center;
+}
+
+.top-bar .company-logo {
+  height: 60px;
+  cursor: pointer;
+}
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: 'Assistant', Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: url("/static/sky.jpg") no-repeat;
+    background-size: cover;
+    background-position: center;
+}
+
+.card {
+background: rgba(255, 255, 255, 0.2);
+width: 90%;
+max-width: 700px;
+padding: 30px;
+border: 2px solid rgba(37, 34, 99, 0.2);
+border-radius: 12px;
+box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+backdrop-filter: blur(10px);
+}
+
+.title {
+    margin: 0;
+    color: #252264;
+    font-size: 28px;
+    text-align: center;
+}
+
+.sub {
+    text-align: center;
+    color: #666;
+    margin: 10px 0 25px;
+    font-size: 14px;
+}
+
+.error {
+    background: #ffe6e6;
+    color: #b00020;
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    text-align: center;
+    font-weight: 600;
+}
+
+.tabs {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 25px;
+}
+
+.tab {
+    padding: 10px 18px;
+    border-radius: 30px;
+    text-decoration: none;
+    color: #252264;
+    background: rgba(37,34,99,0.12);
+    font-weight: 600;
+    transition: 0.2s ease;
+}
+
+.tab:hover {
+    background: rgba(37,34,99,0.2);
+}
+
+.tab.active {
+    background: #252264;
+    color: #fff;
+}
+
+.row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.small {
+    font-size: 14px;
+    color: #444;
+}
+
+input[type="email"] {
+    width: 100%;
+    height: 48px;
+    padding: 0 18px;
+    border-radius: 40px;
+    border: 1px solid #ddd;
+    font-size: 15px;
+}
+
+input[type="email"]:focus,
+input[type="email"]:hover {
+    outline: none;
+    border-color: #252264;
+    box-shadow: 0 0 5px rgba(37, 34, 100, 0.4);
+}
+
+.grid {
+    display: grid;
+    gap: 10px;
+    justify-content: center;
+    margin: 30px 0;
+}
+
+.seat {
+    width: 54px;
+    height: 54px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    transition: 0.15s ease;
+}
+
+.seat.available {
+    background: #e9edff;
+    color: #252264;
+}
+
+.seat.available:hover {
+    background: #cfd6ff;
+}
+
+.seat.available:hover i {
+    color: #252264;
+    transform: scale(1.2);
+}
+
+.seat.booked {
+    background: #ddd;
+    color: #888;
+    cursor: not-allowed;
+}
+
+.seat.selected {
+    background: #252264;
+}
+.seat.selected i {
+    color: #fff;
+    transform: scale(1.2);
+}
+
+.seat i {
+    font-size: 24px;
+    transition: 0.2s ease;
+}
+
+.btn {
+    padding: 12px 26px;
+    border-radius: 40px;
+    border: none;
+    background: #252264;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: 0.2s ease;
+}
+
+.btn:hover {
+    opacity: 0.9;
+}
+
+.btn.secondary {
+    background: transparent;
+    color: #252264;
+    border: 2px solid #252264;
+}
+
+.btn.secondary:hover {
+    background: rgba(37,34,99,0.08);
+}
