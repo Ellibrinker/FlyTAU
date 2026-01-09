@@ -1,4 +1,5 @@
 .top-bar {
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
@@ -91,7 +92,7 @@ body {
 
 .input-box input:hover,
 .input-box input:focus {
-    border-color: #252264; /* כחול אתר */
+    border-color: #252264;
     box-shadow: 0 0 5px rgba(37, 34, 100, 0.4);
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
@@ -121,14 +122,41 @@ button:hover {
     margin: 20px 0 15px;
 }
 
-.link a {
-    color: #252264;
-    text-decoration: none;
-    font-weight: 600;
+/* לינק רגיל */
+.login-text {
+    font-size: 14px;
+    margin-bottom: 14px;
 }
 
-.link a:hover {
+.login-link {
+    color: #252264;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.login-link:hover {
     text-decoration: underline;
+}
+
+.back-home {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #252264;
+    text-decoration: none;
+    opacity: 0.75;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.back-home i {
+    font-size: 18px;
+}
+
+.back-home:hover {
+    opacity: 1;
+    transform: translateX(-2px);
 }
 
 .phone-input {
@@ -138,18 +166,18 @@ button:hover {
 .add-phone-btn {
 background-color: rgba(37, 34, 99, 0.2);
 color: #252264;
-padding: 0 20px;      
-height: 50px;           
-border-radius: 40px;   
+padding: 0 20px;
+height: 50px;
+border-radius: 40px;
 border: none;
 cursor: pointer;
 width: 60%;
-margin: 100px;          
-margin-top: 15px;   
-margin-bottom: 15px;   
+margin: 100px;
+margin-top: 15px;
+margin-bottom: 15px;
 font-size: 16px;
 font-weight: 600;
-display: block;     
+display: block;
 }
 
 .add-phone-btn:hover {
