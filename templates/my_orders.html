@@ -1,44 +1,66 @@
 <!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><title>My Orders</title></head>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Orders | FlyTAU</title>
+    <link rel="stylesheet" href="/static/my_orders.css">
+    <link href='https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css' rel='stylesheet'>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
 <body>
-  <h1>My Orders</h1>
 
-  <form method="GET" action="/my_orders">
-    <select name="status">
-      <option value="" {% if not status_filter %}selected{% endif %}>All</option>
-      <option value="paid" {% if status_filter=='paid' %}selected{% endif %}>Active</option>
-      <option value="done" {% if status_filter=='done' %}selected{% endif %}>Done</option>
-      <option value="customer_cancelled" {% if status_filter=='customer_cancelled' %}selected{% endif %}>Customer Cancelled</option>
-      <option value="system_cancelled" {% if status_filter=='system_cancelled' %}selected{% endif %}>System Cancelled</option>
-    </select>
-    <button type="submit">Filter</button>
-  </form>
+  <!-- Top Bar -->
+  <header class="top-bar">
+    <a href="/" class="logo-link">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Company Logo" class="company-logo">
+    </a>
+  </header>
 
-  <hr>
+  <div class="wrapper">
 
-  {% for o in orders %}
-    <div style="border:1px solid #ccc; padding:12px; margin:10px 0;">
-      <h3>Order #{{ o.order_id }}</h3>
-      <p>{{ o.origin_airport }} → {{ o.destination_airport }} | {{ o.departure_date }} {{ o.departure_time }}</p>
-      <p>Status: {{ o.status }} | Total: {{ o.total_payment }}</p>
+    <h1>My Orders</h1>
 
-      <p><b>Seats:</b>
-        {% for s in seats_by_order[o.order_id] %}
-          Row {{ s.row_num }} Col {{ s.column_number }} ({{ s.class_type }}){% if not loop.last %}, {% endif %}
-        {% endfor %}
-      </p>
+    <!-- Filter Form -->
+    <form class="filter-form" method="GET" action="/my_orders">
+      <select name="status">
+        <option value="" {% if not status_filter %}selected{% endif %}>All</option>
+        <option value="paid" {% if status_filter=='paid' %}selected{% endif %}>Active</option>
+        <option value="done" {% if status_filter=='done' %}selected{% endif %}>Done</option>
+        <option value="customer_cancelled" {% if status_filter=='customer_cancelled' %}selected{% endif %}>Customer Cancelled</option>
+        <option value="system_cancelled" {% if status_filter=='system_cancelled' %}selected{% endif %}>System Cancelled</option>
+      </select>
+      <button type="submit">Filter</button>
+    </form>
 
-      {% set hours_left = (o.departure_dt - now).total_seconds() / 3600 %}
-      {% if o.status == 'paid' and hours_left >= 36 %}
-        <form method="POST" action="/cancel_order">
-          <input type="hidden" name="order_id" value="{{ o.order_id }}">
-          <button type="submit">Cancel Order (5% fee)</button>
-        </form>
-      {% endif %}
+    <hr>
+
+    {% for o in orders %}
+      <div class="order-card">
+        <h3>Order #{{ o.order_id }}</h3>
+        <p>{{ o.origin_airport }} → {{ o.destination_airport }} | {{ o.departure_date }} {{ o.departure_time }}</p>
+        <p>Status: {{ o.status }} | Total: {{ o.total_payment }}</p>
+        <p class="seats-list"><b>Seats:</b>
+          {% for s in seats_by_order[o.order_id] %}
+            Row {{ s.row_num }} Col {{ s.column_number }} ({{ s.class_type }}){% if not loop.last %}, {% endif %}
+          {% endfor %}
+        </p>
+
+        {% set hours_left = (o.departure_dt - now).total_seconds() / 3600 %}
+        {% if o.status == 'paid' and hours_left >= 36 %}
+          <form method="POST" action="/cancel_order">
+            <input type="hidden" name="order_id" value="{{ o.order_id }}">
+            <button type="submit" class="cancel-btn">Cancel Order (5% fee)</button>
+          </form>
+        {% endif %}
+      </div>
+    {% endfor %}
+
+    <div class="link">
+      <a href="/" class="back-home">
+        <i class='bx bx-arrow-left'></i> Back to home
+      </a>
     </div>
-  {% endfor %}
 
-  <p><a href="/">Back</a></p>
+  </div>
 </body>
 </html>
