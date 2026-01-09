@@ -21,19 +21,22 @@
             <form action="/login" method="POST">
                 <div class="input-box">
                     <input type="email" name="email" placeholder="Email Address" required>
-                    <i class='bxr  bx-user'></i> 
+                    <i class='bxr  bx-user'></i>
                 </div>
                 <div class="input-box">
                     <input type="password" name="password" placeholder="Password" required>
                     <i class='bxr  bx-lock'></i>
                 </div>
-                    <button type="submit">Login</button> 
+                    <button type="submit">Login</button>
             </form>
         <div class="link">
-            <p>Don't have an account? <a href="/signup"> Sign Up</a></p>
+            <p>Don't have an account? <a href="/signup" class="signup"> Sign Up</a></p>
         </div>
         <div class="link">
-            <a href="/" style="font-weight: 400;">Back to home</a>
+            <a href="/" class="back-home">
+                <i class='bxr  bx-arrow-left'></i>
+                Back to home
+            </a>
         </div>
     </div>
 </body>
