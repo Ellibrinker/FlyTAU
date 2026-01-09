@@ -1,0 +1,153 @@
+.top-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background-color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* לוגו שמאל, כפתור ימין */
+    padding: 0 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    z-index: 1000;
+}
+
+.top-bar .logo-link {
+    display: flex;
+    align-items: center;
+}
+
+.top-bar .company-logo {
+    height: 50px;
+    cursor: pointer;
+}
+
+.back-home {
+    display: flex;
+    align-items: center;
+    color: #252264;
+    font-weight: 600;
+    margin-right: 70px;
+    text-decoration: none;
+}
+
+.back-home i {
+    margin-right: 6px;
+}
+
+.back-home:hover { text-decoration: underline; }
+
+/* === Body === */
+body {
+    font-family: 'Assistant', sans-serif;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    background: url("/static/sky.jpg") no-repeat center center;
+    background-size: cover;
+    padding-top: 80px; /* מתחת ל-top-bar */
+}
+
+/* === Wrapper === */
+.wrapper {
+    width: 960px;
+    max-width: 95%;
+    background: rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(37,34,99,0.2);
+    backdrop-filter: blur(10px);
+    color: #252264;
+    border-radius: 12px;
+    padding: 30px 40px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    margin-bottom: 40px;
+}
+
+/* === Headings === */
+h1 {
+    text-align: center;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+h3 {
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+/* === Pills === */
+.pill {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.3);
+    border: 1px solid rgba(37,34,99,0.2);
+    font-size: 13px;
+    margin-right: 8px;
+    margin-bottom: 6px;
+    color: #252264;
+}
+
+/* === Boxes === */
+.box {
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(37,34,99,0.2);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+}
+
+/* === Text styles === */
+.muted {
+    color: #252264;
+    font-size: 14px;
+}
+
+.warn {
+    color: #b00020;
+    font-weight: 700;
+}
+
+.status { font-weight: 700; }
+.status-open { color: #0b6e4f; }
+.status-cancelled { color: #b00020; }
+.status-full { color: #6b4e00; }
+.status-done { color: #444; }
+
+/* === Info banner === */
+.info {
+    background: rgba(249,244,232,0.6);
+    border: 1px solid #ead7a7;
+    color: #6b4e00;
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-weight: 700;
+}
+
+/* === Buttons === */
+button {
+    background-color: rgb(37,34,99);
+    color: white;
+    border: none;
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+button:hover { background-color: #130f42; transform: translateY(-2px); }
+button:disabled { background-color: rgba(37,34,99,0.3); cursor: not-allowed; }
+
+/* === Rows === */
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+/* === Responsive === */
+@media (max-width: 600px) {
+    .row { flex-direction: column; }
+    .pill { width: 100%; text-align: center; }
+}
