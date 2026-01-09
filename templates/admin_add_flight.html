@@ -2,251 +2,220 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Add Flight</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 24px; }
-    .error { color: #b00020; font-weight: 700; }
-    .box { border: 1px solid #ddd; padding: 14px; border-radius: 10px; margin: 14px 0; }
-    .muted { color: #666; }
-    .row { display: flex; gap: 10px; flex-wrap: wrap; }
-    input, select, button { padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
-    button { cursor: pointer; border: none; background: #008B8B; color: white; font-weight: 700; }
-    button:disabled { background: #9fbcbc; cursor: not-allowed; }
-    a { color: #008B8B; text-decoration: none; }
-    .hint { font-size: 14px; color: #444; }
-    .section-title { margin: 0 0 10px; }
-    .count { font-weight: 700; }
-    .pill { display: inline-block; padding: 4px 10px; border-radius: 999px; background: #f4f7f6; border: 1px solid #ddd; font-size: 13px; }
-    label { display: block; margin: 6px 0; }
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
-  </style>
-</head>
-
+  <title>Add Flight | FLYTAU</title>
+  <link href='https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css' rel='stylesheet'>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/admin_add_flight.css">
+    </head>
 <body>
-  <h1>Add New Flight</h1>
-  <p><a href="/admin/flights">← Back</a></p>
 
-  {% if error %}
-    <p class="error">{{ error }}</p>
-  {% endif %}
+  <header class="top-bar">
+    <a href="/" class="logo-link">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Company Logo" class="company-logo">
+    </a>
+    <a href="/admin/flights" class="back-home">
+      <i class='bx bx-arrow-left'></i>
+      Back to flights
+    </a>
+  </header>
 
-  {% if step == 1 %}
-    <div class="box">
-      <h3 class="section-title">Step 1: Choose route & departure</h3>
-      <p class="muted">We’ll check flight duration, and show only available planes & crew.</p>
+  <div class="wrapper">
 
-      <form method="POST">
-        <input type="hidden" name="step" value="1" />
+    {% if error %}
+      <div class="error-box">{{ error }}</div>
+    {% endif %}
 
-        <div class="row">
-          <input name="origin" placeholder="Origin (e.g. TLV)" required />
-          <input name="destination" placeholder="Destination (e.g. ATH)" required />
-          <input type="date" name="departure_date" required />
-          <input type="time" name="departure_time" required />
-        </div>
+    {% if step == 1 %}
+      <div class="box">
+        <h3 class="section-title">Step 1: Choose route & departure</h3>
+        <p class="muted">We’ll check flight duration, and show only available planes & crew</p>
 
-        <div style="margin-top: 12px;">
-          <button type="submit">Next</button>
-        </div>
-      </form>
-    </div>
+        <form method="POST">
+          <input type="hidden" name="step" value="1" />
+            <div class="row">
+              <div class="input-box">
+                <input name="origin" placeholder="Origin (e.g. TLV)" required />
+                <i class='bx bx-plane'></i>
+              </div>
 
-  {% else %}
-    <div class="box">
-      <h3 class="section-title">Step 2: Select plane, crew & pricing</h3>
+              <div class="input-box">
+                <input name="destination" placeholder="Destination (e.g. ATH)" required />
+                <i class='bx bx-map'></i>
+              </div>
 
-      <p>
-        <span class="pill">Route: <b>{{ data.origin }}</b> → <b>{{ data.destination }}</b></span>
-        <span class="pill">Departure: <b>{{ data.departure_date }}</b> <b>{{ data.departure_time }}</b></span>
-        <span class="pill">Duration: <b>{{ data.duration_min }}</b> min</span>
-        <span class="pill">Type: <b>{% if data.is_long %}Long{% else %}Short{% endif %}</b></span>
-      </p>
+              <div class="input-box">
+                <input type="date" name="departure_date" required />
+              </div>
 
-      <form method="POST" id="createForm">
-        <input type="hidden" name="step" value="2" />
-        <input type="hidden" name="origin" value="{{ data.origin }}" />
-        <input type="hidden" name="destination" value="{{ data.destination }}" />
-        <input type="hidden" name="departure_date" value="{{ data.departure_date }}" />
-        <input type="hidden" name="departure_time" value="{{ data.departure_time }}" />
+              <div class="input-box">
+                <input type="time" name="departure_time" required />
+              </div>
+            </div>
+          <div class="row" style="margin-top: 12px;">
+            <button type="submit">Next</button>
+          </div>
+        </form>
+      </div>
 
-        <!-- ========= Planes ========= -->
-        <div class="box">
-          <h3 class="section-title">Select plane</h3>
+    {% else %}
+      <div class="box">
+        <h3 class="section-title">Step 2: Select plane, crew & pricing</h3>
 
-          {% if not data.planes or data.planes|length == 0 %}
-            <p class="error">No available planes for this time window.</p>
-            <p class="muted">Try another departure time/date, or a different route.</p>
-          {% else %}
-            <select name="plane_id" required>
-              <option value="" disabled {% if not data.selected_plane_id %}selected{% endif %}>Select a plane…</option>
-              {% for p in data.planes %}
-                <option value="{{ p.plane_id }}"
-                  {% if data.selected_plane_id == p.plane_id %}selected{% endif %}>
-                  Plane {{ p.plane_id }} ({{ p.manufacturer }})
-                </option>
-              {% endfor %}
-            </select>
-          {% endif %}
-        </div>
+        <p class="row" style="flex-wrap: wrap; gap:8px;">
+          <span class="pill">Route: <b>{{ data.origin }}</b> → <b>{{ data.destination }}</b></span>
+          <span class="pill">Departure: <b>{{ data.departure_date }}</b> <b>{{ data.departure_time }}</b></span>
+          <span class="pill">Duration: <b>{{ data.duration_min }}</b> min</span>
+          <span class="pill">Type: <b>{% if data.is_long %}Long{% else %}Short{% endif %}</b></span>
+        </p>
 
-        <!-- ========= Crew ========= -->
-        <div class="two-col">
+        <form method="POST" id="createForm">
+          <input type="hidden" name="step" value="2" />
+          <input type="hidden" name="origin" value="{{ data.origin }}" />
+          <input type="hidden" name="destination" value="{{ data.destination }}" />
+          <input type="hidden" name="departure_date" value="{{ data.departure_date }}" />
+          <input type="hidden" name="departure_time" value="{{ data.departure_time }}" />
+
+          <!-- Planes -->
           <div class="box">
-            <h3 class="section-title">
-              Select pilots
-              <span class="pill">Need: <span class="count" id="pilotsNeed">{{ data.pilots_needed }}</span></span>
-              <span class="pill">
-                Selected:
-                <span class="count" id="pilotsSelected">{{ data.selected_pilot_ids|length if data.selected_pilot_ids else 0 }}</span>
-                /<span class="count">{{ data.pilots_needed }}</span>
-              </span>
-            </h3>
-
-            {% if not data.pilots or data.pilots|length < data.pilots_needed %}
-              <p class="error">
-                Not enough available pilots.
-                (Available: {{ data.pilots|length if data.pilots else 0 }}, Required: {{ data.pilots_needed }})
-              </p>
-              <p class="muted">Try another time/date or route.</p>
+            <h3 class="section-title">Select plane</h3>
+            {% if not data.planes or data.planes|length == 0 %}
+              <div class="error-box">No available planes for this time window.</div>
+              <p class="muted">Try another departure time/date, or a different route.</p>
             {% else %}
-              <p class="hint">You can select exactly {{ data.pilots_needed }} pilots.</p>
-              {% for pl in data.pilots %}
-                <label>
-                  <input type="checkbox"
-                         class="pilot-checkbox"
-                         name="pilot_ids"
-                         value="{{ pl.id }}"
-                         {% if data.selected_pilot_ids and (pl.id|string) in data.selected_pilot_ids %}checked{% endif %}>
-                  {{ pl.id }} — {{ pl.first_name }} {{ pl.last_name }}
-                </label>
-              {% endfor %}
+              <select name="plane_id" required>
+                <option value="" disabled {% if not data.selected_plane_id %}selected{% endif %}>Select a plane…</option>
+                {% for p in data.planes %}
+                  <option value="{{ p.plane_id }}" {% if data.selected_plane_id == p.plane_id %}selected{% endif %}>
+                    Plane {{ p.plane_id }} ({{ p.manufacturer }})
+                  </option>
+                {% endfor %}
+              </select>
             {% endif %}
+          </div>
+
+          <!-- Crew -->
+          <div class="two-col">
+            <div class="box">
+              <h3 class="section-title">
+                Select pilots
+                <span class="pill">Need: <span class="count" id="pilotsNeed">{{ data.pilots_needed }}</span></span>
+                <span class="pill">Selected: <span class="count" id="pilotsSelected">{{ data.selected_pilot_ids|length if data.selected_pilot_ids else 0 }}</span>/<span class="count">{{ data.pilots_needed }}</span></span>
+              </h3>
+              {% if not data.pilots or data.pilots|length < data.pilots_needed %}
+                <div class="error-box">
+                  Not enough available pilots. (Available: {{ data.pilots|length if data.pilots else 0 }}, Required: {{ data.pilots_needed }})
+                </div>
+                <p class="muted">Try another time/date or route.</p>
+              {% else %}
+                <p class="hint">You can select exactly {{ data.pilots_needed }} pilots.</p>
+                {% for pl in data.pilots %}
+                  <label>
+                    <input type="checkbox" class="pilot-checkbox" name="pilot_ids" value="{{ pl.id }}" {% if data.selected_pilot_ids and (pl.id|string) in data.selected_pilot_ids %}checked{% endif %}>
+                    {{ pl.id }} — {{ pl.first_name }} {{ pl.last_name }}
+                  </label>
+                {% endfor %}
+              {% endif %}
+            </div>
+
+            <div class="box">
+              <h3 class="section-title">
+                Select attendants
+                <span class="pill">Need: <span class="count" id="faNeed">{{ data.fa_needed }}</span></span>
+                <span class="pill">Selected: <span class="count" id="faSelected">{{ data.selected_fa_ids|length if data.selected_fa_ids else 0 }}</span>/<span class="count">{{ data.fa_needed }}</span></span>
+              </h3>
+              {% if not data.attendants or data.attendants|length < data.fa_needed %}
+                <div class="error-box">
+                  Not enough available attendants. (Available: {{ data.attendants|length if data.attendants else 0 }}, Required: {{ data.fa_needed }})
+                </div>
+                <p class="muted">Try another time/date or route.</p>
+              {% else %}
+                <p class="hint">You can select exactly {{ data.fa_needed }} attendants.</p>
+                {% for fa in data.attendants %}
+                  <label>
+                    <input type="checkbox" class="fa-checkbox" name="fa_ids" value="{{ fa.id }}" {% if data.selected_fa_ids and (fa.id|string) in data.selected_fa_ids %}checked{% endif %}>
+                    {{ fa.id }} — {{ fa.first_name }} {{ fa.last_name }}
+                  </label>
+                {% endfor %}
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Pricing -->
+          <div class="box">
+            <h3 class="section-title">Pricing</h3>
+
+            <div class="input-box">
+              <input type="number" step="0.01" name="regular_price" placeholder="Regular price"
+                    value="{{ data.regular_price if data.regular_price is not none else '' }}" required />
+              <i class='bx bx-cash'></i>
+            </div>
+
+            <div class="input-box">
+              <input type="number" step="0.01" name="business_price" placeholder="Business price (if applicable)"
+                    value="{{ data.business_price if data.business_price is not none else '' }}" />
+              <i class='bx bx-briefcase-alt-2'></i>
+            </div>
+
+            <p class="muted">
+              Note: Business price is required only if the selected plane has Business class.
+            </p>
           </div>
 
           <div class="box">
-            <h3 class="section-title">
-              Select attendants
-              <span class="pill">Need: <span class="count" id="faNeed">{{ data.fa_needed }}</span></span>
-              <span class="pill">
-                Selected:
-                <span class="count" id="faSelected">{{ data.selected_fa_ids|length if data.selected_fa_ids else 0 }}</span>
-                /<span class="count">{{ data.fa_needed }}</span>
-              </span>
-            </h3>
-
-            {% if not data.attendants or data.attendants|length < data.fa_needed %}
-              <p class="error">
-                Not enough available attendants.
-                (Available: {{ data.attendants|length if data.attendants else 0 }}, Required: {{ data.fa_needed }})
-              </p>
-              <p class="muted">Try another time/date or route.</p>
-            {% else %}
-              <p class="hint">You can select exactly {{ data.fa_needed }} attendants.</p>
-              {% for fa in data.attendants %}
-                <label>
-                  <input type="checkbox"
-                         class="fa-checkbox"
-                         name="fa_ids"
-                         value="{{ fa.id }}"
-                         {% if data.selected_fa_ids and (fa.id|string) in data.selected_fa_ids %}checked{% endif %}>
-                  {{ fa.id }} — {{ fa.first_name }} {{ fa.last_name }}
-                </label>
-              {% endfor %}
-            {% endif %}
+            <p id="validationMsg" class="muted"></p>
+            <button type="submit" id="submitBtn" {% if (not data.planes or data.planes|length == 0) or (not data.pilots or data.pilots|length < data.pilots_needed) or (not data.attendants or data.attendants|length < data.fa_needed) %}disabled{% endif %}>
+              Create Flight
+            </button>
           </div>
-        </div>
+        </form>
+      </div>
 
-        <!-- ========= Pricing ========= -->
-        <div class="box">
-          <h3 class="section-title">Pricing</h3>
-          <div class="row">
-            <input
-              type="number"
-              step="0.01"
-              name="regular_price"
-              placeholder="Regular price"
-              value="{{ data.regular_price if data.regular_price is not none else '' }}"
-              required
-            />
-            <input
-              type="number"
-              step="0.01"
-              name="business_price"
-              placeholder="Business price (if applicable)"
-              value="{{ data.business_price if data.business_price is not none else '' }}"
-            />
-          </div>
-          <p class="muted" style="margin-top: 8px;">
-            Note: Business price is required only if the selected plane has Business class.
-          </p>
-        </div>
+      <script>
+        (function () {
+          const pilotsNeed = parseInt(document.getElementById("pilotsNeed")?.textContent || "0", 10);
+          const faNeed = parseInt(document.getElementById("faNeed")?.textContent || "0", 10);
 
-        <div class="box">
-          <p id="validationMsg" class="muted"></p>
-          <button type="submit" id="submitBtn"
-            {% if (not data.planes or data.planes|length == 0) or (not data.pilots or data.pilots|length < data.pilots_needed) or (not data.attendants or data.attendants|length < data.fa_needed) %}
-              disabled
-            {% endif %}
-          >
-            Create Flight
-          </button>
-        </div>
-      </form>
-    </div>
+          const pilotBoxes = Array.from(document.querySelectorAll(".pilot-checkbox"));
+          const faBoxes = Array.from(document.querySelectorAll(".fa-checkbox"));
 
-    <script>
-      (function () {
-        const pilotsNeed = parseInt(document.getElementById("pilotsNeed")?.textContent || "0", 10);
-        const faNeed = parseInt(document.getElementById("faNeed")?.textContent || "0", 10);
+          const pilotsSelectedEl = document.getElementById("pilotsSelected");
+          const faSelectedEl = document.getElementById("faSelected");
+          const msgEl = document.getElementById("validationMsg");
+          const submitBtn = document.getElementById("submitBtn");
+          const planeSelect = document.querySelector("select[name='plane_id']");
 
-        const pilotBoxes = Array.from(document.querySelectorAll(".pilot-checkbox"));
-        const faBoxes = Array.from(document.querySelectorAll(".fa-checkbox"));
+          function updateGroupLimit(boxes, need, selectedEl) {
+            const selected = boxes.filter(b => b.checked).length;
+            if (selectedEl) selectedEl.textContent = String(selected);
+            boxes.forEach(b => { if (!b.checked) b.disabled = (selected >= need); });
+            return selected;
+          }
 
-        const pilotsSelectedEl = document.getElementById("pilotsSelected");
-        const faSelectedEl = document.getElementById("faSelected");
-        const msgEl = document.getElementById("validationMsg");
-        const submitBtn = document.getElementById("submitBtn");
-        const planeSelect = document.querySelector("select[name='plane_id']");
+          function validateAll() {
+            const pilotsSelected = updateGroupLimit(pilotBoxes, pilotsNeed, pilotsSelectedEl);
+            const faSelected = updateGroupLimit(faBoxes, faNeed, faSelectedEl);
+            const planeOk = planeSelect ? !!planeSelect.value : true;
+            const pilotsOk = (pilotsNeed === 0) ? true : (pilotsSelected === pilotsNeed);
+            const faOk = (faNeed === 0) ? true : (faSelected === faNeed);
 
-        function updateGroupLimit(boxes, need, selectedEl) {
-          const selected = boxes.filter(b => b.checked).length;
-          if (selectedEl) selectedEl.textContent = String(selected);
+            let msg = "";
+            if (!planeOk) msg = "Please select a plane.";
+            else if (!pilotsOk) msg = `Please select exactly ${pilotsNeed} pilots.`;
+            else if (!faOk) msg = `Please select exactly ${faNeed} attendants.`;
+            else msg = "All set ✅ You can create the flight.";
 
-          // If already selected enough, disable the remaining unchecked boxes
-          boxes.forEach(b => {
-            if (!b.checked) b.disabled = (selected >= need);
-          });
+            if (msgEl) msgEl.textContent = msg;
+            if (submitBtn) submitBtn.disabled = !(planeOk && pilotsOk && faOk);
+          }
 
-          return selected;
-        }
+          pilotBoxes.forEach(b => b.addEventListener("change", validateAll));
+          faBoxes.forEach(b => b.addEventListener("change", validateAll));
+          if (planeSelect) planeSelect.addEventListener("change", validateAll);
+          validateAll();
+        })();
+      </script>
 
-        function validateAll() {
-          const pilotsSelected = updateGroupLimit(pilotBoxes, pilotsNeed, pilotsSelectedEl);
-          const faSelected = updateGroupLimit(faBoxes, faNeed, faSelectedEl);
-
-          const planeOk = planeSelect ? !!planeSelect.value : true;
-          const pilotsOk = (pilotsNeed === 0) ? true : (pilotsSelected === pilotsNeed);
-          const faOk = (faNeed === 0) ? true : (faSelected === faNeed);
-
-          let msg = "";
-          if (!planeOk) msg = "Please select a plane.";
-          else if (!pilotsOk) msg = `Please select exactly ${pilotsNeed} pilots.`;
-          else if (!faOk) msg = `Please select exactly ${faNeed} attendants.`;
-          else msg = "All set ✅ You can create the flight.";
-
-          if (msgEl) msgEl.textContent = msg;
-
-          if (submitBtn) submitBtn.disabled = !(planeOk && pilotsOk && faOk);
-        }
-
-        pilotBoxes.forEach(b => b.addEventListener("change", validateAll));
-        faBoxes.forEach(b => b.addEventListener("change", validateAll));
-        if (planeSelect) planeSelect.addEventListener("change", validateAll);
-
-        validateAll();
-      })();
-    </script>
-  {% endif %}
+    {% endif %}
+  </div>
 </body>
 </html>
