@@ -1,0 +1,211 @@
+.top-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background-color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* <-- מגדיר שהלוגו שמאל, הכפתור ימין */
+    padding: 0 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    z-index: 1000;
+}
+
+.back-home {
+    display: flex;
+    margin-right: 70px;
+    align-items: center;
+    color: #252264;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.back-home i {
+    margin-right: 6px;
+}
+
+.back-home:hover {
+    text-decoration: underline;
+}
+.top-bar .logo-link {
+    display: flex;
+    align-items: center;
+}
+
+.top-bar .company-logo {
+    height: 60px;
+    cursor: pointer;
+}
+
+body {
+    font-family: 'Assistant', sans-serif;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: url("/static/sky.jpg") no-repeat center center;
+    background-size: cover;
+}
+
+.wrapper {
+    width: 960px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(37, 34, 99, 0.2);
+    backdrop-filter: blur(10px);
+    color: #252264;
+    border-radius: 12px;
+    padding: 30px 40px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    margin-top: 80px; /* מתחת ל-top-bar */
+}
+
+.wrapper h1 {
+    color: #252264;
+    margin-bottom: 10px;
+    text-align: center;
+    font-weight: 700;
+}
+
+.pill {
+    display: block;
+    padding: 4px 12px;
+    width: 23%;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.3);
+    border: 1px solid rgba(37, 34, 99, 0.2);
+    font-size: 13px;
+    margin: 0 auto 20px auto;
+    text-align: center;
+    color: #252264;
+}
+
+.muted {
+    color: #252264;
+    font-size: 14px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* Input Box */
+.input-box {
+    width: 100%;
+    display: flex;
+    align-items: center; /* יישור אנכי אחיד */
+    margin: 12px 0;
+    position: relative; /* בשביל האייקון */
+    height: 50px;
+}
+
+.input-box input,
+.input-box select {
+    flex: 1;
+    height: 50px;
+    background: transparent;
+    outline: none;
+    border: 2px solid rgba(37, 34, 99, 0.2);
+    border-radius: 40px;
+    font-size: 16px;
+    color: #252264;
+    padding: 0 45px 0 20px; /* מקום לאייקון מימין */
+}
+
+.input-box i {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    margin-right: 28px;
+    transform: translateY(-50%); /* ממרכז את האייקון אנכית */
+    font-size: 20px;
+    color: #252264;
+    pointer-events: none;
+}
+
+.input-box input::placeholder,
+.input-box select::placeholder {
+    color: #252264;
+}
+
+.input-box input:hover,
+.input-box input:focus,
+.input-box select:hover,
+.input-box select:focus {
+    border-color: #252264;
+    box-shadow: 0 0 5px rgba(37, 34, 100, 0.4);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Buttons */
+button {
+    background-color: rgb(37, 34, 99);
+    color: white;
+    border: none;
+    width: 100%;
+    padding: 12px;
+    font-size: 18px;
+    font-weight: 700;
+    border-radius: 50px;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: all 0.3s ease;
+}
+
+button:hover {
+    background-color: #130f42;
+    transform: translateY(-2px);
+}
+
+button:disabled {
+    background-color: rgba(37,34,99,0.3);
+    cursor: not-allowed;
+}
+
+/* Error messages */
+.error {
+    color: #b00020;
+    font-weight: 700;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.error-box {
+    background: #ffe5e5;
+    color: #b00020;
+    border: 1px solid #ffb3b3;
+    padding: 10px 12px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    font-weight: 700;
+    text-align: center;
+}
+
+/* Footer link */
+.footer {
+    margin-top: 16px;
+    font-size: 16px;
+    text-align: center;
+}
+
+.footer a {
+    color: #252264;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.footer a:hover {
+    text-decoration: underline;
+}
+
+/* Two-col for crew selection */
+.two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+@media (max-width: 900px) {
+    .two-col { grid-template-columns: 1fr; }
+}
