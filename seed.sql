@@ -219,6 +219,14 @@ VALUES (@pl7,'TLV','LCA','2026-01-14','08:00:00','open'); SET @f5 = LAST_INSERT_
 INSERT INTO Flight (plane_id, origin_airport, destination_airport, departure_date, departure_time, status)
 VALUES (@pl8,'TLV','FCO','2026-01-15','16:15:00','open'); SET @f6 = LAST_INSERT_ID();
 
+INSERT INTO Flight (plane_id, origin_airport, destination_airport, departure_date, departure_time, status)
+VALUES (@pl1, 'TLV', 'ATH', '2025-12-15', '10:00:00', 'done');
+SET @f7 = LAST_INSERT_ID();
+
+INSERT INTO Flight (plane_id, origin_airport, destination_airport, departure_date, departure_time, status)
+VALUES (@pl2, 'TLV', 'ROM', '2026-01-05', '12:00:00', 'done');
+SET @f8 = LAST_INSERT_ID();
+
 INSERT INTO FlightPricing (flight_id, class_type, price) VALUES
 (@f1,'Regular',500.00),(@f1,'Business',900.00),
 (@f2,'Regular',600.00),(@f2,'Business',1100.00),
@@ -243,6 +251,16 @@ INSERT INTO FlightSeat (flight_id, seat_id, status) VALUES
 (@f5, @s_pl7_1_2, 'available'),
 (@f6, @s_pl2_2_1, 'available'),
 (@f6, @s_pl2_2_2, 'available');
+
+INSERT INTO FlightSeat (flight_id, seat_id, status) VALUES
+(@f7, @s_pl1_1_1, 'booked'),    
+(@f7, @s_pl1_1_2, 'available'), 
+(@f7, @s_pl1_1_3, 'available'); 
+
+INSERT INTO FlightSeat (flight_id, seat_id, status) VALUES
+(@f8, @s_pl2_1_1, 'booked'),    
+(@f8, @s_pl2_1_2, 'booked'),   
+(@f8, @s_pl2_1_3, 'available');
 
 -- fetch flight_seat_ids for orders
 SELECT flight_seat_id INTO @fs1 FROM FlightSeat WHERE flight_id=@f1 AND seat_id=@s_pl1_1_1;
