@@ -1,0 +1,170 @@
+.top-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  background-color: white;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  z-index: 1000;
+}
+
+.top-bar .logo-link {
+  display: flex;
+  align-items: center;
+}
+
+.top-bar .company-logo {
+  height: 60px;
+  cursor: pointer;
+}
+
+/* Body and Background */
+body {
+  font-family: 'Assistant', sans-serif;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  min-height: 100vh;
+  background: url("/static/sky.jpg") no-repeat;
+  background-size: cover;
+  background-position: center;
+  padding-top: 80px; /* space for top bar */
+}
+
+/* Wrapper */
+.wrapper {
+  width: 540px;
+  background: rgba(255,255,255,0.15);
+  border: 2px solid rgba(37, 34, 99, 0.2);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 30px 40px;
+  margin-bottom: 40px;
+  color: #252264;
+}
+
+.wrapper h1 {
+  text-align: center;
+  font-weight: 700;
+  margin-bottom: 25px;
+  color: #252264;
+}
+
+/* Filter Form */
+.filter-form {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 25px;
+}
+
+.filter-form select {
+  padding: 10px 14px;
+  border-radius: 40px;
+  border: 2px solid rgba(37, 34, 99, 0.2);
+  outline: none;
+  font-size: 15px;
+  color: #252264;
+  background: transparent;
+  min-width: 150px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.filter-form select:focus,
+.filter-form select:hover {
+  border-color: #252264;
+  box-shadow: 0 0 5px rgba(37, 34, 100, 0.3);
+}
+
+.filter-form button {
+  padding: 10px 20px;
+  border-radius: 50px;
+  border: none;
+  background-color: rgb(37,34,99);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.filter-form button:hover {
+  background-color: #130f42;
+  transform: translateY(-2px);
+}
+
+/* Order Card */
+.order-card {
+  border: 1px solid rgba(37,34,99,0.2);
+  border-radius: 12px;
+  padding: 20px 25px;
+  margin-bottom: 20px;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(5px);
+}
+
+.order-card h3 {
+  margin: 0 0 10px 0;
+  color: #252264;
+}
+
+.order-card p {
+  margin: 4px 0;
+  font-size: 15px;
+  color: #252264;
+}
+
+/* Seats list */
+.seats-list {
+  margin: 6px 0 0 0;
+  font-size: 15px;
+}
+
+/* Cancel Button */
+.cancel-btn {
+  margin-top: 10px;
+  padding: 10px 15px;
+  border-radius: 50px;
+  border: none;
+  background-color: rgba(185,28,28,0.8);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cancel-btn:hover {
+  background-color: #991b1b;
+  transform: translateY(-2px);
+}
+
+/* Back Link */
+.link {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.back-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #252264;
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.back-home i {
+  font-size: 18px;
+}
+
+.back-home:hover {
+  opacity: 1;
+  transform: translateX(-2px);
+}
