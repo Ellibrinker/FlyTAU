@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Flight Booking</title>
     <link rel="stylesheet" href="/static/search_flights.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link href='https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css' rel='stylesheet'>
 </head>
 <body>
@@ -27,15 +28,17 @@
         {% endif %}
 
         <!-- טופס חיפוש טיסות -->
+        <h1 class="search-title">Choose your destination ✈️</h1>
+        <p class="search-subtitle">Find the best flights in just a few clicks</p>
         <form action="/search_flights" method="GET" class="search-form">
             <div class="input-box">
                 <input type="text" name="origin" placeholder="Input Origin" value="{{ request.args.get('origin', '') }}">
-                <i class='bxr  bx-plane-take-off'></i> 
+                <i class='bxr  bx-plane-take-off'></i>
             </div>
 
             <div class="input-box">
                 <input type="text" name="destination" placeholder="Input Destination" value="{{ request.args.get('destination', '') }}">
-                <i class='bxr  bx-plane-land'></i> 
+                <i class='bxr  bx-plane-land'></i>
             </div>
 
             <div class="input-box">
@@ -43,6 +46,11 @@
             </div>
 
             <button type="submit">Search Flights</button>
+            <a href="/" class="back-home">
+                <i class='bxr  bx-arrow-left'></i>
+                Back to Home
+            </a>
+
         </form>
 
         <!-- טבלת טיסות -->
