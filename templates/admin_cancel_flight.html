@@ -1,57 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Cancel Flight</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 24px; }
-    .box { border: 1px solid #ddd; padding: 14px; border-radius: 10px; margin: 14px 0; }
-    .error { color: #b00020; font-weight: 700; }
-    .muted { color: #666; }
-    .pill { display: inline-block; padding: 4px 10px; border-radius: 999px; background: #f4f7f6; border: 1px solid #ddd; font-size: 13px; margin-right: 6px; }
-    a { color: #008B8B; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    button {
-      cursor: pointer;
-      border: none;
-      background: #b00020;
-      color: #fff;
-      font-weight: 700;
-      padding: 10px 14px;
-      border-radius: 8px;
-    }
-    button:hover { opacity: 0.92; }
-    button:disabled { background: #d7a0a8; cursor: not-allowed; opacity: 1; }
-
-    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    .warn { color: #7a1b1b; font-weight: 700; }
-
-    /* ✅ NEW: status styling */
-    .status { font-weight: 700; }
-    .status-open { color: #0b6e4f; }
-    .status-cancelled { color: #b00020; }
-    .status-full { color: #6b4e00; }
-    .status-done { color: #444; }
-
-    /* ✅ NEW: info banner */
-    .info {
-      background: #f9f4e8;
-      border: 1px solid #ead7a7;
-      color: #6b4e00;
-      padding: 12px 14px;
-      border-radius: 10px;
-      margin: 14px 0;
-      font-weight: 700;
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <title>Cancel Flight | FlyTAU</title>
+    <link rel="stylesheet" href="/static/admin_cancel_flight.css">
+    <link href='https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css' rel='stylesheet'>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
+
 <body>
+<header class="top-bar">
+  <a href="/" class="logo-link">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Company Logo" class="company-logo">
+  </a>
+  <a href="/admin/flights" class="back-home">
+    <i class='bx bx-arrow-left'></i>
+    Back to flights
+  </a>
+</header>
+
+<div class="wrapper">
+
   <h1>Cancel Flight</h1>
-  <p><a href="/admin/flights">← Back to flights</a></p>
 
   {% if error %}
-    <p class="error">{{ error }}</p>
+    <div class="warn">{{ error }}</div>
   {% endif %}
 
   {% set st = (flight.status|string)|lower %}
@@ -79,9 +52,7 @@
     </div>
 
     <p class="muted" style="margin-top: 10px;">
-      This action will mark the flight as <b>cancelled</b>.
-      Customers’ active/paid orders will be <b>system-cancelled</b> (refunded in your DB logic),
-      and seats will be released for this flight.
+      This action will mark the flight as <b>cancelled</b>. Customers’ active/paid orders will be <b>system-cancelled</b> and seats released.
     </p>
 
     <p class="warn" style="margin-top: 8px;">
@@ -90,21 +61,22 @@
   </div>
 
   <div class="box">
-    <h3 style="margin: 0 0 10px;">Confirm cancellation</h3>
-    <p class="muted" style="margin: 0 0 12px;">
-      Please confirm you want to cancel this flight.
-    </p>
+    <h3>Confirm cancellation</h3>
+    <p class="muted">Please confirm you want to cancel this flight.</p>
 
     <form method="POST">
       <button type="submit" {% if not can_cancel %}disabled{% endif %}>
         Confirm
       </button>
+
       {% if not can_cancel %}
         <p class="muted" style="margin-top:10px;">
-          To cancel, change the flight status back to <b>open</b> (if your system allows it) and try again.
+          To cancel, change the flight status back to <b>open</b> and try again.
         </p>
       {% endif %}
     </form>
   </div>
+
+</div>
 </body>
 </html>
