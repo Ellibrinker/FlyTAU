@@ -755,20 +755,27 @@ def admin_reports():
                 "Average occupancy percent for flights that actually took place (exclude cancelled)."
             )
             _set_table([
-                {"key": "month", "label": "Month"},
-                {"key": "avg_occupancy_percent", "label": "Avg Occupancy %"},
-                {"key": "flights_count", "label": "# Flights"},
+                {"key": "total_avg_occupancy", "label": "avg_occupancy (%)"}
             ])
             meta["notes"] = [
-                "TODO: Define what counts as 'completed' (status='done' / departure in past + not cancelled).",
-                "TODO: Ensure cancellations are excluded."
+                "The calculation is based on the ratio of occupied seats to the total seats available in the FlightSeat table.",
+                "Flights with a 'cancelled' status are excluded from the calculation.",
+                "The report includes only flights with a departure date that has already passed""
             ]
 
-            # TODO: Replace with real SQL
-            # cursor.execute(""" ... """, (date_from, date_to))
-            # data = cursor.fetchall()
-            # cursor.execute(""" ... """, (date_from, date_to))
-            # kpis = cursor.fetchone() or {}
+            SELECT 
+            AVG(stats.occupancy) AS avg_occupancy_percent #חישוב ממוצע טיסות
+        FROM Flight f
+        JOIN (
+            SELECT 
+                flight_id, 
+                (COUNT(CASE WHEN status != 'available' THEN 1 END) * 100.0 / COUNT(*)) AS occupancy #סופר את המושבים התפוסים
+            FROM FlightSeat
+            GROUP BY flight_id
+        ) AS stats ON f.flight_id = stats.flight_id
+        WHERE f.status != 'cancelled' #מחשיבים רק את הטיסות שלא בוטלו
+          AND f.departure_date < CURDATE(); #מחשיבים רק טיסות שכבר התרחשו 
+
 
         # =========================================================
         # 2) Revenue by plane size, manufacturer, and class
