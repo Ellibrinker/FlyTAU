@@ -1,153 +1,111 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Admin - Flights</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 24px; }
-    a { color: #008B8B; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-    .box { border: 1px solid #ddd; padding: 14px; border-radius: 10px; margin: 14px 0; }
-    .muted { color: #666; }
-
-    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    input, select, button {
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-    }
-    button { cursor: pointer; border: none; background: #008B8B; color: white; font-weight: 700; }
-    button:hover { opacity: 0.92; }
-
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #e5e5e5; padding: 10px; text-align: left; vertical-align: top; }
-    th { background: #f7f7f7; }
-
-    .pill { display: inline-block; padding: 4px 10px; border-radius: 999px; background: #f4f7f6; border: 1px solid #ddd; font-size: 13px; }
-    .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-
-    .status { font-weight: 700; }
-    .status-open { color: #0b6e4f; }
-    .status-cancelled { color: #b00020; }
-    .status-full { color: #6b4e00; }
-    .status-done { color: #444; }
-
-    .danger-link { color: #b00020; font-weight: 700; }
-    .disabled-link { color: #999; pointer-events: none; cursor: not-allowed; text-decoration: none; }
-
-    .empty { padding: 18px; border: 1px dashed #ccc; border-radius: 10px; }
-
-    /* ✅ NEW: success banner */
-    .success {
-      background: #e8f7f2;
-      border: 1px solid #bfe8d7;
-      color: #0b6e4f;
-      padding: 12px 14px;
-      border-radius: 10px;
-      font-weight: 700;
-      margin: 14px 0;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <title>Admin - Flights | FLYTAU</title>
+  <link href='https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css' rel='stylesheet'>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/admin_flights.css">
 </head>
 <body>
-  <div class="topbar">
-    <div>
-      <h1 style="margin:0;">Flights Management</h1>
-      <p class="muted" style="margin:6px 0 0;">Hi {{ session.get('manager_name') }}</p>
-    </div>
 
-    <div class="row">
-      <a class="pill" href="/admin/flights/new">+ Add New Flight</a>
-      <a class="pill" href="/admin/reports">Reports</a>
-      <a class="pill" href="/admin/logout">Logout</a>
-    </div>
-  </div>
-
-  <!-- ✅ NEW: show success when redirected with ?created=1 -->
-  {% if created %}
-    <div class="success">✅ Flight created successfully.</div>
-  {% endif %}
-
-  <div class="box">
-    <h3 style="margin:0 0 10px;">Search</h3>
-    <form method="GET">
-      <div class="row">
-        <input name="origin" placeholder="Origin (e.g. TLV)" value="{{ request.args.get('origin','') }}" />
-        <input name="destination" placeholder="Destination (e.g. ATH)" value="{{ request.args.get('destination','') }}" />
-        <input type="date" name="departure_date" value="{{ request.args.get('departure_date','') }}" />
-        <select name="status">
-          {% set s = (request.args.get('status','')|lower) %}
-          <option value="" {% if not s %}selected{% endif %}>All statuses</option>
-          <option value="open" {% if s=='open' %}selected{% endif %}>open</option>
-          <option value="cancelled" {% if s=='cancelled' %}selected{% endif %}>cancelled</option>
-          <option value="full" {% if s=='full' %}selected{% endif %}>full</option>
-          <option value="done" {% if s=='done' %}selected{% endif %}>done</option>
-        </select>
-
-        <button type="submit">Search</button>
-        <a class="pill" href="/admin/flights">Clear</a>
+  <!-- Top Bar -->
+  <header class="top-bar">
+    <a href="/" class="logo-link">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Company Logo" class="company-logo">
+    </a>
+    <div class="topbar-right">
+      <span class="muted">Hi {{ session.get('manager_name') }}</span>
+      <div class="actions-row">
+        <a href="/admin/flights/new" class="pill-btn">+ Add New Flight</a>
+        <a href="/admin/reports" class="pill-btn">Reports</a>
+        <a href="/admin/logout" class="pill-btn">Logout</a>
       </div>
-      <p class="muted" style="margin:10px 0 0;">
-        Tip: “Cancel” is available only for flights with status <b>open</b>. Cancelled/done flights can’t be cancelled again.
-      </p>
-    </form>
-  </div>
-
-  {% if not flights or flights|length == 0 %}
-    <div class="empty">
-      <b>No flights found.</b>
-      <div class="muted" style="margin-top:6px;">Try changing filters or add a new flight.</div>
     </div>
-  {% else %}
+  </header>
+
+  <div class="wrapper">
+
+    {% if created %}
+      <div class="success">
+        Flight created successfully
+        <i class='bx bx-check-circle'></i>
+      </div>
+    {% endif %}
+
     <div class="box">
-      <div class="row" style="justify-content: space-between;">
-        <h3 style="margin:0;">Results</h3>
-        <span class="pill">Total: <b>{{ flights|length }}</b></span>
-      </div>
+      <h3>Search</h3>
+      <form method="GET">
+        <div class="row">
+          <input name="origin" placeholder="Origin (e.g. TLV)" value="{{ request.args.get('origin','') }}">
+          <input name="destination" placeholder="Destination (e.g. ATH)" value="{{ request.args.get('destination','') }}">
+          <input type="date" name="departure_date" value="{{ request.args.get('departure_date','') }}">
+          <select name="status">
+            {% set s = (request.args.get('status','')|lower) %}
+            <option value="" {% if not s %}selected{% endif %}>All statuses</option>
+            <option value="open" {% if s=='open' %}selected{% endif %}>open</option>
+            <option value="cancelled" {% if s=='cancelled' %}selected{% endif %}>cancelled</option>
+            <option value="full" {% if s=='full' %}selected{% endif %}>full</option>
+            <option value="done" {% if s=='done' %}selected{% endif %}>done</option>
+          </select>
 
-      <table>
-        <tr>
-          <th style="width:90px;">Flight ID</th>
-          <th>Route</th>
-          <th style="width:140px;">Date</th>
-          <th style="width:110px;">Time</th>
-          <th style="width:120px;">Status</th>
-          <th style="width:140px;">Actions</th>
-        </tr>
-
-        {% for f in flights %}
-          {% set st = (f.status|string)|lower %}
-          <tr>
-            <td><b>{{ f.flight_id }}</b></td>
-
-            <td>
-              <span class="pill"><b>{{ f.origin_airport }}</b> → <b>{{ f.destination_airport }}</b></span>
-            </td>
-
-            <td>{{ f.departure_date }}</td>
-            <td>{{ f.departure_time }}</td>
-
-            <td class="status
-              {% if st=='open' %}status-open{% elif st=='cancelled' %}status-cancelled{% elif st=='full' %}status-full{% elif st=='done' %}status-done{% endif %}
-            ">
-              {{ st }}
-            </td>
-
-            <td>
-              <div class="actions">
-                {% if st == 'open' %}
-                  <a class="danger-link" href="{{ url_for('admin.admin_cancel_flight', flight_id=f.flight_id) }}">Cancel</a>
-                {% else %}
-                  <span class="disabled-link" title="Only open flights can be cancelled">Cancel</span>
-                {% endif %}
-              </div>
-            </td>
-          </tr>
-        {% endfor %}
-      </table>
+          <button type="submit">Search</button>
+          <a class="pill-btn" href="/admin/flights">Clear</a>
+        </div>
+        <p class="muted">
+          Tip: “Cancel” is available only for flights with status <b>open</b>. Cancelled/done flights can’t be cancelled again.
+        </p>
+      </form>
     </div>
-  {% endif %}
+
+    {% if not flights or flights|length == 0 %}
+      <div class="empty">
+        <b>No flights found.</b>
+        <div class="muted">Try changing filters or add a new flight.</div>
+      </div>
+    {% else %}
+      <div class="box">
+        <div class="row" style="justify-content: space-between;">
+          <h3>Results</h3>
+          <span class="pill">Total: <b>{{ flights|length }}</b></span>
+        </div>
+
+        <table>
+          <tr>
+            <th>Flight ID</th>
+            <th>Route</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+
+          {% for f in flights %}
+            {% set st = (f.status|string)|lower %}
+            <tr>
+              <td><b>{{ f.flight_id }}</b></td>
+              <td><span class="pill"><b>{{ f.origin_airport }}</b> → <b>{{ f.destination_airport }}</b></span></td>
+              <td>{{ f.departure_date }}</td>
+              <td>{{ f.departure_time }}</td>
+              <td class="status
+                {% if st=='open' %}status-open{% elif st=='cancelled' %}status-cancelled{% elif st=='full' %}status-full{% elif st=='done' %}status-done{% endif %}
+              ">{{ st }}</td>
+              <td>
+                <div class="actions">
+                  {% if st == 'open' %}
+                    <a class="danger-link" href="{{ url_for('admin.admin_cancel_flight', flight_id=f.flight_id) }}">Cancel</a>
+                  {% else %}
+                    <span class="disabled-link" title="Only open flights can be cancelled">Cancel</span>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </table>
+      </div>
+    {% endif %}
+
+  </div>
+
 </body>
 </html>
