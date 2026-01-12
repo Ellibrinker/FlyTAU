@@ -79,17 +79,16 @@ The interface is designed to support the following reports:
 
 ## 📁 Repository Structure (High-Level)
 
-```
-/app
-  /templates
-    admin_*.html
-    customer_*.html
-  /static
-  admin.py
-  main.py
-/database
-  schema.sql
-  seed.sql
+```project/
+├── static/ # CSS and static assets
+├── templates/ # HTML templates (Jinja)
+│ ├── admin_*.html
+│ └── customer-facing pages
+├── admin.py # Admin (manager) logic
+├── flights.py # Customer flight & booking logic
+├── main.py # Application entry point
+├── schema.sql # Database schema
+└── seed.sql # Initial data
 ```
 
 ---
