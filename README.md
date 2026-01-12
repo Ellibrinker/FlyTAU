@@ -77,7 +77,7 @@ The interface is designed to support the following reports:
 
 ---
 
-## 📁 Repository Structure (High-Level)
+## 📁 Repository Structure
 
 ```project/
 ├── static/ # CSS and static assets
