@@ -763,19 +763,39 @@ def admin_reports():
                 "The report includes only flights with a departure date that has already passed""
             ]
 
-            SELECT 
-            AVG(stats.occupancy) AS avg_occupancy_percent #חישוב ממוצע טיסות
-        FROM Flight f
-        JOIN (
-            SELECT 
-                flight_id, 
-                (COUNT(CASE WHEN status != 'available' THEN 1 END) * 100.0 / COUNT(*)) AS occupancy #סופר את המושבים התפוסים
-            FROM FlightSeat
-            GROUP BY flight_id
-        ) AS stats ON f.flight_id = stats.flight_id
-        WHERE f.status != 'cancelled' #מחשיבים רק את הטיסות שלא בוטלו
-          AND f.departure_date < CURDATE(); #מחשיבים רק טיסות שכבר התרחשו 
+            elif report == "flight_occupancy_stats":
+            _set_title(
+                "Average Flight Occupancy",
+                "Calculates the occupancy percentage for all completed and non-cancelled flights."
+            )
+            _set_table([
+                {"key": "avg_occupancy_percent", "label": "Average Occupancy (%)"}
+            ])
 
+            query = """
+                SELECT 
+                    ROUND(AVG(stats.occupancy), 2) AS avg_occupancy_percent
+                FROM Flight f
+                JOIN (
+                    SELECT 
+                        flight_id, 
+                        (COUNT(CASE WHEN status != 'available' THEN 1 END) * 100.0 / COUNT(*)) AS occupancy
+                    FROM FlightSeat
+                    GROUP BY flight_id
+                ) AS stats ON f.flight_id = stats.flight_id
+                WHERE f.status != 'cancelled'
+                  AND f.departure_date < CURDATE()
+                  AND f.departure_date BETWEEN %s AND %s;
+            """
+            cursor.execute(query, (date_from, date_to))
+            row = cursor.fetchone()
+
+            # המרה של התוצאה הבודדת למבנה שהטבלה מצפה לו
+            data = []
+            if row and row[0] is not None:
+                data.append({"avg_occupancy_percent": f"{row[0]}%"})
+            else:
+                data.append({"avg_occupancy_percent": "No data available"})
 
         # =========================================================
         # 2) Revenue by plane size, manufacturer, and class
