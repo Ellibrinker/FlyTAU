@@ -917,14 +917,13 @@ def admin_reports():
                 "Per aircraft: performed flights, cancelled flights, utilization % (assume 30 days), dominant route."
             )
             _set_table([
-                {"key": "month", "label": "Month"},
                 {"key": "plane_id", "label": "Plane ID"},
                 {"key": "manufacturer", "label": "Manufacturer"},
-                {"key": "plane_size", "label": "Plane Size (Big/Regular)"},
-                {"key": "performed_flights", "label": "Performed Flights"},
-                {"key": "cancelled_flights", "label": "Cancelled Flights"},
-                {"key": "utilization_percent", "label": "Utilization % (30 days)"},
-                {"key": "dominant_route", "label": "Dominant Route"},
+                {"key": "month", "label": "Month"},
+                {"key": "total_flights", "label": "Total Flights"},
+                {"key": "cancelled_flights", "label": "Cancelled"},
+                {"key": "top_route", "label": "Dominant Route"},
+                {"key": "utilization", "label": "Utilization (%)"},
             ])
             meta["notes"] = [
                 "TODO: Define utilization calculation clearly (e.g., total flight time / (30*24*60)).",
@@ -932,11 +931,52 @@ def admin_reports():
                 "TODO: Separate performed vs cancelled flights."
             ]
 
-            # TODO: Replace with real SQL
-            # cursor.execute(""" ... """, (date_from, date_to))
-            # data = cursor.fetchall()
-            # cursor.execute(""" ... """, (date_from, date_to))
-            # kpis = cursor.fetchone() or {}
+            query = """
+                WITH MonthlyStats AS (
+                    SELECT 
+                        p.plane_id,
+                        p.manufacturer,
+                        DATE_FORMAT(f.departure_date, '%%Y-%%m') AS flight_month,
+                        COUNT(*) AS total_flights,
+                        SUM(CASE WHEN f.status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_count
+                    FROM Plane p
+                    JOIN Flight f ON p.plane_id = f.plane_id
+                    WHERE f.departure_date BETWEEN %s AND %s
+                    GROUP BY p.plane_id, p.manufacturer, flight_month
+                )
+                SELECT 
+                    ms.plane_id,
+                    ms.manufacturer,
+                    ms.flight_month,
+                    ms.total_flights,
+                    ms.cancelled_count,
+                    (SELECT CONCAT(f3.origin_airport, '-', f3.destination_airport)
+                     FROM Flight f3
+                     WHERE f3.plane_id = ms.plane_id 
+                       AND DATE_FORMAT(f3.departure_date, '%%Y-%%m') = ms.flight_month
+                     GROUP BY f3.origin_airport, f3.destination_airport
+                     ORDER BY COUNT(*) DESC 
+                     LIMIT 1) AS top_route
+                FROM MonthlyStats ms
+                ORDER BY ms.flight_month DESC, ms.total_flights DESC;
+            """
+            cursor.execute(query, (date_from, date_to))
+            data = []
+            for row in cursor.fetchall():
+                total = row[3]
+                cancelled = row[4]
+                actual_flights = total - cancelled
+                utilization_pct = round((actual_flights / 30.0) * 100, 1)
+                
+                data.append({
+                    "plane_id": row[0],
+                    "manufacturer": row[1],
+                    "month": row[2],
+                    "total_flights": total,
+                    "cancelled_flights": cancelled,
+                    "top_route": row[5] if row[5] else "N/A",
+                    "utilization": f"{utilization_pct}%"
+                })
 
         else:
             # fallback to a valid report key
