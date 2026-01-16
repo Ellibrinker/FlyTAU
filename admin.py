@@ -827,12 +827,40 @@ def admin_reports():
                 "TODO: Exclude cancelled flights."
             ]
 
-            # TODO: Replace with real SQL
-            # cursor.execute(""" ... """, (date_from, date_to))
-            # data = cursor.fetchall()
-            # cursor.execute(""" ... """, (date_from, date_to))
-            # kpis = cursor.fetchone() or {}
-
+            sql_query = """
+            SELECT 
+                w.id AS worker_id,
+                CASE 
+                        WHEN p.id IS NOT NULL THEN 'Pilot'
+                        WHEN fa.id IS NOT NULL THEN 'Flight Attendant'
+                        ELSE 'AirCrew'
+                END AS role,
+                CONCAT(w.first_name, ' ', w.last_name) AS full_name,
+                COALESCE(SUM(CASE WHEN aw.duration <= 360 THEN aw.duration ELSE 0 END), 0) AS short_flights_hours,
+                COALESCE(SUM(CASE WHEN aw.duration > 360 THEN aw.duration ELSE 0 END), 0) AS long_flights_hours,
+                COALESCE(SUM(aw.duration), 0) AS total_flight_hours
+            FROM Worker w
+            JOIN AirCrew ac ON w.id = ac.id
+            JOIN FlightCrewPlacement fcp ON ac.id = fcp.id
+            JOIN Flight f ON fcp.flight_id = f.flight_id
+            JOIN Airway aw ON f.origin_airport = aw.origin_airport 
+               AND f.destination_airport = aw.destination_airport
+            WHERE f.departure_date BETWEEN %s AND %s
+            GROUP BY w.id, w.first_name, w.last_name
+            ORDER BY total_flight_hours DESC;
+            """    
+            cursor.execute(sql_query, (date_from, date_to))
+            data = [
+                {
+                    "worker_id": row[0],
+                    "full_name": row[1],
+                    "role": row[2],
+                    "short_minutes": row[3],
+                    "long_minutes": row[4],
+                    "total_minutes": row[5]
+                }
+                for row in cursor.fetchall()
+            ]
         # =========================================================
         # 4) Purchase cancellation rate by month
         #    (שיעור ביטולי רכישות לפי חודש)
