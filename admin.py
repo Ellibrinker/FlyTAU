@@ -801,28 +801,56 @@ def admin_reports():
         # 2) Revenue by plane size, manufacturer, and class
         #    (הכנסות בחתך גודל מטוס, יצרנית מטוס ומחלקה)
         # =========================================================
-        elif report == "revenue_plane_size_manu_class":
+    elif report == "revenue_plane_size_manu_class":
             _set_title(
                 "Revenue by Plane Size / Manufacturer / Class",
                 "Revenue breakdown by aircraft size, manufacturer and ticket class."
             )
             _set_table([
-                {"key": "plane_size", "label": "Plane Size (Big/Regular)"},
+                {"key": "plane_size", "label": "Plane Size (Big/Small)"},
                 {"key": "manufacturer", "label": "Manufacturer"},
                 {"key": "class_type", "label": "Class"},
-                {"key": "orders_count", "label": "# Orders"},
                 {"key": "revenue", "label": "Revenue"},
             ])
             meta["notes"] = [
-                "TODO: Decide revenue source: FlightOrder.total_payment (net) vs derived from pricing table.",
-                "TODO: Handle cancelled orders/flight cancellations explicitly per project policy."
+                "Revenue is calculated per sold seat based on flight pricing.",
+                "Customer-cancelled orders contribute 5% of the ticket price.",
+                "Cancelled flights are excluded from the report."
             ]
 
-            # TODO: Replace with real SQL
-            # cursor.execute(""" ... """, (date_from, date_to))
-            # data = cursor.fetchall()
-            # cursor.execute(""" ... """, (date_from, date_to))
-            # kpis = cursor.fetchone() or {}
+            cursor.execute("""
+                SELECT
+                    CASE
+            		    WHEN bp.plane_id IS NOT NULL THEN "Big"
+            		    ELSE "Small"
+	                END AS plane_size,
+                    p.manufacturer AS manufacturer,
+                    fp.class_type AS class_type,
+                    ROUND(
+		                SUM(
+		                CASE
+			                WHEN fo.status = "customer cancelled" THEN fp.price*0.05
+			                ELSE fp.price
+		                END),2)
+                        AS revenue
+                FROM flight f
+                    JOIN plane p ON f.plane_id = p.plane_id
+                    LEFT JOIN bigplane bp ON f.plane_id = bp.plane_id
+                    JOIN flightseat fs ON f.flight_id = fs.flight_id
+                    JOIN seat s ON fs.seat_id = s.seat_id
+                    JOIN orderitem oi ON fs.flight_seat_id = oi.flight_seat_id
+                    JOIN flightorder fo ON oi.order_id = fo.order_id
+                    JOIN flightpricing fp ON f.flight_id = fp.flight_id AND s.class_type = fp.class_type
+                WHERE f.status != "cancelled"
+                    AND f.departure_date BETWEEN %s AND %s
+                GROUP BY 
+                    plane_size,
+                    manufacturer,
+                    class_type;
+             """, (date_from, date_to))
+            data = cursor.fetchall()
+            total_revenue = sum(row["revenue"] for row in data)
+            kpis = {"total_revenue": total_revenue}
 
         # =========================================================
         # 3) Accumulated flight hours per worker, split long/short
@@ -891,21 +919,37 @@ def admin_reports():
                 "Cancellation rate of purchases/orders by month."
             )
             _set_table([
+                {"key": "year", "label": "Year"},
                 {"key": "month", "label": "Month"},
-                {"key": "total_orders", "label": "Total Orders"},
-                {"key": "cancelled_orders", "label": "Cancelled Orders"},
-                {"key": "cancel_rate_percent", "label": "Cancel Rate %"},
+                {"key": "cancellation_rate_percentage", "label": "Cancel Rate %"},
             ])
             meta["notes"] = [
-                "TODO: Decide which statuses count as cancellation (customer_cancelled/system_cancelled).",
-                "TODO: Use execution_date (or order_date if exists) consistently."
+                "Cancelled orders include statuses: customer cancelled.",
+                 "Using execution_date for month/year grouping."
             ]
 
-            # TODO: Replace with real SQL
-            # cursor.execute(""" ... """, (date_from, date_to))
-            # data = cursor.fetchall()
-            # cursor.execute(""" ... """, (date_from, date_to))
-            # kpis = cursor.fetchone() or {}
+            cursor.execute("""
+                SELECT
+                    YEAR(fo.execution_date) AS year,
+                    MONTHNAME(fo.execution_date) AS month,
+                    CONCAT(
+                        ROUND(
+                            SUM(CASE WHEN fo.status = 'customer cancelled' THEN 1 ELSE 0 END) * 100 / COUNT(*),
+                            2
+                        ),
+                        '%'
+                    ) AS cancellation_rate_percentage
+                FROM flightorder fo
+                WHERE fo.execution_date BETWEEN %s AND %s
+                GROUP BY 
+                    YEAR(fo.execution_date), 
+                    MONTH(fo.execution_date),
+                    MONTHNAME(fo.execution_date)
+                ORDER BY 
+                    year ASC, 
+                    MONTH(fo.execution_date) ASC;
+            """, (date_from, date_to))
+            data = cursor.fetchall()
 
         # =========================================================
         # 5) Monthly activity summary per plane
