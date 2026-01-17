@@ -88,6 +88,7 @@ body {
     transform: translate(-50%);
     font-size: 20px;
     color: #252264;
+    pointer-events: none;
 }
 
 .input-box input:hover,
