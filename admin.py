@@ -762,7 +762,8 @@ def admin_reports():
                 "Flights with a 'cancelled' status are excluded from the calculation.",
                 "The report includes only flights with a departure date that has already passed"
             ]
-		elif report == "flight_occupancy_stats":
+
+        elif report == "flight_occupancy_stats":
             _set_title(
                 "Average Flight Occupancy",
                 "Calculates the occupancy percentage for all completed and non-cancelled flights."
@@ -800,7 +801,7 @@ def admin_reports():
         # 2) Revenue by plane size, manufacturer, and class
         #    (הכנסות בחתך גודל מטוס, יצרנית מטוס ומחלקה)
         # =========================================================
-			elif report == "revenue_plane_size_manu_class":
+        elif report == "revenue_plane_size_manu_class":
             _set_title(
                 "Revenue by Plane Size / Manufacturer / Class",
                 "Revenue breakdown by aircraft size, manufacturer and ticket class."
@@ -820,17 +821,17 @@ def admin_reports():
             cursor.execute("""
                 SELECT
                     CASE
-            		    WHEN bp.plane_id IS NOT NULL THEN "Big"
-            		    ELSE "Small"
-	                END AS plane_size,
+                        WHEN bp.plane_id IS NOT NULL THEN "Big"
+                        ELSE "Small"
+                    END AS plane_size,
                     p.manufacturer AS manufacturer,
                     fp.class_type AS class_type,
                     ROUND(
-		                SUM(
-		                CASE
-			                WHEN fo.status = "customer cancelled" THEN fp.price*0.05
-			                ELSE fp.price
-		                END),2)
+                        SUM(
+                        CASE
+                            WHEN fo.status = "customer cancelled" THEN fp.price*0.05
+                            ELSE fp.price
+                        END),2)
                         AS revenue
                 FROM flight f
                     JOIN plane p ON f.plane_id = p.plane_id
@@ -846,7 +847,7 @@ def admin_reports():
                     plane_size,
                     manufacturer,
                     class_type;
-             """, (date_from, date_to))
+            """, (date_from, date_to))
             data = cursor.fetchall()
             total_revenue = sum(row["revenue"] for row in data)
             kpis = {"total_revenue": total_revenue}
@@ -908,6 +909,7 @@ def admin_reports():
                 }
                 for row in cursor.fetchall()
             ]
+
         # =========================================================
         # 4) Purchase cancellation rate by month
         #    (שיעור ביטולי רכישות לפי חודש)
@@ -924,7 +926,7 @@ def admin_reports():
             ])
             meta["notes"] = [
                 "Cancelled orders include statuses: customer cancelled.",
-                 "Using execution_date for month/year grouping."
+                "Using execution_date for month/year grouping."
             ]
 
             cursor.execute("""
@@ -1010,7 +1012,7 @@ def admin_reports():
                 cancelled = row[4]
                 actual_flights = total - cancelled
                 utilization_pct = round((actual_flights / 30.0) * 100, 1)
-                
+
                 data.append({
                     "plane_id": row[0],
                     "manufacturer": row[1],
@@ -1034,4 +1036,3 @@ def admin_reports():
         kpis=kpis,
         meta=meta,
     )
-
