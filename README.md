@@ -80,15 +80,16 @@ The interface is designed to support the following reports:
 ## 📁 Repository Structure
 
 ```project/
-├── static/ # CSS and static assets
-├── templates/ # HTML templates (Jinja)
-│ ├── admin_*.html
-│ └── customer-facing pages
-├── admin.py # Admin (manager) logic
-├── flights.py # Customer flight & booking logic
-├── main.py # Application entry point
-├── schema.sql # Database schema
-└── seed.sql # Initial data
+├── static/                 # CSS and static assets
+├── templates/              # HTML templates (Jinja)
+│   ├── admin_*.html        # Admin / managerial pages
+│   └── customer-*.html     # Customer-facing pages
+├── admin.py                # Admin (manager) logic
+├── flights.py              # Customer flight & booking logic
+├── main.py                 # Application entry point
+├── schema.sql               # Database schema (tables, constraints)
+├── seed.sql                 # Initial data
+└── reports_queries.sql      # Management reports SQL queries
 ```
 
 ---
