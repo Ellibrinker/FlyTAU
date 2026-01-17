@@ -137,7 +137,6 @@ def order_success():
     order_id = request.args.get("order_id", type=int)
     email = request.args.get("email", "")
 
-    from main import db_cur
     with db_cur() as cursor:
         cursor.execute("""
             SELECT fo.order_id, fo.flight_id, fo.email, fo.execution_date, fo.status, fo.total_payment
