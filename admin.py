@@ -760,7 +760,7 @@ def admin_reports():
             meta["notes"] = [
                 "The calculation is based on the ratio of occupied seats to the total seats available in the FlightSeat table.",
                 "Flights with a 'cancelled' status are excluded from the calculation.",
-                "The report includes only flights with a departure date that has already passed""
+                "The report includes only flights with a departure date that has already passed"
             ]
 
             elif report == "flight_occupancy_stats":
