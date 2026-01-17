@@ -762,8 +762,7 @@ def admin_reports():
                 "Flights with a 'cancelled' status are excluded from the calculation.",
                 "The report includes only flights with a departure date that has already passed"
             ]
-
-        elif report == "flight_occupancy_stats":
+		elif report == "flight_occupancy_stats":
             _set_title(
                 "Average Flight Occupancy",
                 "Calculates the occupancy percentage for all completed and non-cancelled flights."
