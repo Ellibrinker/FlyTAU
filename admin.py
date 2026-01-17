@@ -800,7 +800,7 @@ def admin_reports():
         # 2) Revenue by plane size, manufacturer, and class
         #    (הכנסות בחתך גודל מטוס, יצרנית מטוס ומחלקה)
         # =========================================================
-    elif report == "revenue_plane_size_manu_class":
+			elif report == "revenue_plane_size_manu_class":
             _set_title(
                 "Revenue by Plane Size / Manufacturer / Class",
                 "Revenue breakdown by aircraft size, manufacturer and ticket class."
