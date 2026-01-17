@@ -219,14 +219,6 @@ VALUES (@pl7,'TLV','LCA','2026-01-14','08:00:00','open'); SET @f5 = LAST_INSERT_
 INSERT INTO Flight (plane_id, origin_airport, destination_airport, departure_date, departure_time, status)
 VALUES (@pl8,'TLV','FCO','2026-01-15','16:15:00','open'); SET @f6 = LAST_INSERT_ID();
 
-INSERT INTO Flight (plane_id, origin_airport, destination_airport, departure_date, departure_time, status)
-VALUES (@pl1, 'TLV', 'ATH', '2025-12-15', '10:00:00', 'done');
-SET @f7 = LAST_INSERT_ID();
-
-INSERT INTO Flight (plane_id, origin_airport, destination_airport, departure_date, departure_time, status)
-VALUES (@pl2, 'TLV', 'ROM', '2026-01-05', '12:00:00', 'done');
-SET @f8 = LAST_INSERT_ID();
-
 INSERT INTO FlightPricing (flight_id, class_type, price) VALUES
 (@f1,'Regular',500.00),(@f1,'Business',900.00),
 (@f2,'Regular',600.00),(@f2,'Business',1100.00),
@@ -251,16 +243,6 @@ INSERT INTO FlightSeat (flight_id, seat_id, status) VALUES
 (@f5, @s_pl7_1_2, 'available'),
 (@f6, @s_pl2_2_1, 'available'),
 (@f6, @s_pl2_2_2, 'available');
-
-INSERT INTO FlightSeat (flight_id, seat_id, status) VALUES
-(@f7, @s_pl1_1_1, 'booked'),    
-(@f7, @s_pl1_1_2, 'available'), 
-(@f7, @s_pl1_1_3, 'available'); 
-
-INSERT INTO FlightSeat (flight_id, seat_id, status) VALUES
-(@f8, @s_pl2_1_1, 'booked'),    
-(@f8, @s_pl2_1_2, 'booked'),   
-(@f8, @s_pl2_1_3, 'available');
 
 -- fetch flight_seat_ids for orders
 SELECT flight_seat_id INTO @fs1 FROM FlightSeat WHERE flight_id=@f1 AND seat_id=@s_pl1_1_1;
@@ -310,3 +292,256 @@ INSERT INTO FlightCrewPlacement (flight_id, id) VALUES
 (@f1, 300000001),(@f1, 400000001),(@f1, 400000002),
 (@f2, 300000002),(@f2, 400000003),(@f2, 400000004),
 (@f5, 300000003),(@f5, 400000005),(@f5, 400000006);
+
+
+
+USE `ellibrinker$flytau`;
+
+-- A) Boeing Business seat on @pl1 (choose a free coord)
+INSERT INTO Seat (row_num, column_number, plane_id, class_type)
+VALUES (3, 1, @pl1, 'Business');
+
+SELECT seat_id INTO @s_pl1_b_3_1
+FROM Seat
+WHERE plane_id = @pl1 AND row_num = 3 AND column_number = 1 AND class_type = 'Business'
+ORDER BY seat_id DESC
+LIMIT 1;
+
+INSERT INTO FlightSeat (flight_id, seat_id, status)
+VALUES (@f1, @s_pl1_b_3_1, 'available');
+
+SELECT flight_seat_id INTO @fs7
+FROM FlightSeat
+WHERE flight_id = @f1 AND seat_id = @s_pl1_b_3_1
+ORDER BY flight_seat_id DESC
+LIMIT 1;
+
+INSERT INTO FlightOrder (flight_id, email, execution_date, status, total_payment)
+VALUES (@f1, 'guest2@example.com', CURDATE(), 'paid', 900.00);
+SET @o7 = LAST_INSERT_ID();
+
+INSERT INTO OrderItem (order_id, flight_seat_id)
+VALUES (@o7, @fs7);
+
+UPDATE FlightSeat
+SET status = 'booked'
+WHERE flight_seat_id = @fs7;
+
+
+-- B) Airbus Business seat on @pl2 (choose a free coord)
+INSERT INTO Seat (row_num, column_number, plane_id, class_type)
+VALUES (3, 1, @pl2, 'Business');
+
+SELECT seat_id INTO @s_pl2_b_3_1
+FROM Seat
+WHERE plane_id = @pl2 AND row_num = 3 AND column_number = 1 AND class_type = 'Business'
+ORDER BY seat_id DESC
+LIMIT 1;
+
+INSERT INTO FlightSeat (flight_id, seat_id, status)
+VALUES (@f2, @s_pl2_b_3_1, 'available');
+
+SELECT flight_seat_id INTO @fs8
+FROM FlightSeat
+WHERE flight_id = @f2 AND seat_id = @s_pl2_b_3_1
+ORDER BY flight_seat_id DESC
+LIMIT 1;
+
+INSERT INTO FlightOrder (flight_id, email, execution_date, status, total_payment)
+VALUES (@f2, 'guest1@example.com', CURDATE(), 'paid', 1100.00);
+SET @o8 = LAST_INSERT_ID();
+
+INSERT INTO OrderItem (order_id, flight_seat_id)
+VALUES (@o8, @fs8);
+
+UPDATE FlightSeat
+SET status = 'booked'
+WHERE flight_seat_id = @fs8;
+
+
+USE `ellibrinker$flytau`;
+
+-- 1) Add a seat to Dassault plane @pl5 (Small)
+INSERT INTO Seat (row_num, column_number, plane_id, class_type)
+VALUES (99, 99, @pl5, 'Regular');
+
+SELECT seat_id INTO @s_pl5_r_99_99
+FROM Seat
+WHERE plane_id = @pl5 AND row_num = 99 AND column_number = 99 AND class_type = 'Regular'
+ORDER BY seat_id DESC
+LIMIT 1;
+
+-- 2) Create a flight on Dassault plane @pl5
+INSERT INTO Flight (plane_id, origin_airport, destination_airport, departure_date, departure_time, status)
+VALUES (@pl5, 'TLV', 'ATH', '2026-01-16', '11:00:00', 'open');
+SET @f7 = LAST_INSERT_ID();
+
+-- 3) Pricing (Regular)
+INSERT INTO FlightPricing (flight_id, class_type, price)
+VALUES (@f7, 'Regular', 400.00);
+
+-- 4) FlightSeat
+INSERT INTO FlightSeat (flight_id, seat_id, status)
+VALUES (@f7, @s_pl5_r_99_99, 'available');
+
+SELECT flight_seat_id INTO @fs9
+FROM FlightSeat
+WHERE flight_id = @f7 AND seat_id = @s_pl5_r_99_99
+ORDER BY flight_seat_id DESC
+LIMIT 1;
+
+-- 5) Order + item
+INSERT INTO FlightOrder (flight_id, email, execution_date, status, total_payment)
+VALUES (@f7, 'stav.abraham@example.com', CURDATE(), 'paid', 400.00);
+SET @o9 = LAST_INSERT_ID();
+
+INSERT INTO OrderItem (order_id, flight_seat_id)
+VALUES (@o9, @fs9);
+
+UPDATE FlightSeat
+SET status = 'booked'
+WHERE flight_seat_id = @fs9;
+
+
+USE `ellibrinker$flytau`;
+
+-- =========================================================
+-- ADD MORE ORDERS ACROSS MONTHS (to get 5+ monthly rows)
+-- Months added: 2025-09, 2025-10, 2025-11, 2025-12
+-- Existing orders already create 2026-01 (via CURDATE in your seed)
+-- =========================================================
+
+/* -----------------------------
+   2025-09 (customer cancelled)
+   Add a NEW Regular seat on plane @pl1, attach it to flight @f1
+------------------------------ */
+INSERT INTO Seat (row_num, column_number, plane_id, class_type)
+VALUES (4, 1, @pl1, 'Regular');
+
+SELECT seat_id INTO @s_pl1_r_4_1
+FROM Seat
+WHERE plane_id = @pl1 AND row_num = 4 AND column_number = 1 AND class_type = 'Regular'
+ORDER BY seat_id DESC
+LIMIT 1;
+
+INSERT INTO FlightSeat (flight_id, seat_id, status)
+VALUES (@f1, @s_pl1_r_4_1, 'available');
+
+SELECT flight_seat_id INTO @fs10
+FROM FlightSeat
+WHERE flight_id = @f1 AND seat_id = @s_pl1_r_4_1
+ORDER BY flight_seat_id DESC
+LIMIT 1;
+
+INSERT INTO FlightOrder (flight_id, email, execution_date, status, total_payment)
+VALUES (@f1, 'guest1@example.com', '2025-09-05', 'customer cancelled', 25.00);
+SET @o10 = LAST_INSERT_ID();
+
+INSERT INTO OrderItem (order_id, flight_seat_id)
+VALUES (@o10, @fs10);
+
+UPDATE FlightSeat
+SET status = 'booked'
+WHERE flight_seat_id = @fs10;
+
+
+/* -----------------------------
+   2025-10 (paid)
+   Add a NEW Regular seat on plane @pl2, attach it to flight @f2
+------------------------------ */
+INSERT INTO Seat (row_num, column_number, plane_id, class_type)
+VALUES (4, 1, @pl2, 'Regular');
+
+SELECT seat_id INTO @s_pl2_r_4_1
+FROM Seat
+WHERE plane_id = @pl2 AND row_num = 4 AND column_number = 1 AND class_type = 'Regular'
+ORDER BY seat_id DESC
+LIMIT 1;
+
+INSERT INTO FlightSeat (flight_id, seat_id, status)
+VALUES (@f2, @s_pl2_r_4_1, 'available');
+
+SELECT flight_seat_id INTO @fs11
+FROM FlightSeat
+WHERE flight_id = @f2 AND seat_id = @s_pl2_r_4_1
+ORDER BY flight_seat_id DESC
+LIMIT 1;
+
+INSERT INTO FlightOrder (flight_id, email, execution_date, status, total_payment)
+VALUES (@f2, 'guest2@example.com', '2025-10-10', 'paid', 600.00);
+SET @o11 = LAST_INSERT_ID();
+
+INSERT INTO OrderItem (order_id, flight_seat_id)
+VALUES (@o11, @fs11);
+
+UPDATE FlightSeat
+SET status = 'booked'
+WHERE flight_seat_id = @fs11;
+
+
+/* -----------------------------
+   2025-11 (system_cancelled)
+   Add a NEW Regular seat on plane @pl7, attach it to flight @f5
+------------------------------ */
+INSERT INTO Seat (row_num, column_number, plane_id, class_type)
+VALUES (3, 1, @pl7, 'Regular');
+
+SELECT seat_id INTO @s_pl7_r_3_1
+FROM Seat
+WHERE plane_id = @pl7 AND row_num = 3 AND column_number = 1 AND class_type = 'Regular'
+ORDER BY seat_id DESC
+LIMIT 1;
+
+INSERT INTO FlightSeat (flight_id, seat_id, status)
+VALUES (@f5, @s_pl7_r_3_1, 'available');
+
+SELECT flight_seat_id INTO @fs12
+FROM FlightSeat
+WHERE flight_id = @f5 AND seat_id = @s_pl7_r_3_1
+ORDER BY flight_seat_id DESC
+LIMIT 1;
+
+INSERT INTO FlightOrder (flight_id, email, execution_date, status, total_payment)
+VALUES (@f5, 'elli.brinker@example.com', '2025-11-12', 'system_cancelled', 0.00);
+SET @o12 = LAST_INSERT_ID();
+
+INSERT INTO OrderItem (order_id, flight_seat_id)
+VALUES (@o12, @fs12);
+
+UPDATE FlightSeat
+SET status = 'booked'
+WHERE flight_seat_id = @fs12;
+
+
+/* -----------------------------
+   2025-12 (paid)
+   Add a NEW Regular seat on plane @pl8 (flight @f6 uses @pl8), attach it to flight @f6
+------------------------------ */
+INSERT INTO Seat (row_num, column_number, plane_id, class_type)
+VALUES (3, 1, @pl8, 'Regular');
+
+SELECT seat_id INTO @s_pl8_r_3_1
+FROM Seat
+WHERE plane_id = @pl8 AND row_num = 3 AND column_number = 1 AND class_type = 'Regular'
+ORDER BY seat_id DESC
+LIMIT 1;
+
+INSERT INTO FlightSeat (flight_id, seat_id, status)
+VALUES (@f6, @s_pl8_r_3_1, 'available');
+
+SELECT flight_seat_id INTO @fs13
+FROM FlightSeat
+WHERE flight_id = @f6 AND seat_id = @s_pl8_r_3_1
+ORDER BY flight_seat_id DESC
+LIMIT 1;
+
+INSERT INTO FlightOrder (flight_id, email, execution_date, status, total_payment)
+VALUES (@f6, 'stav.abraham@example.com', '2025-12-20', 'paid', 900.00);
+SET @o13 = LAST_INSERT_ID();
+
+INSERT INTO OrderItem (order_id, flight_seat_id)
+VALUES (@o13, @fs13);
+
+UPDATE FlightSeat
+SET status = 'booked'
+WHERE flight_seat_id = @fs13;
