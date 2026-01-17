@@ -718,7 +718,7 @@ def admin_reports():
     if guard:
         return guard
 
-    # Date filter (still shown in UI; queries below match the updated SQL you provided)
+    # Date filter (shown in UI; now ALSO applied in SQL)
     today = date.today()
     date_from = request.args.get("date_from") or today.replace(day=1).isoformat()
     date_to = request.args.get("date_to") or today.isoformat()
@@ -748,6 +748,7 @@ def admin_reports():
         # =========================================================
         # 1) Average occupancy of flights that actually took place
         #    (exclude cancelled flights, only past flights)
+        #    + date range filter on departure_date
         # =========================================================
         if report == "avg_occupancy_completed":
             _set_title(
@@ -761,6 +762,7 @@ def admin_reports():
                 "Occupancy is calculated per flight as: occupied seats / total seats in FlightSeat.",
                 "Occupied seat = any FlightSeat.status other than 'available'.",
                 "Includes only flights with departure_date < CURDATE() and status != cancelled.",
+                "Date range filters Flight.departure_date (inclusive).",
             ]
 
             query = """
@@ -774,9 +776,10 @@ def admin_reports():
                 ) AS t
                 JOIN Flight AS f ON f.flight_id = t.flight_id
                 WHERE LOWER(f.status) <> 'cancelled'
-                  AND f.departure_date < CURDATE();
+                  AND f.departure_date < CURDATE()
+                  AND f.departure_date BETWEEN %s AND %s;
             """
-            cursor.execute(query)
+            cursor.execute(query, (date_from, date_to))
             row = cursor.fetchone()
             val = row["avg_occupancy_percent"] if row else None
             data = [{"avg_occupancy_percent": f"{val}%" if val is not None else "No data"}]
@@ -787,6 +790,7 @@ def admin_reports():
         #    - customer_cancelled -> 5%
         #    - system_cancelled   -> 0%
         #    - cancelled flights excluded
+        #    + date range filter on departure_date
         # =========================================================
         elif report == "revenue_plane_size_manu_class":
             _set_title(
@@ -803,6 +807,7 @@ def admin_reports():
                 "Revenue is derived from FlightPricing.price per sold seat (via OrderItem -> FlightSeat -> Seat.class_type).",
                 "customer_cancelled contributes 5% of the ticket price; system_cancelled contributes 0%.",
                 "Cancelled flights are excluded.",
+                "Date range filters Flight.departure_date (inclusive).",
             ]
 
             query = """
@@ -828,10 +833,11 @@ def admin_reports():
                   ON fp.flight_id = f.flight_id
                  AND fp.class_type = s.class_type
                 WHERE LOWER(f.status) <> 'cancelled'
+                  AND f.departure_date BETWEEN %s AND %s
                 GROUP BY plane_size, manufacturer, class_type
                 ORDER BY plane_size, manufacturer, class_type;
             """
-            cursor.execute(query)
+            cursor.execute(query, (date_from, date_to))
             data = cursor.fetchall()
 
             total_revenue = sum((row.get("revenue") or 0) for row in data)
@@ -841,6 +847,7 @@ def admin_reports():
         # 3) Accumulated flight hours per worker
         #    - split short/long flights (threshold: 360 minutes)
         #    - exclude cancelled flights
+        #    + date range filter on departure_date
         # =========================================================
         elif report == "crew_hours_long_short":
             _set_title(
@@ -859,6 +866,7 @@ def admin_reports():
                 "Flight duration is taken from Airway.duration (minutes) by matching Flight origin/destination.",
                 "Short flight: duration <= 360 minutes; Long flight: duration > 360 minutes.",
                 "Cancelled flights are excluded.",
+                "Date range filters Flight.departure_date (inclusive).",
             ]
 
             query = """
@@ -883,15 +891,17 @@ def admin_reports():
                   ON aw.origin_airport = f.origin_airport
                  AND aw.destination_airport = f.destination_airport
                 WHERE LOWER(f.status) <> 'cancelled'
+                  AND f.departure_date BETWEEN %s AND %s
                 GROUP BY w.id, w.first_name, w.last_name, role
                 ORDER BY total_minutes DESC;
             """
-            cursor.execute(query)
+            cursor.execute(query, (date_from, date_to))
             data = cursor.fetchall()
 
         # =========================================================
         # 4) Purchase cancellation rate by month
         #    - includes customer_cancelled AND system_cancelled
+        #    + date range filter on execution_date
         # =========================================================
         elif report == "purchase_cancel_rate_monthly":
             _set_title(
@@ -906,6 +916,7 @@ def admin_reports():
             meta["notes"] = [
                 "Cancellation statuses: customer_cancelled and system_cancelled.",
                 "Grouping is by execution_date month.",
+                "Date range filters FlightOrder.execution_date (inclusive).",
             ]
 
             query = """
@@ -923,19 +934,25 @@ def admin_reports():
                     2
                   ) AS cancellation_rate_percentage
                 FROM FlightOrder fo
+                WHERE fo.execution_date BETWEEN %s AND %s
                 GROUP BY
                   YEAR(fo.execution_date),
                   MONTH(fo.execution_date),
                   MONTHNAME(fo.execution_date)
                 ORDER BY year, month_num;
             """
-            cursor.execute(query)
+            cursor.execute(query, (date_from, date_to))
             data = cursor.fetchall()
             for row in data:
                 row["cancellation_rate_percentage"] = f"{row['cancellation_rate_percentage']}%"
 
         # =========================================================
         # 5) Monthly plane activity summary
+        #    - performed flights
+        #    - cancelled flights
+        #    - utilization % (performed / 30 days)
+        #    - dominant route (performed flights only)
+        #    + date range filter on departure_date
         # =========================================================
         elif report == "monthly_plane_activity":
             _set_title(
@@ -954,6 +971,7 @@ def admin_reports():
             meta["notes"] = [
                 "Utilization is calculated as (performed_flights / 30) * 100.",
                 "Dominant route is calculated from performed flights only.",
+                "Date range filters Flight.departure_date (inclusive).",
             ]
 
             query = """
@@ -969,6 +987,7 @@ def admin_reports():
                     WHERE f3.plane_id = ms.plane_id
                       AND DATE_FORMAT(f3.departure_date, '%Y-%m') = ms.flight_month
                       AND LOWER(f3.status) <> 'cancelled'
+                      AND f3.departure_date BETWEEN %s AND %s
                     GROUP BY f3.origin_airport, f3.destination_airport
                     ORDER BY COUNT(*) DESC
                     LIMIT 1
@@ -983,11 +1002,13 @@ def admin_reports():
                     SUM(CASE WHEN LOWER(f.status) = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_flights
                   FROM Plane p
                   JOIN Flight f ON f.plane_id = p.plane_id
+                  WHERE f.departure_date BETWEEN %s AND %s
                   GROUP BY p.plane_id, p.manufacturer, flight_month
                 ) AS ms
                 ORDER BY ms.flight_month DESC, ms.performed_flights DESC;
             """
-            cursor.execute(query)
+            # note: params used twice (dominant_route subquery + ms subquery)
+            cursor.execute(query, (date_from, date_to, date_from, date_to))
             data = cursor.fetchall()
             for row in data:
                 row["utilization_percentage"] = f"{row['utilization_percentage']}%"
@@ -1006,4 +1027,3 @@ def admin_reports():
         kpis=kpis,
         meta=meta,
     )
-
