@@ -297,3 +297,30 @@ th {
 @media (max-width: 1000px) { .kpis { grid-template-columns: repeat(2, minmax(180px,1fr)); } }
 @media (max-width: 600px) { .kpis { grid-template-columns: 1fr; } }
 @media (max-width: 600px) { .row { flex-direction: column; } .pill { width: 100%; text-align:center; } }
+
+.footer {
+    margin-top: 16px;
+    text-align: center;
+    margin: 25px 0 15px;
+}
+
+.footer a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #252264;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 600;
+    opacity: 0.75;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.footer i {
+    font-size: 20px;
+}
+
+.footer a:hover {
+    opacity: 1;
+    transform: translateX(-2px);
+}
