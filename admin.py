@@ -891,7 +891,6 @@ def admin_reports():
                   ON aw.origin_airport = f.origin_airport
                  AND aw.destination_airport = f.destination_airport
                 WHERE LOWER(f.status) <> 'cancelled'
-                  AND f.departure_date BETWEEN %s AND %s
                 GROUP BY w.id, w.first_name, w.last_name, role
                 ORDER BY total_minutes DESC;
             """
