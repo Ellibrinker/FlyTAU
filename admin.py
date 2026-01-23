@@ -1,11 +1,12 @@
+# admin.py
 from flask import Blueprint, render_template, request, redirect, session
 from datetime import datetime, date, timedelta
+import traceback
 
-admin_bp = Blueprint("admin", __name__)  # <-- בלי url_prefix כאן
-
+admin_bp = Blueprint("admin", __name__)  # בלי url_prefix כאן
 
 # =========================
-# Availability buffers (industry-ish defaults)
+# Availability buffers
 # =========================
 PLANE_BUFFER_MIN = 60
 CREW_BUFFER_MIN = 120
@@ -35,15 +36,22 @@ def _flight_window(dep_date_str: str, dep_time_str: str, duration_min: int):
     return start_dt, end_dt
 
 
+def _db_error_message(e: Exception) -> str:
+    """
+    Safe DB error message: show errno/msg if exists, otherwise generic.
+    Does NOT require mysql imports (prevents site crash on import).
+    """
+    errno = getattr(e, "errno", None)
+    msg = getattr(e, "msg", None) or str(e)
+    if errno:
+        return f"Database error ({errno}): {msg}"
+    return f"Database error: {msg}"
+
+
 def _overlap_exists(cursor, *, start_dt, end_dt, buffer_min, where_sql, params):
     """
-    Checks if there exists an existing (non-cancelled) flight that overlaps
-    [start_dt-buffer, end_dt+buffer] for a given condition (plane / crew etc).
-
-    Overlap definition:
-      existing_start < padded_end AND existing_end > padded_start
-
-    existing_end is computed using Airway.duration.
+    Checks overlap for plane/crew/etc in a padded window.
+    existing_start < padded_end AND existing_end > padded_start
     """
     padded_start = start_dt - timedelta(minutes=buffer_min)
     padded_end = end_dt + timedelta(minutes=buffer_min)
@@ -67,9 +75,9 @@ def _overlap_exists(cursor, *, start_dt, end_dt, buffer_min, where_sql, params):
 def _fetch_step2_lists(cursor, *, is_long: bool, new_start_dt: datetime, new_end_dt: datetime):
     """
     Returns (planes, pilots, attendants) filtered by eligibility + availability window (with buffers).
-    IMPORTANT: This is used both in Step 1 and Step 2 (re-render), so the data is consistent.
+    Used both in step 1 and step 2 so the lists stay consistent.
     """
-    # ---------- Planes (availability filtered) ----------
+    # ---------- Planes ----------
     plane_padded_end = new_end_dt + timedelta(minutes=PLANE_BUFFER_MIN)
     plane_padded_start = new_start_dt - timedelta(minutes=PLANE_BUFFER_MIN)
 
@@ -97,11 +105,12 @@ def _fetch_step2_lists(cursor, *, is_long: bool, new_start_dt: datetime, new_end
     cursor.execute(planes_sql, (plane_padded_end, plane_padded_start))
     planes = cursor.fetchall()
 
-    # ---------- Crew (availability filtered) ----------
+    # ---------- Crew ----------
     crew_padded_end = new_end_dt + timedelta(minutes=CREW_BUFFER_MIN)
     crew_padded_start = new_start_dt - timedelta(minutes=CREW_BUFFER_MIN)
 
     if is_long:
+        # Pilots (long trained)
         cursor.execute(
             """
             SELECT w.id, w.first_name, w.last_name
@@ -129,6 +138,7 @@ def _fetch_step2_lists(cursor, *, is_long: bool, new_start_dt: datetime, new_end
         )
         pilots = cursor.fetchall()
 
+        # Attendants (long trained)
         cursor.execute(
             """
             SELECT w.id, w.first_name, w.last_name
@@ -155,7 +165,9 @@ def _fetch_step2_lists(cursor, *, is_long: bool, new_start_dt: datetime, new_end
             (crew_padded_end, crew_padded_start),
         )
         attendants = cursor.fetchall()
+
     else:
+        # Pilots (any pilot except managers)
         cursor.execute(
             """
             SELECT w.id, w.first_name, w.last_name
@@ -181,6 +193,7 @@ def _fetch_step2_lists(cursor, *, is_long: bool, new_start_dt: datetime, new_end
         )
         pilots = cursor.fetchall()
 
+        # Attendants (any FA except managers)
         cursor.execute(
             """
             SELECT w.id, w.first_name, w.last_name
@@ -267,8 +280,7 @@ def admin_flights():
     destination = request.args.get("destination", "").strip()
     dep_date = request.args.get("departure_date", "").strip()
     status = request.args.get("status", "").strip().lower()
-
-    created = request.args.get("created", "").strip()  # ✅ success flag
+    created = request.args.get("created", "").strip()
 
     from main import db_cur
     query = """
@@ -300,28 +312,6 @@ def admin_flights():
     return render_template("admin_flights.html", flights=flights, created=created)
 
 
-def _mysql_error_to_user_message(e: mysql.connector.Error) -> str:
-    """
-    Translate common MySQL errors into a useful UI error message.
-    (We intentionally don't expose full SQL for security, but we do show errno+msg.)
-    """
-    errno = getattr(e, "errno", None)
-    msg = getattr(e, "msg", str(e))
-
-    if errno == errorcode.ER_DUP_ENTRY:
-        return f"Duplicate value (unique constraint). Details: {msg}"
-    if errno in (errorcode.ER_NO_REFERENCED_ROW_2, errorcode.ER_ROW_IS_REFERENCED_2):
-        return f"Foreign key constraint failed. Details: {msg}"
-    if errno == errorcode.ER_BAD_NULL_ERROR:
-        return f"Missing required value (NULL not allowed). Details: {msg}"
-    if errno == errorcode.ER_DATA_TOO_LONG:
-        return f"Value too long for column. Details: {msg}"
-    if errno == errorcode.ER_TRUNCATED_WRONG_VALUE:
-        return f"Invalid value format (date/time/number). Details: {msg}"
-
-    return f"MySQL error {errno}: {msg}" if errno else f"MySQL error: {msg}"
-
-
 @admin_bp.route("/flights/new", methods=["GET", "POST"])
 def admin_add_flight():
     guard = _require_admin()
@@ -347,7 +337,7 @@ def admin_add_flight():
         if not origin or not destination or not dep_date or not dep_time:
             return render_template("admin_add_flight.html", step=1, error="All fields are required.", data=None)
 
-        # validate airway exists + get duration
+        # airway duration
         with db_cur() as cursor:
             cursor.execute(
                 """
@@ -364,20 +354,13 @@ def admin_add_flight():
 
         duration_min = int(airway["duration"])
         is_long = duration_min > 360
-
         pilots_needed = 3 if is_long else 2
         fa_needed = 6 if is_long else 3
 
-        # validate date/time strings
         try:
             new_start_dt, new_end_dt = _flight_window(dep_date, dep_time, duration_min)
         except Exception as e:
-            return render_template(
-                "admin_add_flight.html",
-                step=1,
-                error=f"Invalid departure date/time. Details: {e}",
-                data=None,
-            )
+            return render_template("admin_add_flight.html", step=1, error=f"Invalid departure date/time: {e}", data=None)
 
         with db_cur() as cursor:
             planes, pilots, attendants = _fetch_step2_lists(
@@ -416,7 +399,7 @@ def admin_add_flight():
         regular_price = request.form.get("regular_price", type=float)
         business_price = request.form.get("business_price", type=float)
 
-        # fetch duration again (trust DB, not hidden fields)
+        # fetch duration again
         with db_cur() as cursor:
             cursor.execute(
                 """
@@ -439,32 +422,23 @@ def admin_add_flight():
         try:
             new_start_dt, new_end_dt = _flight_window(dep_date, dep_time, duration_min)
         except Exception as e:
-            # rebuild step-2 lists for re-render
             with db_cur() as cursor:
                 planes, pilots, attendants = _fetch_step2_lists(
                     cursor, is_long=is_long, new_start_dt=datetime.now(), new_end_dt=datetime.now()
                 )
             data = {
-                "origin": origin,
-                "destination": destination,
-                "departure_date": dep_date,
-                "departure_time": dep_time,
-                "duration_min": duration_min,
-                "is_long": is_long,
-                "pilots_needed": pilots_needed,
-                "fa_needed": fa_needed,
-                "planes": planes,
-                "pilots": pilots,
-                "attendants": attendants,
+                "origin": origin, "destination": destination,
+                "departure_date": dep_date, "departure_time": dep_time,
+                "duration_min": duration_min, "is_long": is_long,
+                "pilots_needed": pilots_needed, "fa_needed": fa_needed,
+                "planes": planes, "pilots": pilots, "attendants": attendants,
                 "selected_plane_id": plane_id,
                 "selected_pilot_ids": set(str(x) for x in pilot_ids),
                 "selected_fa_ids": set(str(x) for x in fa_ids),
-                "regular_price": regular_price,
-                "business_price": business_price,
+                "regular_price": regular_price, "business_price": business_price,
             }
-            return render_template("admin_add_flight.html", step=2, error=f"Invalid date/time. Details: {e}", data=data)
+            return render_template("admin_add_flight.html", step=2, error=f"Invalid date/time: {e}", data=data)
 
-        # Step-2 lists for consistent re-render
         with db_cur() as cursor:
             planes, pilots, attendants = _fetch_step2_lists(
                 cursor, is_long=is_long, new_start_dt=new_start_dt, new_end_dt=new_end_dt
@@ -489,32 +463,32 @@ def admin_add_flight():
             "business_price": business_price,
         }
 
-        # ---------- validations ----------
+        # validations
         if not plane_id:
             return render_template("admin_add_flight.html", step=2, error="Plane is required.", data=data)
 
-        if len(pilot_ids) != pilots_needed or len(fa_ids) != fa_needed:
-            return render_template("admin_add_flight.html", step=2, error="Crew selection count is incorrect.", data=data)
+        if len(pilot_ids) != pilots_needed:
+            return render_template("admin_add_flight.html", step=2, error=f"Please select exactly {pilots_needed} pilots.", data=data)
+
+        if len(fa_ids) != fa_needed:
+            return render_template("admin_add_flight.html", step=2, error=f"Please select exactly {fa_needed} attendants.", data=data)
 
         if regular_price is None or regular_price <= 0:
-            return render_template("admin_add_flight.html", step=2, error="Regular price is required.", data=data)
+            return render_template("admin_add_flight.html", step=2, error="Regular price must be a positive number.", data=data)
 
-        # Does this plane have Business class?
+        # business class exists?
         with db_cur() as cursor:
-            cursor.execute(
-                "SELECT 1 FROM Class WHERE plane_id=%s AND class_type='Business'",
-                (plane_id,),
-            )
+            cursor.execute("SELECT 1 FROM Class WHERE plane_id=%s AND class_type='Business'", (plane_id,))
             has_business = cursor.fetchone() is not None
 
         if has_business and (business_price is None or business_price <= 0):
-            return render_template("admin_add_flight.html", step=2, error="Business price is required for big planes.", data=data)
+            return render_template("admin_add_flight.html", step=2, error="Business price is required for planes with Business class.", data=data)
 
         if not has_business:
             business_price = None
             data["business_price"] = None
 
-        # Role checks + "manager cannot be crew"
+        # role checks
         with db_cur() as cursor:
             for pid in pilot_ids:
                 cursor.execute("SELECT 1 FROM Pilot WHERE id=%s", (pid,))
@@ -522,7 +496,7 @@ def admin_add_flight():
                     return render_template("admin_add_flight.html", step=2, error=f"Worker {pid} is not a Pilot.", data=data)
                 cursor.execute("SELECT 1 FROM Manager WHERE id=%s", (pid,))
                 if cursor.fetchone():
-                    return render_template("admin_add_flight.html", step=2, error=f"Worker {pid} is a Manager and cannot be a Pilot.", data=data)
+                    return render_template("admin_add_flight.html", step=2, error=f"Worker {pid} is a Manager and cannot be assigned as Pilot.", data=data)
 
             for fid in fa_ids:
                 cursor.execute("SELECT 1 FROM FlightAttendant WHERE id=%s", (fid,))
@@ -530,9 +504,9 @@ def admin_add_flight():
                     return render_template("admin_add_flight.html", step=2, error=f"Worker {fid} is not a Flight Attendant.", data=data)
                 cursor.execute("SELECT 1 FROM Manager WHERE id=%s", (fid,))
                 if cursor.fetchone():
-                    return render_template("admin_add_flight.html", step=2, error=f"Worker {fid} is a Manager and cannot be an Attendant.", data=data)
+                    return render_template("admin_add_flight.html", step=2, error=f"Worker {fid} is a Manager and cannot be assigned as Attendant.", data=data)
 
-        # Availability overlap checks
+        # overlap checks
         with db_cur() as cursor:
             if _overlap_exists(
                 cursor,
@@ -580,20 +554,28 @@ def admin_add_flight():
                 ):
                     return render_template("admin_add_flight.html", step=2, error=f"Flight attendant {fid} is not available at this time (overlap).", data=data)
 
-        # =========================
-        # Transaction-safe create (REAL rollback on SAME connection)
-        # =========================
-        conn = None
-        try:
-            with db_cur() as cursor:
-                conn = cursor.connection
-                conn.autocommit = False  # start txn
+        # pre-check seats exist (avoid half-insert scenario)
+        with db_cur() as cursor:
+            cursor.execute("SELECT seat_id FROM Seat WHERE plane_id=%s", (plane_id,))
+            seat_ids = [r["seat_id"] for r in cursor.fetchall()]
 
-                # 1) create Flight
+        if not seat_ids:
+            return render_template(
+                "admin_add_flight.html",
+                step=2,
+                error="Selected plane has no seats in Seat table. Create seats for this plane first.",
+                data=data,
+            )
+
+        # =========================
+        # Create (best-effort with your autocommit db_cur)
+        # =========================
+        try:
+            # 1) Flight
+            with db_cur() as cursor:
                 cursor.execute(
                     """
-                    INSERT INTO Flight (plane_id, origin_airport, destination_airport,
-                                        departure_date, departure_time, status)
+                    INSERT INTO Flight (plane_id, origin_airport, destination_airport, departure_date, departure_time, status)
                     VALUES (%s, %s, %s, %s, %s, 'open')
                     """,
                     (plane_id, origin, destination, dep_date, dep_time),
@@ -601,97 +583,59 @@ def admin_add_flight():
                 cursor.execute("SELECT LAST_INSERT_ID() AS flight_id")
                 flight_id = cursor.fetchone()["flight_id"]
 
-                # 2) pricing
+            # 2) Pricing
+            with db_cur() as cursor:
                 cursor.execute(
-                    """
-                    INSERT INTO FlightPricing (flight_id, class_type, price)
-                    VALUES (%s, 'Regular', %s)
-                    """,
+                    "INSERT INTO FlightPricing (flight_id, class_type, price) VALUES (%s, 'Regular', %s)",
                     (flight_id, regular_price),
                 )
                 if has_business:
                     cursor.execute(
-                        """
-                        INSERT INTO FlightPricing (flight_id, class_type, price)
-                        VALUES (%s, 'Business', %s)
-                        """,
+                        "INSERT INTO FlightPricing (flight_id, class_type, price) VALUES (%s, 'Business', %s)",
                         (flight_id, business_price),
                     )
 
-                # 3) crew placement
-                crew_ids = [int(x) for x in pilot_ids] + [int(x) for x in fa_ids]
+            # 3) Crew placement
+            crew_ids = [int(x) for x in pilot_ids] + [int(x) for x in fa_ids]
+            with db_cur() as cursor:
                 cursor.executemany(
-                    """
-                    INSERT INTO FlightCrewPlacement (flight_id, id)
-                    VALUES (%s, %s)
-                    """,
+                    "INSERT INTO FlightCrewPlacement (flight_id, id) VALUES (%s, %s)",
                     [(flight_id, cid) for cid in crew_ids],
                 )
 
-                # 4) flight seats
-                cursor.execute("SELECT seat_id FROM Seat WHERE plane_id=%s", (plane_id,))
-                seat_ids = [r["seat_id"] for r in cursor.fetchall()]
-
-                if not seat_ids:
-                    raise ValueError("Selected plane has no seats in Seat table. Please create seats for this plane first.")
-
+            # 4) Flight seats
+            with db_cur() as cursor:
                 cursor.executemany(
-                    """
-                    INSERT INTO FlightSeat (flight_id, seat_id, status)
-                    VALUES (%s, %s, 'available')
-                    """,
+                    "INSERT INTO FlightSeat (flight_id, seat_id, status) VALUES (%s, %s, 'available')",
                     [(flight_id, sid) for sid in seat_ids],
                 )
 
-                conn.commit()
-
-        except mysql.connector.Error as e:
-            # rollback on SAME conn
-            try:
-                if conn:
-                    conn.rollback()
-            except Exception:
-                pass
-
-            return render_template(
-                "admin_add_flight.html",
-                step=2,
-                error=_mysql_error_to_user_message(e),
-                data=data,
-            )
-
-        except ValueError as e:
-            try:
-                if conn:
-                    conn.rollback()
-            except Exception:
-                pass
-
-            return render_template(
-                "admin_add_flight.html",
-                step=2,
-                error=str(e),
-                data=data,
-            )
-
         except Exception as e:
-            # last resort
+            # LOG full traceback so PythonAnywhere error.log shows the real reason
+            traceback.print_exc()
+
+            # (Optional cleanup) try to delete the flight if it was created, to avoid partial data
             try:
-                if conn:
-                    conn.rollback()
+                if "flight_id" in locals() and flight_id:
+                    with db_cur() as cursor:
+                        cursor.execute("DELETE FROM FlightSeat WHERE flight_id=%s", (flight_id,))
+                        cursor.execute("DELETE FROM FlightCrewPlacement WHERE flight_id=%s", (flight_id,))
+                        cursor.execute("DELETE FROM FlightPricing WHERE flight_id=%s", (flight_id,))
+                        cursor.execute("DELETE FROM Flight WHERE flight_id=%s", (flight_id,))
             except Exception:
-                pass
+                traceback.print_exc()
 
             return render_template(
                 "admin_add_flight.html",
                 step=2,
-                error=f"Unexpected error: {type(e).__name__}: {e}",
+                error=_db_error_message(e),
                 data=data,
             )
 
         return redirect("/admin/flights?created=1")
 
     return render_template("admin_add_flight.html", step=1, error="Invalid step.", data=None)
+
 
 @admin_bp.route("/flights/cancel/<int:flight_id>", methods=["GET", "POST"])
 def admin_cancel_flight(flight_id):
@@ -714,17 +658,11 @@ def admin_cancel_flight(flight_id):
     if not flight:
         return "Flight not found", 404
 
-    # ✅ Only allow cancellation for OPEN flights
     if request.method == "GET":
         return render_template("admin_cancel_flight.html", flight=flight, error=None)
 
-    # POST - confirm cancel
     if str(flight.get("status", "")).lower() != "open":
-        return render_template(
-            "admin_cancel_flight.html",
-            flight=flight,
-            error="Only flights with status 'open' can be cancelled.",
-        )
+        return render_template("admin_cancel_flight.html", flight=flight, error="Only flights with status 'open' can be cancelled.")
 
     dep_time = flight["departure_time"]
     if isinstance(dep_time, timedelta):
@@ -735,32 +673,20 @@ def admin_cancel_flight(flight_id):
     hours_left = (dep_dt - now).total_seconds() / 3600
 
     if hours_left < 72:
-        return render_template(
-            "admin_cancel_flight.html",
-            flight=flight,
-            error="Cannot cancel less than 72 hours before departure.",
-        )
+        return render_template("admin_cancel_flight.html", flight=flight, error="Cannot cancel less than 72 hours before departure.")
 
     with db_cur() as cursor:
         cursor.execute("UPDATE Flight SET status='cancelled' WHERE flight_id=%s", (flight_id,))
         cursor.execute(
             """
             UPDATE FlightOrder
-            SET status='system_cancelled',
-                total_payment=0
+            SET status='system_cancelled', total_payment=0
             WHERE flight_id=%s
               AND LOWER(status) IN ('paid','active')
             """,
             (flight_id,),
         )
-        cursor.execute(
-            """
-            UPDATE FlightSeat
-            SET status='available'
-            WHERE flight_id=%s
-            """,
-            (flight_id,),
-        )
+        cursor.execute("UPDATE FlightSeat SET status='available' WHERE flight_id=%s", (flight_id,))
 
     return redirect("/admin/flights")
 
@@ -779,23 +705,16 @@ def admin_reports():
     if guard:
         return guard
 
-    # Date filter (shown in UI; now ALSO applied in SQL)
     today = date.today()
     date_from = request.args.get("date_from") or today.replace(day=1).isoformat()
     date_to = request.args.get("date_to") or today.isoformat()
-
     report = request.args.get("report", "avg_occupancy_completed")
 
     from main import db_cur
 
     data = []
     kpis = {}
-    meta = {
-        "title": "",
-        "subtitle": "",
-        "columns": [],  # list of {"key": "...", "label": "..."}
-        "notes": [],
-    }
+    meta = {"title": "", "subtitle": "", "columns": [], "notes": []}
 
     def _set_table(columns):
         meta["columns"] = columns
@@ -805,26 +724,10 @@ def admin_reports():
         meta["subtitle"] = subtitle
 
     with db_cur() as cursor:
-
-        # =========================================================
-        # 1) Average occupancy of flights that actually took place
-        #    (exclude cancelled flights, only past flights)
-        #    + date range filter on departure_date
-        # =========================================================
         if report == "avg_occupancy_completed":
-            _set_title(
-                "Average Occupancy (Flights That Took Place)",
-                "Average occupancy percent for non-cancelled flights that already departed.",
-            )
-            _set_table([
-                {"key": "avg_occupancy_percent", "label": "Avg Occupancy (%)"},
-            ])
-            meta["notes"] = [
-                "Occupancy is calculated per flight as: occupied seats / total seats in FlightSeat.",
-                "Occupied seat = any FlightSeat.status other than 'available'.",
-                "Includes only flights with departure_date < CURDATE() and status != cancelled.",
-                "Date range filters Flight.departure_date (inclusive).",
-            ]
+            _set_title("Average Occupancy (Flights That Took Place)",
+                       "Average occupancy percent for non-cancelled flights that already departed.")
+            _set_table([{"key": "avg_occupancy_percent", "label": "Avg Occupancy (%)"}])
 
             query = """
                 SELECT ROUND(AVG(t.occ_pct), 2) AS avg_occupancy_percent
@@ -845,31 +748,15 @@ def admin_reports():
             val = row["avg_occupancy_percent"] if row else None
             data = [{"avg_occupancy_percent": f"{val}%" if val is not None else "No data"}]
 
-        # =========================================================
-        # 2) Revenue by plane size, manufacturer and class
-        #    - paid               -> 100%
-        #    - customer_cancelled -> 5%
-        #    - system_cancelled   -> 0%
-        #    - cancelled flights excluded
-        #    + date range filter on departure_date
-        # =========================================================
         elif report == "revenue_plane_size_manu_class":
-            _set_title(
-                "Revenue by Plane Size / Manufacturer / Class",
-                "Revenue breakdown by aircraft size, manufacturer and ticket class.",
-            )
+            _set_title("Revenue by Plane Size / Manufacturer / Class",
+                       "Revenue breakdown by aircraft size, manufacturer and ticket class.")
             _set_table([
                 {"key": "plane_size", "label": "Plane Size"},
                 {"key": "manufacturer", "label": "Manufacturer"},
                 {"key": "class_type", "label": "Class"},
                 {"key": "revenue", "label": "Revenue"},
             ])
-            meta["notes"] = [
-                "Revenue is derived from FlightPricing.price per sold seat (via OrderItem -> FlightSeat -> Seat.class_type).",
-                "customer_cancelled contributes 5% of the ticket price; system_cancelled contributes 0%.",
-                "Cancelled flights are excluded.",
-                "Date range filters Flight.departure_date (inclusive).",
-            ]
 
             query = """
                 SELECT
@@ -900,21 +787,11 @@ def admin_reports():
             """
             cursor.execute(query, (date_from, date_to))
             data = cursor.fetchall()
+            kpis = {"total_revenue": round(sum((r.get("revenue") or 0) for r in data), 2)}
 
-            total_revenue = sum((row.get("revenue") or 0) for row in data)
-            kpis = {"total_revenue": round(total_revenue, 2)}
-
-        # =========================================================
-        # 3) Accumulated flight hours per worker
-        #    - split short/long flights (threshold: 360 minutes)
-        #    - exclude cancelled flights
-        #    + date range filter on departure_date
-        # =========================================================
         elif report == "crew_hours_long_short":
-            _set_title(
-                "Crew Flight Hours (Short vs Long)",
-                "Total accumulated flight minutes per worker, split by short/long flights (<= 360 vs > 360).",
-            )
+            _set_title("Crew Flight Hours (Short vs Long)",
+                       "Total accumulated flight minutes per worker, split by short/long flights (<= 360 vs > 360).")
             _set_table([
                 {"key": "worker_id", "label": "Worker ID"},
                 {"key": "full_name", "label": "Name"},
@@ -923,12 +800,6 @@ def admin_reports():
                 {"key": "long_minutes", "label": "Long Minutes"},
                 {"key": "total_minutes", "label": "Total Minutes"},
             ])
-            meta["notes"] = [
-                "Flight duration is taken from Airway.duration (minutes) by matching Flight origin/destination.",
-                "Short flight: duration <= 360 minutes; Long flight: duration > 360 minutes.",
-                "Cancelled flights are excluded.",
-                "Date range filters Flight.departure_date (inclusive).",
-            ]
 
             query = """
                 SELECT
@@ -955,29 +826,16 @@ def admin_reports():
                 GROUP BY w.id, w.first_name, w.last_name, role
                 ORDER BY total_minutes DESC;
             """
-            cursor.execute(query, (date_from, date_to))
+            cursor.execute(query, ())
             data = cursor.fetchall()
 
-        # =========================================================
-        # 4) Purchase cancellation rate by month
-        #    - includes customer_cancelled AND system_cancelled
-        #    + date range filter on execution_date
-        # =========================================================
         elif report == "purchase_cancel_rate_monthly":
-            _set_title(
-                "Purchase Cancellation Rate (Monthly)",
-                "Cancellation rate of purchases/orders by month.",
-            )
+            _set_title("Purchase Cancellation Rate (Monthly)", "Cancellation rate of purchases/orders by month.")
             _set_table([
                 {"key": "year", "label": "Year"},
                 {"key": "month", "label": "Month"},
                 {"key": "cancellation_rate_percentage", "label": "Cancel Rate (%)"},
             ])
-            meta["notes"] = [
-                "Cancellation statuses: customer_cancelled and system_cancelled.",
-                "Grouping is by execution_date month.",
-                "Date range filters FlightOrder.execution_date (inclusive).",
-            ]
 
             query = """
                 SELECT
@@ -995,10 +853,7 @@ def admin_reports():
                   ) AS cancellation_rate_percentage
                 FROM FlightOrder fo
                 WHERE fo.execution_date BETWEEN %s AND %s
-                GROUP BY
-                  YEAR(fo.execution_date),
-                  MONTH(fo.execution_date),
-                  MONTHNAME(fo.execution_date)
+                GROUP BY YEAR(fo.execution_date), MONTH(fo.execution_date), MONTHNAME(fo.execution_date)
                 ORDER BY year, month_num;
             """
             cursor.execute(query, (date_from, date_to))
@@ -1006,19 +861,9 @@ def admin_reports():
             for row in data:
                 row["cancellation_rate_percentage"] = f"{row['cancellation_rate_percentage']}%"
 
-        # =========================================================
-        # 5) Monthly plane activity summary
-        #    - performed flights
-        #    - cancelled flights
-        #    - utilization % (performed / 30 days)
-        #    - dominant route (performed flights only)
-        #    + date range filter on departure_date
-        # =========================================================
         elif report == "monthly_plane_activity":
-            _set_title(
-                "Monthly Plane Activity Summary",
-                "Per aircraft: performed flights, cancelled flights, utilization % (assume 30 days), dominant route.",
-            )
+            _set_title("Monthly Plane Activity Summary",
+                       "Per aircraft: performed flights, cancelled flights, utilization % (assume 30 days), dominant route.")
             _set_table([
                 {"key": "plane_id", "label": "Plane ID"},
                 {"key": "manufacturer", "label": "Manufacturer"},
@@ -1028,11 +873,6 @@ def admin_reports():
                 {"key": "dominant_route", "label": "Dominant Route"},
                 {"key": "utilization_percentage", "label": "Utilization (%)"},
             ])
-            meta["notes"] = [
-                "Utilization is calculated as (performed_flights / 30) * 100.",
-                "Dominant route is calculated from performed flights only.",
-                "Date range filters Flight.departure_date (inclusive).",
-            ]
 
             query = """
                 SELECT
@@ -1067,16 +907,13 @@ def admin_reports():
                 ) AS ms
                 ORDER BY ms.flight_month DESC, ms.performed_flights DESC;
             """
-            # note: params used twice (dominant_route subquery + ms subquery)
             cursor.execute(query, (date_from, date_to, date_from, date_to))
             data = cursor.fetchall()
             for row in data:
                 row["utilization_percentage"] = f"{row['utilization_percentage']}%"
 
         else:
-            return redirect(
-                f"/admin/reports?report=avg_occupancy_completed&date_from={date_from}&date_to={date_to}"
-            )
+            return redirect(f"/admin/reports?report=avg_occupancy_completed&date_from={date_from}&date_to={date_to}")
 
     return render_template(
         "admin_reports.html",
