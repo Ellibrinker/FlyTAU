@@ -34,11 +34,27 @@
 
     <hr>
 
-    {% for o in orders %}
-      <div class="order-card">
-        <h3>Order #{{ o.order_id }}</h3>
-        <p>{{ o.origin_airport }} → {{ o.destination_airport }} | {{ o.departure_date }} {{ o.departure_time }}</p>
-        <p>Status: {{ o.status }} | Total: {{ o.total_payment }}</p>
+{% for o in orders %}
+  <div class="order-card">
+    <h3>Order #{{ o.order_id }}</h3>
+
+    <p>
+      {{ o.origin_airport }} → {{ o.destination_airport }}
+      | {{ o.departure_date }} {{ o.departure_time }}
+    </p>
+
+    {% if o.status == 'paid' and o.departure_dt < now %}
+      {% set display_status = 'done' %}
+    {% else %}
+      {% set display_status = o.status %}
+    {% endif %}
+
+    <p>
+      Status: {{ display_status }} |
+      Total: {{ o.total_payment }}
+    </p>
+
+
         <p class="seats-list"><b>Seats:</b>
           {% for s in seats_by_order[o.order_id] %}
             Row {{ s.row_num }} Col {{ s.column_number }} ({{ s.class_type }}){% if not loop.last %}, {% endif %}

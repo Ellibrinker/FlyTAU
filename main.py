@@ -191,7 +191,10 @@ def my_orders():
         """
         params = [email]
 
-        if status_filter:
+        if status_filter == "done":
+            base_query += " AND fo.status='paid' AND TIMESTAMP(f.departure_date, f.departure_time) < %s"
+            params.append(datetime.now())
+        elif status_filter:
             base_query += " AND fo.status=%s"
             params.append(status_filter)
 
