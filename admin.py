@@ -438,7 +438,7 @@ def admin_add_flight():
             if new_start_dt <= now:
                 return render_template(
                     "admin_add_flight.html",
-                    step=2,
+                    step=1,
                     error="Departure date/time must be in the future.",
                     data=None,
                 )

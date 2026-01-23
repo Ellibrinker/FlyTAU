@@ -175,118 +175,125 @@
         </form>
       </div>
 
-      <script>
-        (function () {
-          const NEEDS = {
-            big: { pilots: 3, fa: 6 },
-            small: { pilots: 2, fa: 3 }
-          };
+<script>
+  (function () {
+    const NEEDS = {
+      big: { pilots: 3, fa: 6 },
+      small: { pilots: 2, fa: 3 }
+    };
 
-          const pilotsNeedEl = document.getElementById("pilotsNeed");
-          const pilotsNeed2El = document.getElementById("pilotsNeed2");
-          const faNeedEl = document.getElementById("faNeed");
-          const faNeed2El = document.getElementById("faNeed2");
+    const pilotsNeedEl = document.getElementById("pilotsNeed");
+    const pilotsNeed2El = document.getElementById("pilotsNeed2");
+    const faNeedEl = document.getElementById("faNeed");
+    const faNeed2El = document.getElementById("faNeed2");
 
-          const pilotBoxes = Array.from(document.querySelectorAll(".pilot-checkbox"));
-          const faBoxes = Array.from(document.querySelectorAll(".fa-checkbox"));
+    const pilotBoxes = Array.from(document.querySelectorAll(".pilot-checkbox"));
+    const faBoxes = Array.from(document.querySelectorAll(".fa-checkbox"));
 
-          const pilotsSelectedEl = document.getElementById("pilotsSelected");
-          const faSelectedEl = document.getElementById("faSelected");
+    const pilotsSelectedEl = document.getElementById("pilotsSelected");
+    const faSelectedEl = document.getElementById("faSelected");
 
-          const msgEl = document.getElementById("validationMsg");
-          const submitBtn = document.getElementById("submitBtn");
-          const planeSelect = document.getElementById("planeSelect");
+    const msgEl = document.getElementById("validationMsg");
+    const submitBtn = document.getElementById("submitBtn");
+    const planeSelect = document.getElementById("planeSelect");
 
-          const businessBox = document.getElementById("businessPriceBox");
-          const businessInput = document.getElementById("businessPriceInput");
-          const businessNote = document.getElementById("businessNote");
+    const businessBox = document.getElementById("businessPriceBox");
+    const businessInput = document.getElementById("businessPriceInput");
+    const businessNote = document.getElementById("businessNote");
 
-          const isBigSelectedHidden = document.getElementById("isBigSelected");
-          const isLong = {{ 1 if data.is_long else 0 }};
+    const isBigSelectedHidden = document.getElementById("isBigSelected");
+    const isLong = {{ 1 if data.is_long else 0 }};
 
-          function setNeeds(isBig) {
-            const need = isBig ? NEEDS.big : NEEDS.small;
+    function setNeeds(isBig) {
+      const need = isBig ? NEEDS.big : NEEDS.small;
 
-            if (pilotsNeedEl) pilotsNeedEl.textContent = String(need.pilots);
-            if (pilotsNeed2El) pilotsNeed2El.textContent = String(need.pilots);
-            if (faNeedEl) faNeedEl.textContent = String(need.fa);
-            if (faNeed2El) faNeed2El.textContent = String(need.fa);
+      if (pilotsNeedEl) pilotsNeedEl.textContent = String(need.pilots);
+      if (pilotsNeed2El) pilotsNeed2El.textContent = String(need.pilots);
+      if (faNeedEl) faNeedEl.textContent = String(need.fa);
+      if (faNeed2El) faNeed2El.textContent = String(need.fa);
 
-            if (businessBox && businessInput && businessNote) {
-              if (isBig) {
-                businessBox.style.display = "";
-                businessNote.style.display = "";
-                businessInput.required = true;
-              } else {
-                businessBox.style.display = "none";
-                businessNote.style.display = "none";
-                businessInput.required = false;
-                businessInput.value = "";
-              }
-            }
+      if (businessBox && businessInput && businessNote) {
+        if (isBig) {
+          businessBox.style.display = "";
+          businessNote.style.display = "";
+          businessInput.required = true;
+        } else {
+          businessBox.style.display = "none";
+          businessNote.style.display = "none";
+          businessInput.required = false;
+          businessInput.value = "";
+        }
+      }
 
-            return need;
-          }
+      return need;
+    }
 
-          function getIsBigFromPage() {
-            if (isBigSelectedHidden && isBigSelectedHidden.value !== "") {
-              return isBigSelectedHidden.value === "1";
-            }
+    function getIsBigFromPage() {
+      // 1) If user selected a plane -> always trust the selected option's data-big
+      if (planeSelect && planeSelect.value) {
+        const opt = planeSelect.options[planeSelect.selectedIndex];
+        return opt && opt.dataset && opt.dataset.big === "1";
+      }
 
-            if (isLong) return true;
+      // 2) If long flight -> must be big (no plane picked yet)
+      if (isLong) return true;
 
-            if (!planeSelect || !planeSelect.value) return false;
+      // 3) Fallback: server-provided hidden (after failed POST)
+      if (isBigSelectedHidden && isBigSelectedHidden.value !== "") {
+        return isBigSelectedHidden.value === "1";
+      }
 
-            const opt = planeSelect.options[planeSelect.selectedIndex];
-            return opt && opt.dataset && opt.dataset.big === "1";
-          }
+      // 4) Default
+      return false;
+    }
 
-          function updateGroupLimit(boxes, need, selectedEl) {
-            const selected = boxes.filter(b => b.checked).length;
-            if (selectedEl) selectedEl.textContent = String(selected);
-            boxes.forEach(b => { if (!b.checked) b.disabled = (selected >= need); });
-            return selected;
-          }
+    function updateGroupLimit(boxes, need, selectedEl) {
+      const selected = boxes.filter(b => b.checked).length;
+      if (selectedEl) selectedEl.textContent = String(selected);
+      boxes.forEach(b => { if (!b.checked) b.disabled = (selected >= need); });
+      return selected;
+    }
 
-          function validateAll() {
-            const isBig = getIsBigFromPage();
-            const need = setNeeds(isBig);
+    function validateAll() {
+      const isBig = getIsBigFromPage();
+      const need = setNeeds(isBig);
 
-            const pilotsSelected = updateGroupLimit(pilotBoxes, need.pilots, pilotsSelectedEl);
-            const faSelected = updateGroupLimit(faBoxes, need.fa, faSelectedEl);
+      const pilotsSelected = updateGroupLimit(pilotBoxes, need.pilots, pilotsSelectedEl);
+      const faSelected = updateGroupLimit(faBoxes, need.fa, faSelectedEl);
 
-            const planeOk = planeSelect ? !!planeSelect.value : true;
-            const pilotsOk = (pilotBoxes.length === 0) ? true : (pilotsSelected === need.pilots);
-            const faOk = (faBoxes.length === 0) ? true : (faSelected === need.fa);
+      const planeOk = planeSelect ? !!planeSelect.value : true;
+      const pilotsOk = (pilotBoxes.length === 0) ? true : (pilotsSelected === need.pilots);
+      const faOk = (faBoxes.length === 0) ? true : (faSelected === need.fa);
 
-            let businessOk = true;
-            if (isBig && businessInput) {
-              businessOk = !!businessInput.value && parseFloat(businessInput.value) > 0;
-            }
+      let businessOk = true;
+      if (isBig && businessInput) {
+        businessOk = !!businessInput.value && parseFloat(businessInput.value) > 0;
+      }
 
-            let longOk = true;
-            if (isLong && !isBig) longOk = false;
+      let longOk = true;
+      if (isLong && !isBig) longOk = false;
 
-            let msg = "";
-            if (!planeOk) msg = "Please select a plane.";
-            else if (!longOk) msg = "Long flights (> 360 minutes) must use a Big plane.";
-            else if (!pilotsOk) msg = `Please select exactly ${need.pilots} pilots.`;
-            else if (!faOk) msg = `Please select exactly ${need.fa} attendants.`;
-            else if (!businessOk) msg = "Please enter a valid Business price (Big planes only).";
-            else msg = "All set ✅ You can create the flight.";
+      let msg = "";
+      if (!planeOk) msg = "Please select a plane.";
+      else if (!longOk) msg = "Long flights (> 360 minutes) must use a Big plane.";
+      else if (!pilotsOk) msg = `Please select exactly ${need.pilots} pilots.`;
+      else if (!faOk) msg = `Please select exactly ${need.fa} attendants.`;
+      else if (!businessOk) msg = "Please enter a valid Business price (Big planes only).";
+      else msg = "All set ✅ You can create the flight.";
 
-            if (msgEl) msgEl.textContent = msg;
-            if (submitBtn) submitBtn.disabled = !(planeOk && longOk && pilotsOk && faOk && businessOk);
-          }
+      if (msgEl) msgEl.textContent = msg;
+      if (submitBtn) submitBtn.disabled = !(planeOk && longOk && pilotsOk && faOk && businessOk);
+    }
 
-          pilotBoxes.forEach(b => b.addEventListener("change", validateAll));
-          faBoxes.forEach(b => b.addEventListener("change", validateAll));
-          if (planeSelect) planeSelect.addEventListener("change", validateAll);
-          if (businessInput) businessInput.addEventListener("input", validateAll);
+    pilotBoxes.forEach(b => b.addEventListener("change", validateAll));
+    faBoxes.forEach(b => b.addEventListener("change", validateAll));
+    if (planeSelect) planeSelect.addEventListener("change", validateAll);
+    if (businessInput) businessInput.addEventListener("input", validateAll);
 
-          validateAll();
-        })();
-      </script>
+    validateAll();
+  })();
+</script>
+
 
     {% endif %}
   </div>
