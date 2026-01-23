@@ -7,11 +7,12 @@
 </head>
 
 <body>
-    <header class="top-bar">
-      <a href="/" class="logo-link">
-          <img src="/static/logo.png" alt="Company Logo" class="company-logo">
-      </a>
+  <header class="top-bar">
+    <a href="/" class="logo-link">
+      <img src="/static/logo.png" alt="Company Logo" class="company-logo">
+    </a>
   </header>
+
   <div class="card">
     {% if error %}
       <div class="error">{{ error }}</div>
@@ -24,24 +25,8 @@
         | {{ flight.departure_date }} {{ flight.departure_time }}
       </p>
 
-      <div class="tabs">
-        <a class="tab {% if class_type=='Regular' %}active{% endif %}"
-          href="/select_seats?flight_id={{ flight.flight_id }}&class_type=Regular">
-          Regular {% if flight.regular_price %}(₪{{ "%.2f"|format(flight.regular_price) }}){% endif %}
-        </a>
-
-        {% if flight.business_price %}
-          <a class="tab {% if class_type=='Business' %}active{% endif %}"
-            href="/select_seats?flight_id={{ flight.flight_id }}&class_type=Business">
-            Business (₪{{ "%.2f"|format(flight.business_price) }})
-          </a>
-        {% endif %}
-      </div>
-
       <form method="POST" action="/select_seats">
         <input type="hidden" name="flight_id" value="{{ flight.flight_id }}">
-<input type="hidden" name="class_type" value="{{ class_type }}">
-
 
         <div class="row">
           <div class="small">Selected seats: <span id="count">0</span></div>
@@ -54,66 +39,95 @@
           {% endif %}
         </div>
 
-        {% set cols = grid_meta.cols if grid_meta.cols else 6 %}
-        <div class="grid" style="grid-template-columns: repeat({{ cols }}, 54px);">
-          {% for s in seats %}
-            {% set st = s.status|lower %}
-            <div class="seat {% if st=='available' %}available{% else %}booked{% endif %}"
-              data-status="{{ st }}"
-              data-id="{{ s.flight_seat_id }}"
-              title="Row {{ s.row_num }} Col {{ s.column_number }}">
-              {{ s.row_num }}{{ s.column_number }}
-            </div>
-          {% endfor %}
+        <!-- Regular -->
+        {% if seats_by_class.get('Regular') %}
+          <h3 style="margin-top:16px;">
+            Regular
+            {% if flight.regular_price %}(₪{{ "%.2f"|format(flight.regular_price) }}){% endif %}
+          </h3>
+
+          {% set cols = grid_by_class['Regular'].cols if grid_by_class.get('Regular') else 6 %}
+          <div class="grid" style="grid-template-columns: repeat({{ cols }}, 54px);">
+            {% for s in seats_by_class['Regular'] %}
+              {% set st = s.status|lower %}
+              <div class="seat {% if st=='available' %}available{% else %}booked{% endif %}"
+                   data-status="{{ st }}"
+                   data-id="{{ s.flight_seat_id }}"
+                   title="Row {{ s.row_num }} Col {{ s.column_number }}">
+                {{ s.row_num }}{{ s.column_number }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <!-- Business -->
+        {% if seats_by_class.get('Business') and flight.business_price %}
+          <h3 style="margin-top:18px;">
+            Business (₪{{ "%.2f"|format(flight.business_price) }})
+          </h3>
+
+          {% set cols = grid_by_class['Business'].cols if grid_by_class.get('Business') else 6 %}
+          <div class="grid" style="grid-template-columns: repeat({{ cols }}, 54px);">
+            {% for s in seats_by_class['Business'] %}
+              {% set st = s.status|lower %}
+              <div class="seat {% if st=='available' %}available{% else %}booked{% endif %}"
+                   data-status="{{ st }}"
+                   data-id="{{ s.flight_seat_id }}"
+                   title="Row {{ s.row_num }} Col {{ s.column_number }}">
+                {{ s.row_num }}{{ s.column_number }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <!-- hidden inputs will be added via JS -->
+        <div id="hiddenInputs"></div>
+
+        <div class="row">
+          <a class="btn secondary" href="/search_flights">Back</a>
+          <button class="btn" type="submit">Confirm booking</button>
         </div>
+      </form>
 
-      <!-- hidden inputs will be added via JS -->
-      <div id="hiddenInputs"></div>
+    {% else %}
+      <div class="error">Flight not found.</div>
+      <a class="btn secondary" href="/search_flights">Back</a>
+    {% endif %}
+  </div>
 
-      <div class="row">
-        <a class="btn secondary" href="/search_flights">Back</a>
-        <button class="btn" type="submit">Confirm booking</button>
-      </div>
-    </form>
-  {% else %}
-    <div class="error">Flight not found.</div>
-    <a class="btn secondary" href="/search_flights">Back</a>
-  {% endif %}
-</div>
+  <script>
+    const selected = new Set();
+    const hidden = document.getElementById("hiddenInputs");
+    const count = document.getElementById("count");
 
-<script>
-  const selected = new Set();
-  const hidden = document.getElementById("hiddenInputs");
-  const count = document.getElementById("count");
+    function syncHiddenInputs() {
+      hidden.innerHTML = "";
+      Array.from(selected).forEach(id => {
+        const inp = document.createElement("input");
+        inp.type = "hidden";
+        inp.name = "flight_seat_id";
+        inp.value = id;
+        hidden.appendChild(inp);
+      });
+      count.innerText = selected.size;
+    }
 
-  function syncHiddenInputs() {
-    hidden.innerHTML = "";
-    Array.from(selected).forEach(id => {
-      const inp = document.createElement("input");
-      inp.type = "hidden";
-      inp.name = "flight_seat_id";
-      inp.value = id;
-      hidden.appendChild(inp);
+    document.querySelectorAll(".seat").forEach(el => {
+      el.addEventListener("click", () => {
+        if (el.dataset.status !== "available") return;
+
+        const id = el.dataset.id;
+        if (selected.has(id)) {
+          selected.delete(id);
+          el.classList.remove("selected");
+        } else {
+          selected.add(id);
+          el.classList.add("selected");
+        }
+        syncHiddenInputs();
+      });
     });
-    count.innerText = selected.size;
-  }
-
-  document.querySelectorAll(".seat").forEach(el => {
-    el.addEventListener("click", () => {
-      if (el.dataset.status !== "available") return;
-
-      const id = el.dataset.id;
-      if (selected.has(id)) {
-        selected.delete(id);
-        el.classList.remove("selected");
-      } else {
-        selected.add(id);
-        el.classList.add("selected");
-      }
-      syncHiddenInputs();
-    });
-  });
-</script>
+  </script>
 
 </body>
 </html>

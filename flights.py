@@ -128,13 +128,18 @@ def get_bookable_flights(origin, destination, departure_date):
 def select_seats():
     from main import db_cur
 
-    flight_id = request.args.get("flight_id", type=int) if request.method == "GET" else request.form.get("flight_id", type=int)
+    flight_id = (
+        request.args.get("flight_id", type=int)
+        if request.method == "GET"
+        else request.form.get("flight_id", type=int)
+    )
     if not flight_id:
         return redirect("/search_flights")
 
-    # 1) פרטי טיסה + מחירים (Regular/Business) + status
+    # 1) Flight details + prices + status
     with db_cur() as cursor:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT
               f.flight_id,
               f.origin_airport,
@@ -149,7 +154,9 @@ def select_seats():
             LEFT JOIN FlightPricing reg ON reg.flight_id=f.flight_id AND reg.class_type='Regular'
             LEFT JOIN FlightPricing bus ON bus.flight_id=f.flight_id AND bus.class_type='Business'
             WHERE f.flight_id=%s
-        """, (flight_id,))
+            """,
+            (flight_id,),
+        )
         flight = cursor.fetchone()
 
     if not flight:
@@ -157,21 +164,18 @@ def select_seats():
             "select_seats.html",
             error="Flight not found",
             flight=None,
-            seats=[],
-            class_type="Regular",
-            grid_meta={"rows": 0, "cols": 0},
+            seats_by_class={},
+            grid_by_class={},
         )
 
-    # ---- חסימות עסקיות: cancelled / עבר הזמן / מלאה ----
-    # cancelled
+    # ---- Business blocks: cancelled / past / fully booked ----
     if str(flight.get("status", "")).lower() == "cancelled":
         return render_template(
             "select_seats.html",
             flight=flight,
-            seats=[],
-            class_type="Regular",
-            grid_meta={"rows": 0, "cols": 0},
-            error="This flight is cancelled."
+            seats_by_class={},
+            grid_by_class={},
+            error="This flight is cancelled.",
         )
 
     # past (handle TIME as timedelta sometimes)
@@ -184,57 +188,50 @@ def select_seats():
         return render_template(
             "select_seats.html",
             flight=flight,
-            seats=[],
-            class_type="Regular",
-            grid_meta={"rows": 0, "cols": 0},
-            error="This flight has already departed."
+            seats_by_class={},
+            grid_by_class={},
+            error="This flight has already departed.",
         )
-
-    # determine class_type (do it before we fetch seats for managers)
-    class_type = request.form.get("class_type") if request.method == "POST" else request.args.get("class_type", "Regular")
-    if class_type not in ("Regular", "Business"):
-        class_type = "Regular"
-
-    # אם אין Business מחיר בכלל, לא מאפשרים Business
-    if class_type == "Business" and not flight["business_price"]:
-        class_type = "Regular"
 
     # fully booked (no available seats at all)
     with db_cur() as cursor:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT 1
             FROM FlightSeat
             WHERE flight_id=%s AND LOWER(status)='available'
             LIMIT 1
-        """, (flight_id,))
+            """,
+            (flight_id,),
+        )
         has_any_available = cursor.fetchone() is not None
 
     if not has_any_available:
         return render_template(
             "select_seats.html",
             flight=flight,
-            seats=[],
-            class_type=class_type,
-            grid_meta={"rows": 0, "cols": 0},
-            error="This flight is fully booked."
+            seats_by_class={},
+            grid_by_class={},
+            error="This flight is fully booked.",
         )
 
-    # חסימת מנהלים מרכישה - גם ב-GET וגם ב-POST
+    # Fetch seats for BOTH classes (Regular + Business if exists on this plane)
+    seats_by_class, grid_by_class = _get_seats_and_grids_by_class(
+        flight_id, flight["plane_id"]
+    )
+
+    # Managers cannot purchase (GET+POST)
     if session.get("is_manager"):
-        seats, grid_meta = _get_seats_and_grid(flight_id, flight["plane_id"], class_type)
         return render_template(
             "select_seats.html",
             flight=flight,
-            seats=seats,
-            class_type=class_type,
-            grid_meta=grid_meta,
-            error="Managers are not allowed to purchase tickets."
+            seats_by_class=seats_by_class,
+            grid_by_class=grid_by_class,
+            error="Managers are not allowed to purchase tickets.",
         )
 
-    # 2) אם זו בקשת POST = אישור הזמנה
+    # 2) POST = confirm booking (can include mixed classes)
     if request.method == "POST":
-        seats, grid_meta = _get_seats_and_grid(flight_id, flight["plane_id"], class_type)
-
         selected_ids = request.form.getlist("flight_seat_id")
         guest_email = request.form.get("guest_email", "").strip()
 
@@ -243,103 +240,123 @@ def select_seats():
             return render_template(
                 "select_seats.html",
                 flight=flight,
-                seats=seats,
-                class_type=class_type,
-                grid_meta=grid_meta,
-                error="Please enter an email to continue as a guest."
+                seats_by_class=seats_by_class,
+                grid_by_class=grid_by_class,
+                error="Please enter an email to continue as a guest.",
             )
 
         if not selected_ids:
             return render_template(
                 "select_seats.html",
                 flight=flight,
-                seats=seats,
-                class_type=class_type,
-                grid_meta=grid_meta,
-                error="Please select at least one seat."
+                seats_by_class=seats_by_class,
+                grid_by_class=grid_by_class,
+                error="Please select at least one seat.",
             )
 
-        # מבטיחים שהמושבים עדיין available ושייכים למחלקה הנוכחית
+        # Validate: seats exist, available, belong to this flight & plane
         with db_cur() as cursor:
-            format_strings = ",".join(["%s"] * len(selected_ids))
-            cursor.execute(f"""
+            fmt = ",".join(["%s"] * len(selected_ids))
+            cursor.execute(
+                f"""
                 SELECT fs.flight_seat_id, fs.status, s.class_type, s.plane_id
                 FROM FlightSeat fs
                 JOIN Seat s ON s.seat_id = fs.seat_id
-                WHERE fs.flight_id=%s AND fs.flight_seat_id IN ({format_strings})
-            """, (flight_id, *selected_ids))
+                WHERE fs.flight_id=%s AND fs.flight_seat_id IN ({fmt})
+                """,
+                (flight_id, *selected_ids),
+            )
             rows = cursor.fetchall()
 
         if len(rows) != len(selected_ids):
-            return redirect(f"/select_seats?flight_id={flight_id}&class_type={class_type}")
+            return redirect(f"/select_seats?flight_id={flight_id}")
 
+        reg_price = flight["regular_price"]
+        bus_price = flight["business_price"]  # may be None
+
+        total_payment = 0.0
         for r in rows:
             if str(r["status"]).lower() != "available":
-                return redirect(f"/select_seats?flight_id={flight_id}&class_type={class_type}")
-            if r["class_type"] != class_type:
-                return redirect(f"/select_seats?flight_id={flight_id}&class_type={class_type}")
+                return redirect(f"/select_seats?flight_id={flight_id}")
             if int(r["plane_id"]) != int(flight["plane_id"]):
-                return redirect(f"/select_seats?flight_id={flight_id}&class_type={class_type}")
+                return redirect(f"/select_seats?flight_id={flight_id}")
 
-        # מחיר לפי מחלקה
-        price_per_seat = flight["regular_price"] if class_type == "Regular" else flight["business_price"]
-        total_payment = float(price_per_seat) * len(selected_ids)
+            ct = r["class_type"]
+            if ct == "Regular":
+                if reg_price is None:
+                    return redirect(f"/select_seats?flight_id={flight_id}")
+                total_payment += float(reg_price)
+            elif ct == "Business":
+                # if flight doesn't have business pricing -> can't book business seats
+                if bus_price is None:
+                    return redirect(f"/select_seats?flight_id={flight_id}")
+                total_payment += float(bus_price)
+            else:
+                return redirect(f"/select_seats?flight_id={flight_id}")
 
-        # יוצרים הזמנה + פריטים + מעדכנים מושבים
+        # Create order + items + mark seats booked
         with db_cur() as cursor:
             cursor.execute("SELECT email FROM Customer WHERE email=%s", (email,))
             if not cursor.fetchone():
                 cursor.execute(
                     "INSERT INTO Customer (email, first_name, last_name) VALUES (%s, %s, %s)",
-                    (email, "Guest", "")
+                    (email, "Guest", ""),
                 )
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO FlightOrder (flight_id, email, execution_date, status, total_payment)
                 VALUES (%s, %s, %s, %s, %s)
-            """, (flight_id, email, date.today(), "paid", total_payment))
+                """,
+                (flight_id, email, date.today(), "paid", total_payment),
+            )
 
             cursor.execute("SELECT LAST_INSERT_ID() AS order_id")
             order_id = cursor.fetchone()["order_id"]
 
             cursor.executemany(
                 "INSERT INTO OrderItem (order_id, flight_seat_id) VALUES (%s, %s)",
-                [(order_id, fsid) for fsid in selected_ids]
+                [(order_id, fsid) for fsid in selected_ids],
             )
 
             cursor.execute(
-                f"UPDATE FlightSeat SET status='booked' WHERE flight_id=%s AND flight_seat_id IN ({format_strings})",
-                (flight_id, *selected_ids)
+                f"UPDATE FlightSeat SET status='booked' WHERE flight_id=%s AND flight_seat_id IN ({fmt})",
+                (flight_id, *selected_ids),
             )
 
         return redirect(f"/order_success?order_id={order_id}&email={email}")
 
-    # 3) GET: להביא מושבים ולהציג
-    seats, grid_meta = _get_seats_and_grid(flight_id, flight["plane_id"], class_type)
-
+    # 3) GET: show seats (mixed classes)
     return render_template(
         "select_seats.html",
         flight=flight,
-        seats=seats,
-        class_type=class_type,
-        grid_meta=grid_meta,
-        error=None
+        seats_by_class=seats_by_class,
+        grid_by_class=grid_by_class,
+        error=None,
     )
 
 
-def _get_seats_and_grid(flight_id, plane_id, class_type):
+def _get_seats_and_grids_by_class(flight_id, plane_id):
+    """
+    Returns:
+      seats_by_class: {"Regular": [...], "Business": [...]}  (only classes that exist / have seats)
+      grid_by_class:  {"Regular": {"rows": X, "cols": Y}, "Business": {...}}
+    """
     from main import db_cur
 
-    # מוחקים FlightSeat לא חוקיים: כאלה שה-seat שלהם לא שייך למטוס של הטיסה
+    # Delete invalid FlightSeat rows (seat not belonging to the flight plane)
     with db_cur() as cursor:
-        cursor.execute("""
+        cursor.execute(
+            """
             DELETE fs
             FROM FlightSeat fs
             JOIN Seat s ON s.seat_id = fs.seat_id
             WHERE fs.flight_id=%s AND s.plane_id<>%s
-        """, (flight_id, plane_id))
+            """,
+            (flight_id, plane_id),
+        )
 
-    # אם אין FlightSeat לטיסה — ניצור לפי כל מושבי המטוס
+    # Ensure FlightSeat exists for this flight (create from all plane seats if missing)
     with db_cur() as cursor:
         cursor.execute("SELECT COUNT(*) AS cnt FROM FlightSeat WHERE flight_id=%s", (flight_id,))
         if cursor.fetchone()["cnt"] == 0:
@@ -348,31 +365,49 @@ def _get_seats_and_grid(flight_id, plane_id, class_type):
             if seat_ids:
                 cursor.executemany(
                     "INSERT INTO FlightSeat (flight_id, seat_id, status) VALUES (%s, %s, 'available')",
-                    [(flight_id, sid) for sid in seat_ids]
+                    [(flight_id, sid) for sid in seat_ids],
                 )
 
-    with db_cur() as cursor:
-        cursor.execute("""
-            SELECT rows_number, columns_number
-            FROM Class
-            WHERE plane_id=%s AND class_type=%s
-        """, (plane_id, class_type))
-        meta = cursor.fetchone() or {"rows_number": 0, "columns_number": 0}
+    seats_by_class = {}
+    grid_by_class = {}
 
-        cursor.execute("""
-            SELECT
-              fs.flight_seat_id,
-              fs.status,
-              s.row_num,
-              s.column_number
-            FROM FlightSeat fs
-            JOIN Seat s ON s.seat_id = fs.seat_id
-            WHERE fs.flight_id=%s
-              AND s.class_type=%s
-              AND s.plane_id=%s
-            ORDER BY s.row_num, s.column_number
-        """, (flight_id, class_type, plane_id))
+    for class_type in ("Regular", "Business"):
+        with db_cur() as cursor:
+            cursor.execute(
+                """
+                SELECT rows_number, columns_number
+                FROM Class
+                WHERE plane_id=%s AND class_type=%s
+                """,
+                (plane_id, class_type),
+            )
+            meta = cursor.fetchone()
 
-        seats = cursor.fetchall()
+            cursor.execute(
+                """
+                SELECT
+                  fs.flight_seat_id,
+                  fs.status,
+                  s.row_num,
+                  s.column_number,
+                  s.class_type
+                FROM FlightSeat fs
+                JOIN Seat s ON s.seat_id = fs.seat_id
+                WHERE fs.flight_id=%s
+                  AND s.class_type=%s
+                  AND s.plane_id=%s
+                ORDER BY s.row_num, s.column_number
+                """,
+                (flight_id, class_type, plane_id),
+            )
+            seats = cursor.fetchall()
 
-    return seats, {"rows": meta["rows_number"], "cols": meta["columns_number"]}
+        # keep only classes that actually exist/have seats
+        if seats:
+            seats_by_class[class_type] = seats
+            grid_by_class[class_type] = {
+                "rows": meta["rows_number"] if meta else 0,
+                "cols": meta["columns_number"] if meta else 6,
+            }
+
+    return seats_by_class, grid_by_class
