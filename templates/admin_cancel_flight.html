@@ -12,11 +12,6 @@
 <header class="top-bar">
   <a href="/" class="logo-link">
     <img src="{{ url_for('static', filename='logo.png') }}" alt="Company Logo" class="company-logo">
-  </a>
-  <a href="/admin/flights" class="back-home">
-    <i class='bx bx-arrow-left'></i>
-    Back to flights
-  </a>
 </header>
 
 <div class="wrapper">
@@ -88,7 +83,10 @@
       {% endif %}
     </form>
   </div>
-
+    <a href="/admin/flights" class="back bottom ">
+        <i class='bx bx-arrow-left'></i>
+    Back to flights
+    </a>
 </div>
 </body>
 </html>
