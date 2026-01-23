@@ -192,9 +192,23 @@ def my_orders():
         params = [email]
 
         if status_filter == "done":
-            base_query += " AND fo.status='paid' AND TIMESTAMP(f.departure_date, f.departure_time) < %s"
+            # Done = paid orders where the flight already departed
+            base_query += """
+                AND fo.status='paid'
+                AND TIMESTAMP(f.departure_date, f.departure_time) < %s
+            """
             params.append(datetime.now())
+
+        elif status_filter == "paid":
+            # Active = paid orders where the flight is in the future
+            base_query += """
+                AND fo.status='paid'
+                AND TIMESTAMP(f.departure_date, f.departure_time) >= %s
+            """
+            params.append(datetime.now())
+
         elif status_filter:
+            # other statuses: customer_cancelled / system_cancelled / etc.
             base_query += " AND fo.status=%s"
             params.append(status_filter)
 
