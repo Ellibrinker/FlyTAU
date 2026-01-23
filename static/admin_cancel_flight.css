@@ -14,6 +14,7 @@
 }
 
 .top-bar .logo-link {
+    margin-left: 90px;
     display: flex;
     align-items: center;
 }
@@ -22,21 +23,6 @@
     height: 50px;
     cursor: pointer;
 }
-
-.back-home {
-    display: flex;
-    align-items: center;
-    color: #252264;
-    font-weight: 600;
-    margin-right: 70px;
-    text-decoration: none;
-}
-
-.back-home i {
-    margin-right: 6px;
-}
-
-.back-home:hover { text-decoration: underline; }
 
 /* === Body === */
 body {
@@ -55,6 +41,8 @@ body {
 .wrapper {
     width: 960px;
     max-width: 95%;
+    display: flex;
+    flex-direction: column;
     background: rgba(255, 255, 255, 0.15);
     border: 2px solid rgba(37,34,99,0.2);
     backdrop-filter: blur(10px);
@@ -150,4 +138,30 @@ button:disabled { background-color: rgba(37,34,99,0.3); cursor: not-allowed; }
 @media (max-width: 600px) {
     .row { flex-direction: column; }
     .pill { width: 100%; text-align: center; }
+}
+
+.back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #252264;
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 16px;
+    opacity: 0.75;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.back i {
+    font-size: 20px;
+}
+
+.back:hover {
+    opacity: 1;
+    transform: translateX(-2px);
+}
+
+.back.bottom {
+  margin-top: auto;
+  align-self: center;
 }
