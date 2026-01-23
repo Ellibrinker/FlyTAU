@@ -817,15 +817,26 @@ def admin_reports():
     if guard:
         return guard
 
-    today = date.today()
-
     date_from = request.args.get("date_from")
     date_to = request.args.get("date_to")
-    report = request.args.get("report", "avg_occupancy_completed")
+    report = request.args.get("report")  # בלי default
 
-    # טעינה ראשונה / Reset – אין תאריכים
+    # כניסה ראשונית / Reset (אין report בכלל)
+    if not report:
+        return render_template(
+            "admin_reports.html",
+            report="avg_occupancy_completed",
+            date_from="",
+            date_to="",
+            data=[],
+            kpis={},
+            meta={"title": "", "subtitle": "", "columns": [],
+                  "notes": ["Please choose a date range and click Run."]},
+            error=None
+        )
+
+    # המשתמש לחץ Run אבל לא מילא תאריכים
     if not date_from or not date_to:
-        error = "Please fill both dates and click Run."
         return render_template(
             "admin_reports.html",
             report=report,
@@ -833,14 +844,10 @@ def admin_reports():
             date_to="",
             data=[],
             kpis={},
-            meta={
-                "title": "",
-                "subtitle": "",
-                "columns": [],
-                "notes": []
-            },
-            error=error
+            meta={"title": "", "subtitle": "", "columns": [], "notes": []},
+            error="Please fill both start and end dates."
         )
+
 
     from main import db_cur
 
