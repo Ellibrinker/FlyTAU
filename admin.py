@@ -1,4 +1,3 @@
-# admin.py
 from flask import Blueprint, render_template, request, redirect, session
 from datetime import datetime, date, timedelta
 import traceback
@@ -279,38 +278,92 @@ def admin_flights():
     origin = request.args.get("origin", "").strip()
     destination = request.args.get("destination", "").strip()
     dep_date = request.args.get("departure_date", "").strip()
+
+    # status filter from UI: active | full | completed | cancelled | (empty=all)
     status = request.args.get("status", "").strip().lower()
     created = request.args.get("created", "").strip()
 
     from main import db_cur
+
     query = """
-        SELECT flight_id, origin_airport, destination_airport, departure_date, departure_time, status
-        FROM Flight
+        SELECT
+            f.flight_id,
+            f.origin_airport,
+            f.destination_airport,
+            f.departure_date,
+            f.departure_time,
+            f.status AS db_status,
+
+            -- seats info
+            SUM(CASE WHEN LOWER(fs.status) = 'available' THEN 1 ELSE 0 END) AS available_seats,
+            COUNT(fs.flight_seat_id) AS total_seats,
+
+            -- computed status for manager UI
+            CASE
+              WHEN LOWER(f.status) = 'cancelled' THEN 'cancelled'
+              WHEN TIMESTAMP(f.departure_date, f.departure_time) <= NOW() THEN 'completed'
+              WHEN SUM(CASE WHEN LOWER(fs.status) = 'available' THEN 1 ELSE 0 END) = 0 THEN 'full'
+              ELSE 'active'
+            END AS manager_status
+
+        FROM Flight f
+        LEFT JOIN FlightSeat fs
+          ON fs.flight_id = f.flight_id
+
         WHERE 1=1
     """
     params = []
 
     if origin:
-        query += " AND origin_airport=%s"
+        query += " AND f.origin_airport=%s"
         params.append(origin)
-    if destination:
-        query += " AND destination_airport=%s"
-        params.append(destination)
-    if dep_date:
-        query += " AND departure_date=%s"
-        params.append(dep_date)
-    if status:
-        query += " AND LOWER(status)=%s"
-        params.append(status)
 
-    query += " ORDER BY departure_date, departure_time"
+    if destination:
+        query += " AND f.destination_airport=%s"
+        params.append(destination)
+
+    if dep_date:
+        query += " AND f.departure_date=%s"
+        params.append(dep_date)
+
+    query += """
+        GROUP BY
+            f.flight_id,
+            f.origin_airport,
+            f.destination_airport,
+            f.departure_date,
+            f.departure_time,
+            f.status
+    """
+
+    # filtering by computed status must be done using HAVING (because of aggregates)
+    if status in ("active", "full", "completed", "cancelled"):
+        if status == "cancelled":
+            query += " HAVING manager_status = 'cancelled'"
+        elif status == "completed":
+            query += " HAVING manager_status = 'completed'"
+        elif status == "full":
+            query += " HAVING manager_status = 'full'"
+        elif status == "active":
+            query += " HAVING manager_status = 'active'"
+
+    query += " ORDER BY f.departure_date, f.departure_time"
 
     with db_cur() as cursor:
         cursor.execute(query, tuple(params))
         flights = cursor.fetchall()
 
-    return render_template("admin_flights.html", flights=flights, created=created)
-
+    return render_template(
+        "admin_flights.html",
+        flights=flights,
+        created=created,
+        filters={
+            "origin": origin,
+            "destination": destination,
+            "departure_date": dep_date,
+            "status": status,
+        },
+    )
 
 @admin_bp.route("/flights/new", methods=["GET", "POST"])
 def admin_add_flight():

@@ -6,7 +6,6 @@
   <link href='https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css' rel='stylesheet'>
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/admin_flights.css">
-  <link href='https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css' rel='stylesheet'>
 </head>
 <body>
 
@@ -36,25 +35,27 @@
 
     <div class="box">
       <h3>Search</h3>
-      <form method="GET">
+      <form method="GET" action="/admin/flights">
         <div class="row">
           <input name="origin" placeholder="Origin (e.g. TLV)" value="{{ request.args.get('origin','') }}">
           <input name="destination" placeholder="Destination (e.g. ATH)" value="{{ request.args.get('destination','') }}">
           <input type="date" name="departure_date" value="{{ request.args.get('departure_date','') }}">
+
           <select name="status">
             {% set s = (request.args.get('status','')|lower) %}
             <option value="" {% if not s %}selected{% endif %}>All statuses</option>
-            <option value="open" {% if s=='open' %}selected{% endif %}>open</option>
-            <option value="cancelled" {% if s=='cancelled' %}selected{% endif %}>cancelled</option>
-            <option value="full" {% if s=='full' %}selected{% endif %}>full</option>
-            <option value="done" {% if s=='done' %}selected{% endif %}>done</option>
+            <option value="active" {% if s=='active' %}selected{% endif %}>Active</option>
+            <option value="full" {% if s=='full' %}selected{% endif %}>Full</option>
+            <option value="completed" {% if s=='completed' %}selected{% endif %}>Completed</option>
+            <option value="cancelled" {% if s=='cancelled' %}selected{% endif %}>Cancelled</option>
           </select>
 
           <button type="submit">Search</button>
           <a class="pill-btn" href="/admin/flights">Clear</a>
         </div>
+
         <p class="muted">
-          Tip: “Cancel” is available only for flights with status <b>open</b>. Cancelled/done flights can’t be cancelled again.
+          Tip: “Cancel” is available only for flights with DB status <b>open</b> (future + not cancelled).
         </p>
       </form>
     </div>
@@ -78,25 +79,44 @@
             <th>Date</th>
             <th>Time</th>
             <th>Status</th>
+            <th>Seats</th>
             <th>Actions</th>
           </tr>
 
           {% for f in flights %}
-            {% set st = (f.status|string)|lower %}
+            {% set st = (f.manager_status|string)|lower %}
+            {% set dbst = (f.db_status|string)|lower %}
+
             <tr>
               <td><b>{{ f.flight_id }}</b></td>
               <td><span class="pill"><b>{{ f.origin_airport }}</b> → <b>{{ f.destination_airport }}</b></span></td>
               <td>{{ f.departure_date }}</td>
               <td>{{ f.departure_time }}</td>
+
               <td class="status
-                {% if st=='open' %}status-open{% elif st=='cancelled' %}status-cancelled{% elif st=='full' %}status-full{% elif st=='done' %}status-done{% endif %}
-              ">{{ st }}</td>
+                {% if st=='active' %}status-active
+                {% elif st=='cancelled' %}status-cancelled
+                {% elif st=='full' %}status-full
+                {% elif st=='completed' %}status-completed
+                {% endif %}
+              ">
+                {{ st }}
+              </td>
+
+              <td class="muted">
+                {% if f.available_seats is not none and f.total_seats is not none %}
+                  {{ f.available_seats }}/{{ f.total_seats }} available
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+
               <td>
                 <div class="actions">
-                  {% if st == 'open' %}
+                  {% if dbst == 'open' %}
                     <a class="danger-link" href="{{ url_for('admin.admin_cancel_flight', flight_id=f.flight_id) }}">Cancel</a>
                   {% else %}
-                    <span class="disabled-link" title="Only open flights can be cancelled">Cancel</span>
+                    <span class="disabled-link" title="Only flights with DB status 'open' can be cancelled">Cancel</span>
                   {% endif %}
                 </div>
               </td>
@@ -105,6 +125,7 @@
         </table>
       </div>
     {% endif %}
+
     <div class="footer">
       <a href="/">
         <i class='bx bx-arrow-left'></i>

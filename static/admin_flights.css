@@ -174,10 +174,11 @@ th {
   font-weight: 700;
 }
 
-.status-open { color: #0b6e4f; }
-.status-cancelled { color: #b00020; }
-.status-full { color: #6b4e00; }
-.status-done { color: #444; }
+.status-active { color: #0b6e4f; }      /* Active */
+.status-cancelled { color: #b00020; }   /* Cancelled */
+.status-full { color: #6b4e00; }        /* Full */
+.status-completed { color: #444; }      /* Completed */
+
 
 /* Actions column */
 .actions {

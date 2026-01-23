@@ -40,6 +40,8 @@
 
       <form method="POST" action="/select_seats">
         <input type="hidden" name="flight_id" value="{{ flight.flight_id }}">
+<input type="hidden" name="class_type" value="{{ class_type }}">
+
 
         <div class="row">
           <div class="small">Selected seats: <span id="count">0</span></div>

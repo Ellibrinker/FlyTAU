@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, session
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 flights_bp = Blueprint("flights", __name__)
 
@@ -60,10 +60,10 @@ def search_flights():
                 departure_date=departure_date
             )
 
-    flights = get_open_flights(origin, destination, departure_date)
+    flights = get_bookable_flights(origin, destination, departure_date)
 
     if not flights:
-        errors.append("No open flights found on this date")
+        errors.append("No flights available for booking on this date")
 
     return render_template(
         "search_flights.html",
@@ -75,7 +75,13 @@ def search_flights():
     )
 
 
-def get_open_flights(origin, destination, departure_date):
+def get_bookable_flights(origin, destination, departure_date):
+    """
+    Returns flights that are relevant for booking for customers:
+    - not cancelled
+    - departure datetime is in the future
+    - has at least 1 available seat (not full)
+    """
     from main import db_cur
 
     query = """
@@ -86,7 +92,13 @@ def get_open_flights(origin, destination, departure_date):
             f.departure_date,
             f.departure_time,
             reg.price AS regular_price,
-            bus.price AS business_price
+            bus.price AS business_price,
+            -- helpful info for UI (optional)
+            (SELECT COUNT(*)
+             FROM FlightSeat fs
+             WHERE fs.flight_id = f.flight_id
+               AND LOWER(fs.status) = 'available'
+            ) AS available_seats
         FROM Flight f
         LEFT JOIN FlightPricing reg
           ON reg.flight_id = f.flight_id AND reg.class_type='Regular'
@@ -95,11 +107,21 @@ def get_open_flights(origin, destination, departure_date):
         WHERE f.origin_airport=%s
           AND f.destination_airport=%s
           AND f.departure_date=%s
-          AND LOWER(f.status) = 'open'
+          AND LOWER(f.status) <> 'cancelled'
+          AND TIMESTAMP(f.departure_date, f.departure_time) > NOW()
+          AND EXISTS (
+              SELECT 1
+              FROM FlightSeat fs2
+              WHERE fs2.flight_id = f.flight_id
+                AND LOWER(fs2.status) = 'available'
+          )
+        ORDER BY f.departure_time
     """
+
     with db_cur() as cursor:
         cursor.execute(query, (origin, destination, departure_date))
         return cursor.fetchall()
+
 
 
 @flights_bp.route("/select_seats", methods=["GET", "POST"])
@@ -110,7 +132,7 @@ def select_seats():
     if not flight_id:
         return redirect("/search_flights")
 
-    # 1) פרטי טיסה + מחירים (Regular/Business)
+    # 1) פרטי טיסה + מחירים (Regular/Business) + status
     with db_cur() as cursor:
         cursor.execute("""
             SELECT
@@ -119,6 +141,7 @@ def select_seats():
               f.destination_airport,
               f.departure_date,
               f.departure_time,
+              f.status,
               f.plane_id,
               reg.price AS regular_price,
               bus.price AS business_price
@@ -130,16 +153,71 @@ def select_seats():
         flight = cursor.fetchone()
 
     if not flight:
-        return render_template("select_seats.html", error="Flight not found", flight=None, seats=[], class_type="Regular", grid_meta={"rows":0,"cols":0})
+        return render_template(
+            "select_seats.html",
+            error="Flight not found",
+            flight=None,
+            seats=[],
+            class_type="Regular",
+            grid_meta={"rows": 0, "cols": 0},
+        )
 
-    # איזה class_type מציגים כרגע
-    class_type = request.args.get("class_type", "Regular")
+    # ---- חסימות עסקיות: cancelled / עבר הזמן / מלאה ----
+    # cancelled
+    if str(flight.get("status", "")).lower() == "cancelled":
+        return render_template(
+            "select_seats.html",
+            flight=flight,
+            seats=[],
+            class_type="Regular",
+            grid_meta={"rows": 0, "cols": 0},
+            error="This flight is cancelled."
+        )
+
+    # past (handle TIME as timedelta sometimes)
+    dep_time = flight["departure_time"]
+    if isinstance(dep_time, timedelta):
+        dep_time = (datetime.min + dep_time).time()
+
+    dep_dt = datetime.combine(flight["departure_date"], dep_time)
+    if dep_dt <= datetime.now():
+        return render_template(
+            "select_seats.html",
+            flight=flight,
+            seats=[],
+            class_type="Regular",
+            grid_meta={"rows": 0, "cols": 0},
+            error="This flight has already departed."
+        )
+
+    # determine class_type (do it before we fetch seats for managers)
+    class_type = request.form.get("class_type") if request.method == "POST" else request.args.get("class_type", "Regular")
     if class_type not in ("Regular", "Business"):
         class_type = "Regular"
 
     # אם אין Business מחיר בכלל, לא מאפשרים Business
     if class_type == "Business" and not flight["business_price"]:
         class_type = "Regular"
+
+    # fully booked (no available seats at all)
+    with db_cur() as cursor:
+        cursor.execute("""
+            SELECT 1
+            FROM FlightSeat
+            WHERE flight_id=%s AND LOWER(status)='available'
+            LIMIT 1
+        """, (flight_id,))
+        has_any_available = cursor.fetchone() is not None
+
+    if not has_any_available:
+        return render_template(
+            "select_seats.html",
+            flight=flight,
+            seats=[],
+            class_type=class_type,
+            grid_meta={"rows": 0, "cols": 0},
+            error="This flight is fully booked."
+        )
 
     # חסימת מנהלים מרכישה - גם ב-GET וגם ב-POST
     if session.get("is_manager"):
@@ -155,11 +233,7 @@ def select_seats():
 
     # 2) אם זו בקשת POST = אישור הזמנה
     if request.method == "POST":
-        seats, grid_meta = _get_seats_and_grid(
-            flight_id,
-            flight["plane_id"],
-            class_type
-        )
+        seats, grid_meta = _get_seats_and_grid(flight_id, flight["plane_id"], class_type)
 
         selected_ids = request.form.getlist("flight_seat_id")
         guest_email = request.form.get("guest_email", "").strip()
@@ -213,8 +287,6 @@ def select_seats():
 
         # יוצרים הזמנה + פריטים + מעדכנים מושבים
         with db_cur() as cursor:
-            # חשוב: האורח חייב להופיע גם ב-Customer לפי הסכמה שלך (FlightOrder.email FK -> Customer.email)
-            # אם האורח לא קיים, ניצור Customer מינימלי.
             cursor.execute("SELECT email FROM Customer WHERE email=%s", (email,))
             if not cursor.fetchone():
                 cursor.execute(
@@ -230,19 +302,16 @@ def select_seats():
             cursor.execute("SELECT LAST_INSERT_ID() AS order_id")
             order_id = cursor.fetchone()["order_id"]
 
-            # OrderItem לכל מושב
             cursor.executemany(
                 "INSERT INTO OrderItem (order_id, flight_seat_id) VALUES (%s, %s)",
                 [(order_id, fsid) for fsid in selected_ids]
             )
 
-            # עדכון מושבים ל-booked
             cursor.execute(
                 f"UPDATE FlightSeat SET status='booked' WHERE flight_id=%s AND flight_seat_id IN ({format_strings})",
                 (flight_id, *selected_ids)
             )
 
-        # מעבר לדף “כרטיסים/אישור”
         return redirect(f"/order_success?order_id={order_id}&email={email}")
 
     # 3) GET: להביא מושבים ולהציג
