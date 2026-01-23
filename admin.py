@@ -818,8 +818,8 @@ def admin_reports():
         return guard
 
     today = date.today()
-    date_from = request.args.get("date_from") or today.replace(day=1).isoformat()
-    date_to = request.args.get("date_to") or today.isoformat()
+    date_from = request.args.get("date_from") or "1900-01-01"
+    date_to = request.args.get("date_to") or "9999-12-31"
     report = request.args.get("report", "avg_occupancy_completed")
 
     from main import db_cur
