@@ -25,6 +25,7 @@ header {
 
 .logo {
     display: flex;
+    margin-left: 90px;
     align-items: center;
     gap: 12px; /* רווח בין הלוגו לפסקה */
 }
@@ -60,6 +61,7 @@ to {
     display: flex;
     align-items: center;
     gap: 24px;
+    margin-right: 90px;
     font-size: 16px;
     white-space: nowrap;
 }
