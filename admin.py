@@ -816,9 +816,14 @@ def admin_reports():
         meta["subtitle"] = subtitle
 
     with db_cur() as cursor:
+        # =========================
+        # Avg occupancy (Completed flights)
+        # =========================
         if report == "avg_occupancy_completed":
-            _set_title("Average Occupancy (Flights That Took Place)",
-                       "Average occupancy percent for non-cancelled flights that already departed.")
+            _set_title(
+                "Average Occupancy (Completed Flights)",
+                "Average occupancy percent for flights that already departed (not cancelled).",
+            )
             _set_table([{"key": "avg_occupancy_percent", "label": "Avg Occupancy (%)"}])
 
             query = """
@@ -832,7 +837,6 @@ def admin_reports():
                 ) AS t
                 JOIN Flight AS f ON f.flight_id = t.flight_id
                 WHERE LOWER(f.status) <> 'cancelled'
-                  AND f.departure_date < CURDATE()
                   AND f.departure_date BETWEEN %s AND %s;
             """
             cursor.execute(query, (date_from, date_to))
@@ -840,9 +844,14 @@ def admin_reports():
             val = row["avg_occupancy_percent"] if row else None
             data = [{"avg_occupancy_percent": f"{val}%" if val is not None else "No data"}]
 
+        # =========================
+        # Revenue by plane size/manufacturer/class (Completed flights)
+        # =========================
         elif report == "revenue_plane_size_manu_class":
-            _set_title("Revenue by Plane Size / Manufacturer / Class",
-                       "Revenue breakdown by aircraft size, manufacturer and ticket class.")
+            _set_title(
+                "Revenue by Plane Size / Manufacturer / Class (Completed Flights)",
+                "Revenue breakdown for flights that already departed (not cancelled).",
+            )
             _set_table([
                 {"key": "plane_size", "label": "Plane Size"},
                 {"key": "manufacturer", "label": "Manufacturer"},
@@ -873,6 +882,7 @@ def admin_reports():
                   ON fp.flight_id = f.flight_id
                  AND fp.class_type = s.class_type
                 WHERE LOWER(f.status) <> 'cancelled'
+                  AND TIMESTAMP(f.departure_date, f.departure_time) < NOW()
                   AND f.departure_date BETWEEN %s AND %s
                 GROUP BY plane_size, manufacturer, class_type
                 ORDER BY plane_size, manufacturer, class_type;
@@ -881,9 +891,14 @@ def admin_reports():
             data = cursor.fetchall()
             kpis = {"total_revenue": round(sum((r.get("revenue") or 0) for r in data), 2)}
 
+        # =========================
+        # Crew hours (Completed flights, filtered by date range)
+        # =========================
         elif report == "crew_hours_long_short":
-            _set_title("Crew Flight Hours (Short vs Long)",
-                       "Total accumulated flight minutes per worker, split by short/long flights (<= 360 vs > 360).")
+            _set_title(
+                "Crew Flight Hours (Short vs Long) — Completed Flights",
+                "Total accumulated flight minutes per worker, split by short/long, for flights that already departed (not cancelled).",
+            )
             _set_table([
                 {"key": "worker_id", "label": "Worker ID"},
                 {"key": "full_name", "label": "Name"},
@@ -915,14 +930,19 @@ def admin_reports():
                   ON aw.origin_airport = f.origin_airport
                  AND aw.destination_airport = f.destination_airport
                 WHERE LOWER(f.status) <> 'cancelled'
+                  AND TIMESTAMP(f.departure_date, f.departure_time) < NOW()
+                  AND f.departure_date BETWEEN %s AND %s
                 GROUP BY w.id, w.first_name, w.last_name, role
                 ORDER BY total_minutes DESC;
             """
-            cursor.execute(query, ())
+            cursor.execute(query, (date_from, date_to))
             data = cursor.fetchall()
 
+        # =========================
+        # Purchase cancellation rate (Orders-based) — keep as-is
+        # =========================
         elif report == "purchase_cancel_rate_monthly":
-            _set_title("Purchase Cancellation Rate (Monthly)", "Cancellation rate of purchases/orders by month.")
+            _set_title("Purchase Cancellation Rate (Monthly)", "Cancellation rate of orders by month (by execution date).")
             _set_table([
                 {"key": "year", "label": "Year"},
                 {"key": "month", "label": "Month"},
@@ -953,14 +973,19 @@ def admin_reports():
             for row in data:
                 row["cancellation_rate_percentage"] = f"{row['cancellation_rate_percentage']}%"
 
+        # =========================
+        # Monthly plane activity (Performed = completed)
+        # =========================
         elif report == "monthly_plane_activity":
-            _set_title("Monthly Plane Activity Summary",
-                       "Per aircraft: performed flights, cancelled flights, utilization % (assume 30 days), dominant route.")
+            _set_title(
+                "Monthly Plane Activity Summary",
+                "Per aircraft: completed flights, cancelled flights, utilization % (assume 30 days), dominant route.",
+            )
             _set_table([
                 {"key": "plane_id", "label": "Plane ID"},
                 {"key": "manufacturer", "label": "Manufacturer"},
                 {"key": "flight_month", "label": "Month"},
-                {"key": "performed_flights", "label": "Performed"},
+                {"key": "performed_flights", "label": "Performed (Completed)"},
                 {"key": "cancelled_flights", "label": "Cancelled"},
                 {"key": "dominant_route", "label": "Dominant Route"},
                 {"key": "utilization_percentage", "label": "Utilization (%)"},
@@ -979,6 +1004,7 @@ def admin_reports():
                     WHERE f3.plane_id = ms.plane_id
                       AND DATE_FORMAT(f3.departure_date, '%Y-%m') = ms.flight_month
                       AND LOWER(f3.status) <> 'cancelled'
+                      AND TIMESTAMP(f3.departure_date, f3.departure_time) < NOW()
                       AND f3.departure_date BETWEEN %s AND %s
                     GROUP BY f3.origin_airport, f3.destination_airport
                     ORDER BY COUNT(*) DESC
@@ -990,7 +1016,13 @@ def admin_reports():
                     p.plane_id,
                     p.manufacturer,
                     DATE_FORMAT(f.departure_date, '%Y-%m') AS flight_month,
-                    SUM(CASE WHEN LOWER(f.status) <> 'cancelled' THEN 1 ELSE 0 END) AS performed_flights,
+                    SUM(
+                      CASE
+                        WHEN LOWER(f.status) <> 'cancelled'
+                         AND TIMESTAMP(f.departure_date, f.departure_time) < NOW()
+                        THEN 1 ELSE 0
+                      END
+                    ) AS performed_flights,
                     SUM(CASE WHEN LOWER(f.status) = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_flights
                   FROM Plane p
                   JOIN Flight f ON f.plane_id = p.plane_id

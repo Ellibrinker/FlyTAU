@@ -1,155 +1,124 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <title>Admin Reports | FlyTAU</title>
-    <link rel="stylesheet" href="/static/admin_reports.css">
-    <link href='https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css' rel='stylesheet'>
-    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&family=Libre+Baskerville:ital,wght@0,400..700;1,400..700&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Roboto:ital,wght@0,100..900;1,100..900&family=Zalando+Sans:ital,wght@0,200..900;1,200..900&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <title>Admin Reports | FlyTAU</title>
+  <link rel="stylesheet" href="/static/admin_reports.css">
+  <link href="https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&family=Libre+Baskerville:ital,wght@0,400..700;1,400..700&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Roboto:ital,wght@0,100..900;1,100..900&family=Zalando+Sans:ital,wght@0,200..900;1,200..900&display=swap" rel="stylesheet">
 </head>
+
 <body>
-    <header class="top-bar">
-      <a href="/" class="logo-link">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Company Logo" class="company-logo">
-      </a>
+  <header class="top-bar">
+    <a href="/" class="logo-link">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Company Logo" class="company-logo">
+    </a>
 
-      <div class="header-actions">
-        <a href="/admin/flights" class="admin-btn">Flights</a>
-        <a href="/admin/logout" class="logout">Logout</a>
-      </div>
-    </header>
-
-    <div class="wrapper">
-      <h1 class="main-title">FlyTAU Admin Report</h1>
+    <div class="header-actions">
+      <a href="/admin/flights" class="admin-btn">Flights</a>
+      <a href="/admin/logout" class="logout">Logout</a>
     </div>
+  </header>
 
-    <div class="box">
-      <h3>Run Report</h3>
+  <div class="wrapper">
+    <h1 class="main-title">FlyTAU Admin Report</h1>
+  </div>
 
-      <form method="GET" style="text-align:center; margin-bottom:20px;">
+  <div class="box">
+    <h3>Run Report</h3>
 
-        <div class="input-box">
-          <!-- Removed "required": some updated queries do not use date range -->
-          <input type="date" name="date_from" value="{{ date_from }}" required>
-          <i class='bx bxs-calendar' onclick="this.previousElementSibling.showPicker()"></i>
-        </div>
-
-        <div class="input-box">
-          <!-- Removed "required": some updated queries do not use date range -->
-          <input type="date" name="date_to" value="{{ date_to }}" required>
-          <i class='bx bxs-calendar' onclick="this.previousElementSibling.showPicker()"></i>
-        </div>
-
-        <div class="input-box">
-          <select name="report" required>
-            <option value="avg_occupancy_completed" {% if report=='avg_occupancy_completed' %}selected{% endif %}>
-              Average occupancy (past, non-cancelled flights)
-            </option>
-            <option value="revenue_plane_size_manu_class" {% if report=='revenue_plane_size_manu_class' %}selected{% endif %}>
-              Revenue by plane size / manufacturer / class
-            </option>
-            <option value="crew_hours_long_short" {% if report=='crew_hours_long_short' %}selected{% endif %}>
-              Crew accumulated minutes (short vs long)
-            </option>
-            <option value="purchase_cancel_rate_monthly" {% if report=='purchase_cancel_rate_monthly' %}selected{% endif %}>
-              Purchase cancellation rate (monthly)
-            </option>
-            <option value="monthly_plane_activity" {% if report=='monthly_plane_activity' %}selected{% endif %}>
-              Monthly plane activity summary
-            </option>
-          </select>
-        </div>
-
-        <div class="row" style="justify-content:center; gap: 10px; margin-top:15px;">
-          <button type="submit">Run</button>
-          <a href="/admin/reports" class="pill reset-btn">Reset</a>
-        </div>
-
-      </form>
-    </div>
-
-    <div class="box">
-      <div class="row" style="justify-content: space-between;">
-        <div>
-          <h2>{{ meta.title }}</h2>
-          {% if meta.subtitle %}
-            <div class="subtitle">{{ meta.subtitle }}</div>
-          {% endif %}
-
-        </div>
-        <span class="pill">Range: <b>{{ date_from }}</b> → <b>{{ date_to }}</b></span>
+    <form method="GET" style="text-align:center; margin-bottom:20px;">
+      <div class="input-box">
+        <input type="date" name="date_from" value="{{ date_from }}" required>
+        <i class="bx bxs-calendar" onclick="this.previousElementSibling.showPicker()"></i>
       </div>
 
-      {% if meta.notes and meta.notes|length > 0 %}
-        <div style="margin-top:12px;">
-          <div class="muted" style="margin-bottom:6px;"><b>Notes / TODOs for SQL</b></div>
-          <ul class="notes">
-            {% for n in meta.notes %}
-              <li class="muted">{{ n }}</li>
-            {% endfor %}
-          </ul>
-        </div>
-      {% endif %}
+      <div class="input-box">
+        <input type="date" name="date_to" value="{{ date_to }}" required>
+        <i class="bx bxs-calendar" onclick="this.previousElementSibling.showPicker()"></i>
+      </div>
+
+      <div class="input-box">
+        <select name="report" required>
+          <option value="avg_occupancy_completed" {% if report=='avg_occupancy_completed' %}selected{% endif %}>
+            Average occupancy (non-cancelled flights, by departure date range)
+          </option>
+          <option value="revenue_plane_size_manu_class" {% if report=='revenue_plane_size_manu_class' %}selected{% endif %}>
+            Revenue by plane size / manufacturer / class (by departure date range; includes future flights)
+          </option>
+          <option value="crew_hours_long_short" {% if report=='crew_hours_long_short' %}selected{% endif %}>
+            Crew accumulated minutes (short vs long; by departure date range)
+          </option>
+          <option value="purchase_cancel_rate_monthly" {% if report=='purchase_cancel_rate_monthly' %}selected{% endif %}>
+            Purchase cancellation rate (monthly; by execution date range)
+          </option>
+          <option value="monthly_plane_activity" {% if report=='monthly_plane_activity' %}selected{% endif %}>
+            Monthly plane activity summary (by departure date range; performed = non-cancelled)
+          </option>
+        </select>
+      </div>
+
+      <div class="row" style="justify-content:center; gap:10px; margin-top:15px;">
+        <button type="submit">Run</button>
+        <a href="/admin/reports" class="pill reset-btn">Reset</a>
+      </div>
+    </form>
+  </div>
+
+  <div class="box">
+    <div class="row" style="justify-content: space-between;">
+      <div>
+        <h2>{{ meta.title }}</h2>
+        {% if meta.subtitle %}
+          <div class="subtitle">{{ meta.subtitle }}</div>
+        {% endif %}
+      </div>
+
+      <span class="pill">Range: <b>{{ date_from }}</b> → <b>{{ date_to }}</b></span>
+    </div>
+  </div>
+
+  <div class="box">
+    <div class="row" style="justify-content: space-between;">
+      <h3>Results</h3>
+      <span class="pill">Rows: <b>{{ data|length if data else 0 }}</b></span>
     </div>
 
-    {% if kpis and kpis|length > 0 %}
-      <div class="box">
-        <div class="row" style="justify-content: space-between;">
-          <h3>KPIs</h3>
-          <span class="pill">Total KPI fields: <b>{{ kpis|length }}</b></span>
+    {% if not data or data|length == 0 %}
+      <div class="empty" style="margin-top:12px;">
+        <b>No data found.</b>
+        <div class="muted" style="margin-top:6px;">
+          Try a different date range or a different report.
         </div>
-
-        <div class="kpis">
-          {% for k, v in kpis.items() %}
-            <div class="kpi">
-              <div class="label">{{ k }}</div>
-              <div class="value">{{ v }}</div>
-            </div>
+      </div>
+    {% else %}
+      <table>
+        <tr>
+          {% for col in meta.columns %}
+            <th>{{ col.label }}</th>
           {% endfor %}
-        </div>
-      </div>
-    {% endif %}
+        </tr>
 
-    <div class="box">
-      <div class="row" style="justify-content: space-between;">
-        <h3>Results</h3>
-        <span class="pill">Rows: <b>{{ data|length if data else 0 }}</b></span>
-      </div>
-
-      {% if not data or data|length == 0 %}
-        <div class="empty" style="margin-top:12px;">
-          <b>No data yet.</b>
-          <div class="muted" style="margin-top:6px;">
-            Once the SQL queries are implemented, the result rows will appear here.
-          </div>
-        </div>
-      {% else %}
-        <table>
+        {% for row in data %}
           <tr>
             {% for col in meta.columns %}
-              <th>{{ col.label }}</th>
+              <td>{{ row[col.key] }}</td>
             {% endfor %}
           </tr>
+        {% endfor %}
+      </table>
+    {% endif %}
 
-          {% for row in data %}
-            <tr>
-              {% for col in meta.columns %}
-                <td>{{ row[col.key] }}</td>
-              {% endfor %}
-            </tr>
-          {% endfor %}
-        </table>
-      {% endif %}
-        <div class="footer">
-            <a href="/">
-              <i class='bx bx-arrow-left'></i>
-              Back
-            </a>
-        </div>
+    <div class="footer">
+      <a href="/">
+        <i class="bx bx-arrow-left"></i>
+        Back
+      </a>
     </div>
+  </div>
 
 </body>
 </html>
