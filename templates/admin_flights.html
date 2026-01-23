@@ -119,7 +119,7 @@
 
               <td>
                 <div class="actions">
-                  {% if dbst == 'open' and f.departure_date >= today %}
+                  {% if dbst == 'open'}
                     <a class="danger-link" href="{{ url_for('admin.admin_cancel_flight', flight_id=f.flight_id) }}">Cancel</a>
                   {% else %}
                     <span class="disabled-link" title="Only flights with DB status 'open' can be cancelled">Cancel</span>
