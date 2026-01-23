@@ -6,9 +6,6 @@
   <link rel="stylesheet" href="/static/admin_reports.css">
   <link href="https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&family=Libre+Baskerville:ital,wght@0,400..700;1,400..700&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Roboto:ital,wght@0,100..900;1,100..900&family=Zalando+Sans:ital,wght@0,200..900;1,200..900&display=swap" rel="stylesheet">
 </head>
 
 <body>
@@ -24,9 +21,10 @@
   </header>
 
   <div class="wrapper">
-    <h1 class="main-title">FlyTAU Admin Report</h1>
+    <h1 class="main-title">FlyTAU – Admin Reports</h1>
   </div>
 
+  <!-- Run Report -->
   <div class="box">
     <h3>Run Report</h3>
 
@@ -44,19 +42,19 @@
       <div class="input-box">
         <select name="report" required>
           <option value="avg_occupancy_completed" {% if report=='avg_occupancy_completed' %}selected{% endif %}>
-            Average occupancy (non-cancelled flights, by departure date range)
+            Average Occupancy
           </option>
           <option value="revenue_plane_size_manu_class" {% if report=='revenue_plane_size_manu_class' %}selected{% endif %}>
-            Revenue by plane size / manufacturer / class (by departure date range; includes future flights)
+            Revenue Breakdown
           </option>
           <option value="crew_hours_long_short" {% if report=='crew_hours_long_short' %}selected{% endif %}>
-            Crew accumulated minutes (short vs long; by departure date range)
+            Crew Flight Hours
           </option>
           <option value="purchase_cancel_rate_monthly" {% if report=='purchase_cancel_rate_monthly' %}selected{% endif %}>
-            Purchase cancellation rate (monthly; by execution date range)
+            Cancellation Rate
           </option>
           <option value="monthly_plane_activity" {% if report=='monthly_plane_activity' %}selected{% endif %}>
-            Monthly plane activity summary (by departure date range; performed = non-cancelled)
+            Plane Activity
           </option>
         </select>
       </div>
@@ -68,6 +66,7 @@
     </form>
   </div>
 
+  <!-- Report Header -->
   <div class="box">
     <div class="row" style="justify-content: space-between;">
       <div>
@@ -76,11 +75,11 @@
           <div class="subtitle">{{ meta.subtitle }}</div>
         {% endif %}
       </div>
-
       <span class="pill">Range: <b>{{ date_from }}</b> → <b>{{ date_to }}</b></span>
     </div>
   </div>
 
+  <!-- Results -->
   <div class="box">
     <div class="row" style="justify-content: space-between;">
       <h3>Results</h3>
@@ -91,7 +90,7 @@
       <div class="empty" style="margin-top:12px;">
         <b>No data found.</b>
         <div class="muted" style="margin-top:6px;">
-          Try a different date range or a different report.
+          Try a different date range or report.
         </div>
       </div>
     {% else %}
