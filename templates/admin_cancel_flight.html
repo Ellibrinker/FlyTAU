@@ -32,12 +32,13 @@
 
 
 {% set status_label =
-  'פעילה' if st=='open'
-  else 'בוטלה' if st=='cancelled'
-  else 'תפוסה מלאה' if st=='full'
-  else 'התקיימה' if st=='done'
+  'Active' if st == 'open'
+  else 'Full' if st == 'full'
+  else 'Completed' if st == 'done'
+  else 'Cancelled' if st == 'cancelled'
   else st
 %}
+
 
 {% if not can_cancel %}
   <div class="info">
