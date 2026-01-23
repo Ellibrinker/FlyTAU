@@ -362,6 +362,15 @@ def admin_add_flight():
 
         try:
             new_start_dt, new_end_dt = _flight_window(dep_date, dep_time, duration_min)
+            # Block creating flights in the past (server-side enforcement)
+            now = datetime.now()
+            if new_start_dt <= now:
+                return render_template(
+                    "admin_add_flight.html",
+                    step=1,
+                    error="Departure date/time must be in the future.",
+                    data=None,
+                )
         except Exception as e:
             return render_template("admin_add_flight.html", step=1, error=f"Invalid departure date/time: {e}", data=None)
 
@@ -423,6 +432,17 @@ def admin_add_flight():
         # compute window
         try:
             new_start_dt, new_end_dt = _flight_window(dep_date, dep_time, duration_min)
+
+            # Block creating flights in the past (server-side enforcement)
+            now = datetime.now()
+            if new_start_dt <= now:
+                return render_template(
+                    "admin_add_flight.html",
+                    step=2,
+                    error="Departure date/time must be in the future.",
+                    data=None,
+                )
+
         except Exception as e:
             # best-effort: rebuild lists with "now" window so template can render
             with db_cur() as cursor:

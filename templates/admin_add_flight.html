@@ -76,7 +76,6 @@
           <input type="hidden" name="departure_date" value="{{ data.departure_date }}" />
           <input type="hidden" name="departure_time" value="{{ data.departure_time }}" />
 
-          <!-- Planes -->
           <div class="box">
             <h3 class="section-title">Select plane</h3>
 
@@ -87,22 +86,21 @@
               <select name="plane_id" id="planeSelect" required data-selected="{{ data.selected_plane_id or '' }}">
                 <option value="" disabled {% if not data.selected_plane_id %}selected{% endif %}>Select a plane…</option>
                 {% for p in data.planes %}
-                  <option
-                    value="{{ p.plane_id }}"
-                    {% if data.selected_plane_id == p.plane_id %}selected{% endif %}
-                    data-big="1"
-                  >
-                    Plane {{ p.plane_id }} ({{ p.manufacturer }})
-                  </option>
-                {% endfor %}
+  <option
+    value="{{ p.plane_id }}"
+    {% if data.selected_plane_id == p.plane_id %}selected{% endif %}
+    data-big="{{ 1 if p.is_big else 0 }}"
+  >
+    Plane {{ p.plane_id }} ({{ p.manufacturer }}) ({{ 'big' if p.is_big else 'small' }})
+  </option>
+{% endfor %}
+
               </select>
 
-              <!-- If Python step-2 sets data.is_big_selected, expose it for JS -->
               <input type="hidden" id="isBigSelected" value="{% if data.is_big_selected is not none %}{{ 1 if data.is_big_selected else 0 }}{% else %}{% endif %}">
             {% endif %}
           </div>
 
-          <!-- Crew -->
           <div class="two-col">
             <div class="box">
               <h3 class="section-title">
@@ -149,7 +147,6 @@
             </div>
           </div>
 
-          <!-- Pricing -->
           <div class="box">
             <h3 class="section-title">Pricing</h3>
 
@@ -159,7 +156,6 @@
               <i class='bx bx-cash'></i>
             </div>
 
-            <!-- Business price: ONLY for Big plane -->
             <div class="input-box" id="businessPriceBox" style="display:none;">
               <input type="number" step="0.01" name="business_price" id="businessPriceInput"
                     placeholder="Business price"
@@ -181,7 +177,6 @@
 
       <script>
         (function () {
-          // Needs by plane size (per assignment)
           const NEEDS = {
             big: { pilots: 3, fa: 6 },
             small: { pilots: 2, fa: 3 }
@@ -211,38 +206,39 @@
 
           function setNeeds(isBig) {
             const need = isBig ? NEEDS.big : NEEDS.small;
-            pilotsNeedEl.textContent = String(need.pilots);
-            pilotsNeed2El.textContent = String(need.pilots);
-            faNeedEl.textContent = String(need.fa);
-            faNeed2El.textContent = String(need.fa);
 
-            // Business price UI
-            if (isBig) {
-              businessBox.style.display = "";
-              businessNote.style.display = "";
-              businessInput.required = true;
-            } else {
-              businessBox.style.display = "none";
-              businessNote.style.display = "none";
-              businessInput.required = false;
-              businessInput.value = ""; // ensure not sent/validated accidentally
+            if (pilotsNeedEl) pilotsNeedEl.textContent = String(need.pilots);
+            if (pilotsNeed2El) pilotsNeed2El.textContent = String(need.pilots);
+            if (faNeedEl) faNeedEl.textContent = String(need.fa);
+            if (faNeed2El) faNeed2El.textContent = String(need.fa);
+
+            if (businessBox && businessInput && businessNote) {
+              if (isBig) {
+                businessBox.style.display = "";
+                businessNote.style.display = "";
+                businessInput.required = true;
+              } else {
+                businessBox.style.display = "none";
+                businessNote.style.display = "none";
+                businessInput.required = false;
+                businessInput.value = "";
+              }
             }
 
             return need;
           }
 
           function getIsBigFromPage() {
-            // Prefer server truth (after a failed POST you’ll have it)
             if (isBigSelectedHidden && isBigSelectedHidden.value !== "") {
               return isBigSelectedHidden.value === "1";
             }
-            // Otherwise: if the selected plane is in the "data.planes" list returned for long flights,
-            // it's a Big plane (because python filters big planes when long). For short flights list may include both.
-            // We don't have plane-size info in the option itself (unless you add it), so:
-            // - if long => must be big
-            // - else default to "big" only if server said so; otherwise assume small until submission
+
             if (isLong) return true;
-            return false;
+
+            if (!planeSelect || !planeSelect.value) return false;
+
+            const opt = planeSelect.options[planeSelect.selectedIndex];
+            return opt && opt.dataset && opt.dataset.big === "1";
           }
 
           function updateGroupLimit(boxes, need, selectedEl) {
@@ -263,13 +259,11 @@
             const pilotsOk = (pilotBoxes.length === 0) ? true : (pilotsSelected === need.pilots);
             const faOk = (faBoxes.length === 0) ? true : (faSelected === need.fa);
 
-            // business required only if big
             let businessOk = true;
-            if (isBig) {
+            if (isBig && businessInput) {
               businessOk = !!businessInput.value && parseFloat(businessInput.value) > 0;
             }
 
-            // long flight must be big (UI message)
             let longOk = true;
             if (isLong && !isBig) longOk = false;
 
