@@ -27,14 +27,25 @@
     <div class="warn">{{ error }}</div>
   {% endif %}
 
-  {% set st = (flight.status|string)|lower %}
-  {% set can_cancel = (st == 'open') %}
+  {% set st = (derived_status if derived_status is defined else (flight.status|string)|lower) %}
+{% set can_cancel = (can_cancel if can_cancel is defined else (st == 'open')) %}
 
-  {% if not can_cancel %}
-    <div class="info">
-      This flight is currently <b>{{ st }}</b>. Only flights with status <b>open</b> can be cancelled.
-    </div>
-  {% endif %}
+
+{% set status_label =
+  'פעילה' if st=='open'
+  else 'בוטלה' if st=='cancelled'
+  else 'תפוסה מלאה' if st=='full'
+  else 'התקיימה' if st=='done'
+  else st
+%}
+
+{% if not can_cancel %}
+  <div class="info">
+    This flight is currently <b>{{ status_label }}</b>.
+    Only flights with status <b>פעילה</b> can be cancelled.
+  </div>
+{% endif %}
+
 
   <div class="box">
     <div class="row">
@@ -46,7 +57,7 @@
         <span class="status
           {% if st=='open' %}status-open{% elif st=='cancelled' %}status-cancelled{% elif st=='full' %}status-full{% elif st=='done' %}status-done{% endif %}
         ">
-          {{ st }}
+          {{ status_label }}
         </span>
       </span>
     </div>
