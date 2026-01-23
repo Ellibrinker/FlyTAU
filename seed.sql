@@ -198,6 +198,14 @@ INSERT INTO Airway (origin_airport, destination_airport, duration) VALUES
 ('CPH','ARN',60), ('ARN','CPH',60),
 ('ARN','OSL',55), ('OSL','ARN',55),
 ('HEL','ARN',60), ('ARN','HEL',60);
+('TLV','JFK',660), ('JFK','TLV',660),
+('TLV','BKK',600), ('BKK','TLV',600),
+('TLV','DEL',420), ('DEL','TLV',420),
+('TLV','HKG',660), ('HKG','TLV',660),
+('TLV','NRT',720), ('NRT','TLV',720),
+('TLV','ICN',660), ('ICN','TLV',660),
+('TLV','SIN',660), ('SIN','TLV',660),
+('TLV','YYZ',720), ('YYZ','TLV',720)
 
 -- Flights (original 4)
 INSERT INTO Flight (plane_id, origin_airport, destination_airport, departure_date, departure_time, status)

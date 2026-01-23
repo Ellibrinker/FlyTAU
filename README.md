@@ -18,6 +18,15 @@ The project is divided into two main academic components:
 
 ---
 
+## 🛠️ Technologies Used
+
+* **Backend:** Python, Flask
+* **Database:** MySQL
+* **Frontend:** HTML, CSS (Jinja templates)
+* **Deployment:** PythonAnywhere
+
+---
+
 ## 👥 User Roles
 
 ### 🧑 Customer
@@ -57,15 +66,6 @@ The interface is designed to support the following reports:
 > 📎 Note:
 > The interface is implemented as part of the **Information Systems Engineering** component.
 > The full SQL queries, explanations, sample outputs, and visualizations are provided separately as part of the **Database Systems Design** submission.
-
----
-
-## 🛠️ Technologies Used
-
-* **Backend:** Python, Flask
-* **Database:** MySQL
-* **Frontend:** HTML, CSS (Jinja templates)
-* **Deployment:** PythonAnywhere
 
 ---
 
