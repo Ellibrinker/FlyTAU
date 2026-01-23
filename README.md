@@ -94,80 +94,108 @@ The interface is designed to support the following reports:
 
 ## ⚙️ Business Rules & Edge Cases
 
-The system explicitly enforces real-world airline business rules, including:
+The system explicitly enforces real-world airline business rules to ensure operational correctness, safety, and data consistency:
 
-* **Role-based access & separation**
-  - Managers are automatically redirected from the public homepage to the admin dashboard.
-  - Managers cannot purchase tickets (blocked in both GET and POST booking flows).
-  - Managers cannot be assigned as flight crew:
-    - Workers marked as managers are excluded from pilot/flight-attendant selection lists.
-    - Backend validation blocks assigning a manager as Pilot/Flight Attendant.
-  - Manager login blocks invalid role configuration where the same ID exists as both **Manager** and **AirCrew**.
+### **Role-based access & separation**
+- Strict separation is enforced between **customers** and **managers**.
+- Managers are automatically redirected from the public homepage to the admin dashboard.
+- Managers are not allowed to purchase flight tickets, neither as registered users nor as guests.
+- Managers cannot be assigned as flight crew (pilots or flight attendants).
+- The system prevents invalid role configurations in which a single individual holds both managerial and air-crew roles.
 
-* **Registration & guest usage rules**
-  - Emails are normalized (lowercased).
-  - At least one phone number is required; empty/duplicate phone entries are ignored.
-  - Guests can retrieve an order only by providing both email and order code (order_id).
+---
 
-* **Flight visibility & booking eligibility**
-  - Customers can only see flights that are bookable:
-    not cancelled, depart in the future, and have at least one available seat.
-  - Past flights (already departed) are not displayed to customers.
-  - Operational actions (booking, crew assignment, cancellation) are blocked on flights that already departed.
+### **Registration & guest usage rules**
+- Customer emails are normalized (stored in lowercase) to prevent duplicates.
+- At least one phone number is required during registration; empty or duplicate phone entries are ignored.
+- Guests can retrieve an order only by providing both the email address and the unique order code.
 
-* **Search validation (server-side)**
-  - Origin, destination, and departure date are required.
-  - Origin and destination cannot be identical.
-  - The system verifies that an `Airway` exists for the requested route.
+---
 
-* **Seat selection & booking protection**
-  - Booking is blocked for cancelled flights, past/departed flights, and fully booked flights.
-  - Mixed-class booking is supported:
-    a single order can include seats from multiple classes (Regular + Business),
-    with pricing calculated per seat based on its class type.
+### **Flight visibility & booking eligibility**
+- Customers are shown **only flights that are eligible for booking**:
+  - Not cancelled  
+  - Scheduled for a future departure  
+  - Contain at least one available seat
+- Flights whose departure time has already passed are not displayed to customers.
+- Operational actions (booking, crew assignment, cancellation) are blocked for flights that have already departed.
 
-* **Pricing rules**
-  - Regular class pricing is mandatory for all flights.
-  - Business class pricing is available only for Big Planes.
+---
 
-* **Order status & cancellation policy (Customer)**
-  - “Active” vs “Done” is derived from the flight departure timestamp:
-    - Active = paid + departure in the future
-    - Done = paid + departure in the past
-  - Only paid orders can be cancelled.
-  - Customer cancellation is allowed only up to **36 hours** before departure.
-  - A **5% fee** is charged, and all seats in the order are released back to availability.
+### **Search validation**
+- Origin airport, destination airport, and departure date are mandatory.
+- Origin and destination airports cannot be identical.
+- A flight route must exist in the system (`Airway`) in order to be searchable or schedulable.
 
-* **Long vs. short flights**
-  - Flights longer than **360 minutes** are classified as *long flights*.
-  - Only aircraft classified as **Big Planes** may be assigned to long flights.
-  - Only crew members with `long_flight_training = true` are selectable for long flights.
+---
 
-* **Availability, overlap prevention & scheduling buffers**
-  - Aircraft and crew cannot be assigned to overlapping flights.
-  - Buffer times are enforced to prevent unrealistic scheduling:
-    - Aircraft require a **60-minute** buffer between flights.
-    - Crew require a **120-minute** buffer between flights.
-  - Overlaps are checked using padded time windows (existing_start < padded_end AND existing_end > padded_start).
+### **Seat selection & booking protection**
+- Seat selection and booking are blocked for:
+  - Cancelled flights
+  - Flights that already departed
+  - Fully booked flights
+- A single order may include seats from multiple classes (Regular and Business), with pricing calculated per seat according to its class.
 
-* **Admin flight creation validations**
-  - Flights cannot be created in the past (server-side enforcement).
-  - A route must exist in `Airway` before a flight can be created.
-  - Crew requirements depend on plane size:
-    - Big Plane: **3 pilots + 6 attendants**
-    - Small Plane: **2 pilots + 3 attendants**
-  - Seat inventory must exist for the selected aircraft before creating a flight.
+---
 
-* **Flight cancellation policy (Admin)**
-  - Only active/open flights can be cancelled (not full, not completed, not already cancelled).
-  - Cancellation is blocked less than **72 hours** before departure.
-  - Cancelling a flight triggers:
-    - System cancellation of all active orders (refund = 0)
-    - Release of all flight seats back to availability
+### **Pricing rules**
+- Regular-class pricing is mandatory for all flights.
+- Business-class pricing is available only on flights operated by **Big Planes**.
+- Ticket prices defined for a flight are also used for calculating cancellation fees.
 
-* **Data consistency safeguards**
-  - Invalid `FlightSeat` records (seats not matching the flight’s plane) are removed automatically.
-  - If `FlightSeat` records are missing for a flight, they are generated from the plane’s `Seat` inventory.
+---
+
+### **Order status & cancellation policy (Customer)**
+- Order status is derived from payment state and flight departure time:
+  - **Active** – paid order for a future flight  
+  - **Done** – paid order for a past flight
+- Only fully paid orders can be cancelled.
+- Customer cancellation is allowed only up to **36 hours** before departure.
+- A fixed **5% cancellation fee** is charged.
+- Partial cancellation of an order is not allowed; all seats in the order are cancelled together and released back to availability.
+- Order statuses include: active/paid, completed, customer-cancelled, and system-cancelled.
+
+---
+
+### **Long vs. short flights**
+- Flights longer than **360 minutes (6 hours)** are classified as *long flights*.
+- Only **Big Planes** may be assigned to long flights.
+- Only crew members who have completed **long-flight training** may be assigned to long flights.
+
+---
+
+### **Availability, overlap prevention & scheduling buffers**
+- Aircraft and crew members cannot be assigned to overlapping flights.
+- Buffer times are enforced to prevent unrealistic scheduling:
+  - Aircraft require a **60-minute** buffer between flights.
+  - Crew members require a **120-minute** buffer between flights.
+- Overlap checks are performed using padded time windows to ensure safe scheduling.
+
+---
+
+### **Admin flight creation rules**
+- Flights cannot be created in the past.
+- A valid route (`Airway`) must exist before a flight can be created.
+- Landing date and time are computed automatically based on route duration and are not entered manually.
+- Crew requirements depend on aircraft size:
+  - **Big Plane:** 3 pilots and 6 flight attendants  
+  - **Small Plane:** 2 pilots and 3 flight attendants
+- Seat inventory must exist for the selected aircraft before a flight can be published.
+
+---
+
+### **Flight cancellation policy (Admin)**
+- Only active/open flights may be cancelled (not full, not completed, not already cancelled).
+- Flight cancellation is blocked less than **72 hours** before departure.
+- Cancelling a flight triggers:
+  - System cancellation of all active orders (full refund, total payment set to 0)
+  - Release of all seats back to availability
+
+---
+
+### **Data consistency safeguards**
+- Seat records that do not match the aircraft assigned to a flight are automatically removed.
+- If seat records are missing for a flight, they are automatically generated from the aircraft’s seat configuration.
 
 ---
 
