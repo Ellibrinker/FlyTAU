@@ -324,3 +324,15 @@ th {
     opacity: 1;
     transform: translateX(-2px);
 }
+
+/* === Error box (added) === */
+.error-box {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 2px solid rgba(180, 0, 0, 0.25);
+  background: rgba(255, 234, 234, 0.65);
+  color: #7a0000;
+  font-weight: 700;
+  text-align: center;
+}

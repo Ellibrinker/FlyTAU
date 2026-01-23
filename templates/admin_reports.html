@@ -30,12 +30,12 @@
 
     <form method="GET" style="text-align:center; margin-bottom:20px;">
       <div class="input-box">
-        <input type="date" name="date_from" value="{{ date_from }}" required>
+        <input type="date" name="date_from" value="{{ date_from or '' }}">
         <i class="bx bxs-calendar" onclick="this.previousElementSibling.showPicker()"></i>
       </div>
 
       <div class="input-box">
-        <input type="date" name="date_to" value="{{ date_to }}" required>
+        <input type="date" name="date_to" value="{{ date_to or '' }}">
         <i class="bx bxs-calendar" onclick="this.previousElementSibling.showPicker()"></i>
       </div>
 
@@ -66,6 +66,15 @@
     </form>
   </div>
 
+  <!-- ERROR BOX (added) -->
+  {% if error %}
+    <div class="box">
+      <div class="error-box">
+        {{ error }}
+      </div>
+    </div>
+  {% endif %}
+
   <!-- Report Header -->
   <div class="box">
     <div class="row" style="justify-content: space-between;">
@@ -77,6 +86,14 @@
       </div>
       <span class="pill">Range: <b>{{ date_from }}</b> → <b>{{ date_to }}</b></span>
     </div>
+
+    {% if meta.notes and meta.notes|length > 0 %}
+      <div class="notes" style="margin-top:10px;">
+        {% for n in meta.notes %}
+          <div class="muted">{{ n }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
   </div>
 
   <!-- Results -->

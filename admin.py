@@ -818,9 +818,29 @@ def admin_reports():
         return guard
 
     today = date.today()
-    date_from = request.args.get("date_from") or "1900-01-01"
-    date_to = request.args.get("date_to") or "9999-12-31"
+
+    date_from = request.args.get("date_from")
+    date_to = request.args.get("date_to")
     report = request.args.get("report", "avg_occupancy_completed")
+
+    # טעינה ראשונה / Reset – אין תאריכים
+    if not date_from or not date_to:
+        error = "Please fill both dates and click Run."
+        return render_template(
+            "admin_reports.html",
+            report=report,
+            date_from="",
+            date_to="",
+            data=[],
+            kpis={},
+            meta={
+                "title": "",
+                "subtitle": "",
+                "columns": [],
+                "notes": []
+            },
+            error=error
+        )
 
     from main import db_cur
 
