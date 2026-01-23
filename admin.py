@@ -300,6 +300,28 @@ def admin_flights():
     return render_template("admin_flights.html", flights=flights, created=created)
 
 
+def _mysql_error_to_user_message(e: mysql.connector.Error) -> str:
+    """
+    Translate common MySQL errors into a useful UI error message.
+    (We intentionally don't expose full SQL for security, but we do show errno+msg.)
+    """
+    errno = getattr(e, "errno", None)
+    msg = getattr(e, "msg", str(e))
+
+    if errno == errorcode.ER_DUP_ENTRY:
+        return f"Duplicate value (unique constraint). Details: {msg}"
+    if errno in (errorcode.ER_NO_REFERENCED_ROW_2, errorcode.ER_ROW_IS_REFERENCED_2):
+        return f"Foreign key constraint failed. Details: {msg}"
+    if errno == errorcode.ER_BAD_NULL_ERROR:
+        return f"Missing required value (NULL not allowed). Details: {msg}"
+    if errno == errorcode.ER_DATA_TOO_LONG:
+        return f"Value too long for column. Details: {msg}"
+    if errno == errorcode.ER_TRUNCATED_WRONG_VALUE:
+        return f"Invalid value format (date/time/number). Details: {msg}"
+
+    return f"MySQL error {errno}: {msg}" if errno else f"MySQL error: {msg}"
+
+
 @admin_bp.route("/flights/new", methods=["GET", "POST"])
 def admin_add_flight():
     guard = _require_admin()
@@ -325,6 +347,7 @@ def admin_add_flight():
         if not origin or not destination or not dep_date or not dep_time:
             return render_template("admin_add_flight.html", step=1, error="All fields are required.", data=None)
 
+        # validate airway exists + get duration
         with db_cur() as cursor:
             cursor.execute(
                 """
@@ -339,13 +362,22 @@ def admin_add_flight():
         if not airway:
             return render_template("admin_add_flight.html", step=1, error="No airway exists for this route.", data=None)
 
-        duration_min = airway["duration"]
+        duration_min = int(airway["duration"])
         is_long = duration_min > 360
 
         pilots_needed = 3 if is_long else 2
         fa_needed = 6 if is_long else 3
 
-        new_start_dt, new_end_dt = _flight_window(dep_date, dep_time, duration_min)
+        # validate date/time strings
+        try:
+            new_start_dt, new_end_dt = _flight_window(dep_date, dep_time, duration_min)
+        except Exception as e:
+            return render_template(
+                "admin_add_flight.html",
+                step=1,
+                error=f"Invalid departure date/time. Details: {e}",
+                data=None,
+            )
 
         with db_cur() as cursor:
             planes, pilots, attendants = _fetch_step2_lists(
@@ -372,10 +404,10 @@ def admin_add_flight():
     # STEP 2
     # =========================
     if step == 2:
-        origin = request.form.get("origin")
-        destination = request.form.get("destination")
-        dep_date = request.form.get("departure_date")
-        dep_time = request.form.get("departure_time")
+        origin = (request.form.get("origin") or "").strip()
+        destination = (request.form.get("destination") or "").strip()
+        dep_date = (request.form.get("departure_date") or "").strip()
+        dep_time = (request.form.get("departure_time") or "").strip()
 
         plane_id = request.form.get("plane_id", type=int)
         pilot_ids = request.form.getlist("pilot_ids")
@@ -384,6 +416,7 @@ def admin_add_flight():
         regular_price = request.form.get("regular_price", type=float)
         business_price = request.form.get("business_price", type=float)
 
+        # fetch duration again (trust DB, not hidden fields)
         with db_cur() as cursor:
             cursor.execute(
                 """
@@ -398,13 +431,40 @@ def admin_add_flight():
         if not airway:
             return render_template("admin_add_flight.html", step=1, error="No airway exists for this route.", data=None)
 
-        duration_min = airway["duration"]
+        duration_min = int(airway["duration"])
         is_long = duration_min > 360
         pilots_needed = 3 if is_long else 2
         fa_needed = 6 if is_long else 3
 
-        new_start_dt, new_end_dt = _flight_window(dep_date, dep_time, duration_min)
+        try:
+            new_start_dt, new_end_dt = _flight_window(dep_date, dep_time, duration_min)
+        except Exception as e:
+            # rebuild step-2 lists for re-render
+            with db_cur() as cursor:
+                planes, pilots, attendants = _fetch_step2_lists(
+                    cursor, is_long=is_long, new_start_dt=datetime.now(), new_end_dt=datetime.now()
+                )
+            data = {
+                "origin": origin,
+                "destination": destination,
+                "departure_date": dep_date,
+                "departure_time": dep_time,
+                "duration_min": duration_min,
+                "is_long": is_long,
+                "pilots_needed": pilots_needed,
+                "fa_needed": fa_needed,
+                "planes": planes,
+                "pilots": pilots,
+                "attendants": attendants,
+                "selected_plane_id": plane_id,
+                "selected_pilot_ids": set(str(x) for x in pilot_ids),
+                "selected_fa_ids": set(str(x) for x in fa_ids),
+                "regular_price": regular_price,
+                "business_price": business_price,
+            }
+            return render_template("admin_add_flight.html", step=2, error=f"Invalid date/time. Details: {e}", data=data)
 
+        # Step-2 lists for consistent re-render
         with db_cur() as cursor:
             planes, pilots, attendants = _fetch_step2_lists(
                 cursor, is_long=is_long, new_start_dt=new_start_dt, new_end_dt=new_end_dt
@@ -429,71 +489,50 @@ def admin_add_flight():
             "business_price": business_price,
         }
 
+        # ---------- validations ----------
         if not plane_id:
             return render_template("admin_add_flight.html", step=2, error="Plane is required.", data=data)
 
         if len(pilot_ids) != pilots_needed or len(fa_ids) != fa_needed:
             return render_template("admin_add_flight.html", step=2, error="Crew selection count is incorrect.", data=data)
 
-        if not regular_price or regular_price <= 0:
+        if regular_price is None or regular_price <= 0:
             return render_template("admin_add_flight.html", step=2, error="Regular price is required.", data=data)
 
+        # Does this plane have Business class?
         with db_cur() as cursor:
             cursor.execute(
-                """
-                SELECT 1 FROM Class
-                WHERE plane_id=%s AND class_type='Business'
-                """,
+                "SELECT 1 FROM Class WHERE plane_id=%s AND class_type='Business'",
                 (plane_id,),
             )
             has_business = cursor.fetchone() is not None
 
         if has_business and (business_price is None or business_price <= 0):
-            return render_template(
-                "admin_add_flight.html",
-                step=2,
-                error="Business price is required for big planes.",
-                data=data,
-            )
+            return render_template("admin_add_flight.html", step=2, error="Business price is required for big planes.", data=data)
 
         if not has_business:
             business_price = None
             data["business_price"] = None
 
+        # Role checks + "manager cannot be crew"
         with db_cur() as cursor:
             for pid in pilot_ids:
                 cursor.execute("SELECT 1 FROM Pilot WHERE id=%s", (pid,))
                 if not cursor.fetchone():
-                    return render_template("admin_add_flight.html", step=2, error=f"Worker {pid} is not a Pilot", data=data)
-
+                    return render_template("admin_add_flight.html", step=2, error=f"Worker {pid} is not a Pilot.", data=data)
                 cursor.execute("SELECT 1 FROM Manager WHERE id=%s", (pid,))
                 if cursor.fetchone():
-                    return render_template(
-                        "admin_add_flight.html",
-                        step=2,
-                        error=f"Worker {pid} is a Manager and cannot be assigned as Pilot",
-                        data=data,
-                    )
+                    return render_template("admin_add_flight.html", step=2, error=f"Worker {pid} is a Manager and cannot be a Pilot.", data=data)
 
             for fid in fa_ids:
                 cursor.execute("SELECT 1 FROM FlightAttendant WHERE id=%s", (fid,))
                 if not cursor.fetchone():
-                    return render_template(
-                        "admin_add_flight.html",
-                        step=2,
-                        error=f"Worker {fid} is not a Flight Attendant",
-                        data=data,
-                    )
-
+                    return render_template("admin_add_flight.html", step=2, error=f"Worker {fid} is not a Flight Attendant.", data=data)
                 cursor.execute("SELECT 1 FROM Manager WHERE id=%s", (fid,))
                 if cursor.fetchone():
-                    return render_template(
-                        "admin_add_flight.html",
-                        step=2,
-                        error=f"Worker {fid} is a Manager and cannot be assigned as Attendant",
-                        data=data,
-                    )
+                    return render_template("admin_add_flight.html", step=2, error=f"Worker {fid} is a Manager and cannot be an Attendant.", data=data)
 
+        # Availability overlap checks
         with db_cur() as cursor:
             if _overlap_exists(
                 cursor,
@@ -503,12 +542,7 @@ def admin_add_flight():
                 where_sql="f.plane_id = %s",
                 params=(plane_id,),
             ):
-                return render_template(
-                    "admin_add_flight.html",
-                    step=2,
-                    error="Selected plane is not available at this time (overlap).",
-                    data=data,
-                )
+                return render_template("admin_add_flight.html", step=2, error="Selected plane is not available at this time (overlap).", data=data)
 
             for pid in pilot_ids:
                 if _overlap_exists(
@@ -526,12 +560,7 @@ def admin_add_flight():
                     """,
                     params=(pid,),
                 ):
-                    return render_template(
-                        "admin_add_flight.html",
-                        step=2,
-                        error=f"Pilot {pid} is not available at this time (overlap).",
-                        data=data,
-                    )
+                    return render_template("admin_add_flight.html", step=2, error=f"Pilot {pid} is not available at this time (overlap).", data=data)
 
             for fid in fa_ids:
                 if _overlap_exists(
@@ -549,20 +578,18 @@ def admin_add_flight():
                     """,
                     params=(fid,),
                 ):
-                    return render_template(
-                        "admin_add_flight.html",
-                        step=2,
-                        error=f"Flight attendant {fid} is not available at this time (overlap).",
-                        data=data,
-                    )
+                    return render_template("admin_add_flight.html", step=2, error=f"Flight attendant {fid} is not available at this time (overlap).", data=data)
 
-        # ✅ Transaction-safe create
-        from main import db_cur
+        # =========================
+        # Transaction-safe create (REAL rollback on SAME connection)
+        # =========================
+        conn = None
         try:
             with db_cur() as cursor:
                 conn = cursor.connection
-                conn.autocommit(False)
+                conn.autocommit = False  # start txn
 
+                # 1) create Flight
                 cursor.execute(
                     """
                     INSERT INTO Flight (plane_id, origin_airport, destination_airport,
@@ -574,6 +601,7 @@ def admin_add_flight():
                 cursor.execute("SELECT LAST_INSERT_ID() AS flight_id")
                 flight_id = cursor.fetchone()["flight_id"]
 
+                # 2) pricing
                 cursor.execute(
                     """
                     INSERT INTO FlightPricing (flight_id, class_type, price)
@@ -581,7 +609,6 @@ def admin_add_flight():
                     """,
                     (flight_id, regular_price),
                 )
-
                 if has_business:
                     cursor.execute(
                         """
@@ -591,6 +618,7 @@ def admin_add_flight():
                         (flight_id, business_price),
                     )
 
+                # 3) crew placement
                 crew_ids = [int(x) for x in pilot_ids] + [int(x) for x in fa_ids]
                 cursor.executemany(
                     """
@@ -600,37 +628,70 @@ def admin_add_flight():
                     [(flight_id, cid) for cid in crew_ids],
                 )
 
+                # 4) flight seats
                 cursor.execute("SELECT seat_id FROM Seat WHERE plane_id=%s", (plane_id,))
                 seat_ids = [r["seat_id"] for r in cursor.fetchall()]
-                if seat_ids:
-                    cursor.executemany(
-                        """
-                        INSERT INTO FlightSeat (flight_id, seat_id, status)
-                        VALUES (%s, %s, 'available')
-                        """,
-                        [(flight_id, sid) for sid in seat_ids],
-                    )
+
+                if not seat_ids:
+                    raise ValueError("Selected plane has no seats in Seat table. Please create seats for this plane first.")
+
+                cursor.executemany(
+                    """
+                    INSERT INTO FlightSeat (flight_id, seat_id, status)
+                    VALUES (%s, %s, 'available')
+                    """,
+                    [(flight_id, sid) for sid in seat_ids],
+                )
 
                 conn.commit()
-        except Exception:
-            # rollback if anything failed
+
+        except mysql.connector.Error as e:
+            # rollback on SAME conn
             try:
-                with db_cur() as cursor:
-                    cursor.connection.rollback()
+                if conn:
+                    conn.rollback()
             except Exception:
                 pass
+
             return render_template(
                 "admin_add_flight.html",
                 step=2,
-                error="Failed to create flight due to an internal error. Please try again.",
+                error=_mysql_error_to_user_message(e),
                 data=data,
             )
 
-        # ✅ success flag
+        except ValueError as e:
+            try:
+                if conn:
+                    conn.rollback()
+            except Exception:
+                pass
+
+            return render_template(
+                "admin_add_flight.html",
+                step=2,
+                error=str(e),
+                data=data,
+            )
+
+        except Exception as e:
+            # last resort
+            try:
+                if conn:
+                    conn.rollback()
+            except Exception:
+                pass
+
+            return render_template(
+                "admin_add_flight.html",
+                step=2,
+                error=f"Unexpected error: {type(e).__name__}: {e}",
+                data=data,
+            )
+
         return redirect("/admin/flights?created=1")
 
     return render_template("admin_add_flight.html", step=1, error="Invalid step.", data=None)
-
 
 @admin_bp.route("/flights/cancel/<int:flight_id>", methods=["GET", "POST"])
 def admin_cancel_flight(flight_id):
