@@ -266,3 +266,32 @@ margin: 0 0 2px 0;
     opacity: 1;
     transform: translateY(-2px);
 }
+
+.header-actions .logout,
+.header-actions .admin-btn,
+.header-actions .my-orders {
+    width: auto;
+    padding: 0 25px;
+    margin-right: 0;              /* חשוב כדי שלא ידחוף ימינה */
+    height: 40px;
+    border-radius: 40px;
+    border: 2px solid rgba(37, 34, 99, 0.2);
+    color: #252264;
+    font-weight: 600;
+    font-family: 'Assistant', sans-serif;
+    font-size: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    text-decoration: none;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+
+.header-actions .logout:hover,
+.header-actions .admin-btn:hover,
+.header-actions .my-orders:hover {
+    border-color: #252264;
+    box-shadow: 0 0 5px rgba(37, 34, 100, 0.4);
+    background: rgba(37, 34, 99, 0.05);
+}

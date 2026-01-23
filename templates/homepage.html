@@ -1,76 +1,81 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<body>
-    <title>FlyTAU</title>
-    <link rel="stylesheet" href="/static/homepage.css">
-    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
-<header>
-    <div class="logo">
-        <a href="/" class="logo-link">
-            <img src="/static/logo.png" alt="FLYTAU">
-        </a>
-        <p class="welcome-text">Welcome to FlyTAU</p>
-    </div>    
+  <title>FlyTAU</title>
+  <link rel="stylesheet" href="/static/homepage.css">
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
 
-    <div class="header-actions">
-        {% if user_name %}
-            <span>Hi {{ user_name }} 👋</span>
-            <a href="/logout" class="logout">Logout</a>
-        {% else %}
-            <a href="/login">Login</a>
-            <a href="/signup">Sign up</a>
-            <p>or continue as guest</p>
-            <a href="/order_lookup">Find my order</a>
-        {% endif %}
-        {% if not session.get("user_email") and not session.get("is_manager") %}
-             <a href="/admin/login" class="admin-btn">Admin Login</a>
-        {% endif %}
-    </div>
+<body>
+<header>
+  <div class="logo">
+    <a href="/" class="logo-link">
+      <img src="/static/logo.png" alt="FLYTAU">
+    </a>
+    <p class="welcome-text">Welcome to FlyTAU</p>
+  </div>
+
+<div class="header-actions">
+  {% if user_name %}
+    <span>Hi {{ user_name }} 👋</span>
+    <a href="/my_orders" class="my-orders">My orders</a>
+    <a href="/logout" class="logout">Logout</a>
+  {% else %}
+    <a href="/login">Login</a>
+    <a href="/signup">Sign up</a>
+    <p>or continue as guest</p>
+    <a href="/order_lookup">Find my order</a>
+  {% endif %}
+
+  {% if not session.get("user_email") and not session.get("is_manager") %}
+    <a href="/admin/login" class="admin-btn">Admin Login</a>
+  {% endif %}
+</div>
+
 </header>
 
 <section class="main">
-    <div class="main-content">
-        <div class="main-text">
-            Book your next flight<br>
-            with confidence ✈️
+  <div class="main-content">
+    <div class="main-text">
+      Book your next flight<br>
+      with confidence ✈️
 
-            <div class="main-cta">
-                <a href="/search_flights">
-                    <button>Search & Book Flights</button>
-                </a>
-            </div>
-        </div>
+      <div class="main-cta">
+        <a href="/search_flights">
+          <button>Search & Book Flights</button>
+        </a>
+      </div>
     </div>
+  </div>
 
-    <div class="trust-logos-wrapper">
-        <p class="trust-title">Trusted payment & partners</p>
-        <div class="trust-logos">
-            <i class='bx bxl-visa'></i>
-            <i class='bx bxl-mastercard'></i>
-            <i class='bx bxl-paypal'></i>
-            <i class='bx bxl-apple'></i>
-            <i class='bx bxl-google'></i>
-        </div>
+  <div class="trust-logos-wrapper">
+    <p class="trust-title">Trusted payment & partners</p>
+    <div class="trust-logos">
+      <i class='bx bxl-visa'></i>
+      <i class='bx bxl-mastercard'></i>
+      <i class='bx bxl-paypal'></i>
+      <i class='bx bxl-apple'></i>
+      <i class='bx bxl-google'></i>
     </div>
+  </div>
 </section>
 
 <section class="featured-destinations">
-    <h2>Popular Destinations</h2>
-    <div class="destinations-grid">
-        <div class="destination-card">
-            <img src="/static/paris.avif" alt="Paris">
-            <h3>Paris</h3>
-            <p>Flights from $199</p>
-        </div>
-        <div class="destination-card">
-            <img src="/static/newyork.jpg" alt="New York">
-            <h3>New York</h3>
-            <p>Flights from $249</p>
-        </div>
+  <h2>Popular Destinations</h2>
+  <div class="destinations-grid">
+    <div class="destination-card">
+      <img src="/static/paris.avif" alt="Paris">
+      <h3>Paris</h3>
+      <p>Flights from $199</p>
     </div>
+    <div class="destination-card">
+      <img src="/static/newyork.jpg" alt="New York">
+      <h3>New York</h3>
+      <p>Flights from $249</p>
+    </div>
+  </div>
 </section>
 
 </body>
