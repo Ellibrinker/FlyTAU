@@ -902,7 +902,6 @@ def admin_reports():
                   ON fp.flight_id = f.flight_id
                  AND fp.class_type = s.class_type
                 WHERE LOWER(f.status) <> 'cancelled'
-                  AND TIMESTAMP(f.departure_date, f.departure_time) < NOW()
                   AND f.departure_date BETWEEN %s AND %s
                 GROUP BY plane_size, manufacturer, class_type
                 ORDER BY plane_size, manufacturer, class_type;
@@ -950,7 +949,6 @@ def admin_reports():
                   ON aw.origin_airport = f.origin_airport
                  AND aw.destination_airport = f.destination_airport
                 WHERE LOWER(f.status) <> 'cancelled'
-                  AND TIMESTAMP(f.departure_date, f.departure_time) < NOW()
                   AND f.departure_date BETWEEN %s AND %s
                 GROUP BY w.id, w.first_name, w.last_name, role
                 ORDER BY total_minutes DESC;
@@ -1024,7 +1022,6 @@ def admin_reports():
                     WHERE f3.plane_id = ms.plane_id
                       AND DATE_FORMAT(f3.departure_date, '%Y-%m') = ms.flight_month
                       AND LOWER(f3.status) <> 'cancelled'
-                      AND TIMESTAMP(f3.departure_date, f3.departure_time) < NOW()
                       AND f3.departure_date BETWEEN %s AND %s
                     GROUP BY f3.origin_airport, f3.destination_airport
                     ORDER BY COUNT(*) DESC
@@ -1039,7 +1036,6 @@ def admin_reports():
                     SUM(
                       CASE
                         WHEN LOWER(f.status) <> 'cancelled'
-                         AND TIMESTAMP(f.departure_date, f.departure_time) < NOW()
                         THEN 1 ELSE 0
                       END
                     ) AS performed_flights,
