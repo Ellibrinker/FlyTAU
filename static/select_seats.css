@@ -238,9 +238,12 @@ backdrop-filter: blur(10px);
 }
 
 .modal-actions {
-  margin-top: auto;
+  margin-top: auto;          /* דוחף לתחתית */
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between; /* Back שמאל, Continue ימין */
+  align-items: center;
+  padding-top: 20px;
+  margin-top: auto;
 }
 
 .grid {
