@@ -39,6 +39,8 @@ The project is divided into two main academic components:
 ### 👨‍💼 Manager (Admin)
 
 * Secure login
+* Centralized admin dashboard
+* Add operational resources (aircraft and crew)
 * Add new flights (with resource availability checks)
 * Cancel flights (policy-based cancellation)
 * View all flights
@@ -169,6 +171,16 @@ The system explicitly enforces real-world airline business rules and operational
   - **Big Plane**: 3 pilots and 6 flight attendants
   - **Small Plane**: 2 pilots and 3 flight attendants
 - Seat inventory must exist for the selected aircraft before flight creation.
+
+### **Resource creation & integrity**
+- Aircraft must be registered in the system before they can be assigned to flights.
+- Crew members must be registered and classified before being eligible for assignment.
+- Aircraft size (Small / Big) determines:
+  - Seat configuration
+  - Pricing eligibility
+  - Long-flight compatibility
+- Crew members assigned to long flights must be explicitly marked as long-flight qualified.
+- Managers are explicitly blocked from being registered as air crew members.
 
 ### **Flight cancellation policy (Admin)**
 - Only active/open flights can be cancelled (not full, not completed, not already cancelled).

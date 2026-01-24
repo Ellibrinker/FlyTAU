@@ -315,6 +315,311 @@ def admin_flights():
         },
     )
 
+# =========================================================
+# 1) NO "cooldown"/buffer: once landed, can depart immediately
+# 2) Location is derived from the LAST relevant flight in timeline
+# 3) First assignment: NO location constraint (allowed anywhere)
+# 4) Cancelled flights should NOT block availability and should NOT affect location
+# 5) Cancelling a flight has NO cascading effect on future flights (we don't "fix chains")
+# =========================================================
+
+# Per Eren: no cooling period
+CREW_BUFFER_MIN = 0
+PLANE_BUFFER_MIN = 0
+
+
+def _normalize_time(t):
+    if isinstance(t, timedelta):
+        return (datetime.min + t).time()
+    return t
+
+
+def _flight_end_expr():
+    return "DATE_ADD(TIMESTAMP(f.departure_date, f.departure_time), INTERVAL a.duration MINUTE)"
+
+
+def _overlap_exists_no_buffer(cursor, start_dt: datetime, end_dt: datetime, where_sql: str, params: tuple):
+    """
+    Per Eren: overlap only (no buffer). Ignore cancelled flights.
+    existing_start < new_end AND existing_end > new_start
+    """
+    cursor.execute(
+        f"""
+        SELECT 1
+        FROM Flight f
+        JOIN Airway a
+          ON a.origin_airport = f.origin_airport
+         AND a.destination_airport = f.destination_airport
+        WHERE LOWER(f.status) <> 'cancelled'
+          AND ({where_sql})
+          AND (
+            TIMESTAMP(f.departure_date, f.departure_time) < %s
+            AND {_flight_end_expr()} > %s
+          )
+        LIMIT 1
+        """,
+        params + (end_dt, start_dt),
+    )
+    return cursor.fetchone() is not None
+
+
+def _last_location_plane(cursor, plane_id: int, new_start_dt: datetime):
+    cursor.execute(
+        """
+        SELECT f3.destination_airport AS last_dest
+        FROM Flight f3
+        JOIN Airway a3
+          ON a3.origin_airport = f3.origin_airport
+         AND a3.destination_airport = f3.destination_airport
+        WHERE f3.plane_id = %s
+          AND LOWER(f3.status) <> 'cancelled'
+          AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
+        ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
+        LIMIT 1
+        """,
+        (plane_id, new_start_dt),
+    )
+    row = cursor.fetchone()
+    return row["last_dest"] if row else None
+
+
+def _last_location_worker(cursor, worker_id: int, new_start_dt: datetime):
+    cursor.execute(
+        """
+        SELECT f3.destination_airport AS last_dest
+        FROM FlightCrewPlacement fcp3
+        JOIN Flight f3 ON f3.flight_id = fcp3.flight_id
+        JOIN Airway a3
+          ON a3.origin_airport = f3.origin_airport
+         AND a3.destination_airport = f3.destination_airport
+        WHERE fcp3.id = %s
+          AND LOWER(f3.status) <> 'cancelled'
+          AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
+        ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
+        LIMIT 1
+        """,
+        (worker_id, new_start_dt),
+    )
+    row = cursor.fetchone()
+    return row["last_dest"] if row else None
+
+
+def _plane_is_big(cursor, plane_id: int) -> bool:
+    cursor.execute("SELECT 1 FROM BigPlane WHERE plane_id=%s", (plane_id,))
+    return cursor.fetchone() is not None
+
+
+def _crew_needed_for_plane(is_big_plane: bool):
+    # Project rule: crew count depends on PLANE SIZE
+    return (3, 6) if is_big_plane else (2, 3)
+
+
+def _fetch_step2_lists(cursor, is_long: bool, new_start_dt: datetime, new_end_dt: datetime, origin: str):
+    """
+    Returns (planes, pilots, attendants)
+
+    Filters by:
+    - time overlap only (no buffer) AND ignoring cancelled
+    - location at departure: last_dest must equal origin OR NULL (first assignment)
+    - long flights: pilots/attendants require AirCrew.long_flight_training = 1
+    - long flights: only Big planes are shown (UX improvement; still enforced on POST)
+    """
+
+    # ---- Planes ----
+    cursor.execute(
+        """
+        SELECT
+          p.plane_id,
+          p.manufacturer,
+          p.purchase_date,
+          CASE WHEN bp.plane_id IS NOT NULL THEN 1 ELSE 0 END AS is_big
+        FROM Plane p
+        LEFT JOIN BigPlane bp ON bp.plane_id = p.plane_id
+        WHERE
+          -- If long flight: show only Big planes
+          (%s = 0 OR bp.plane_id IS NOT NULL)
+
+          -- (A) time availability (ignore cancelled)
+          AND NOT EXISTS (
+            SELECT 1
+            FROM Flight f
+            JOIN Airway a
+              ON a.origin_airport = f.origin_airport
+             AND a.destination_airport = f.destination_airport
+            WHERE f.plane_id = p.plane_id
+              AND LOWER(f.status) <> 'cancelled'
+              AND (
+                TIMESTAMP(f.departure_date, f.departure_time) < %s
+                AND DATE_ADD(TIMESTAMP(f.departure_date, f.departure_time), INTERVAL a.duration MINUTE) > %s
+              )
+          )
+
+          -- (B) location-at-departure (or NULL => first assignment)
+          AND (
+            (
+              SELECT f3.destination_airport
+              FROM Flight f3
+              JOIN Airway a3
+                ON a3.origin_airport = f3.origin_airport
+               AND a3.destination_airport = f3.destination_airport
+              WHERE f3.plane_id = p.plane_id
+                AND LOWER(f3.status) <> 'cancelled'
+                AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
+              ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
+              LIMIT 1
+            ) IS NULL
+            OR
+            (
+              SELECT f3.destination_airport
+              FROM Flight f3
+              JOIN Airway a3
+                ON a3.origin_airport = f3.origin_airport
+               AND a3.destination_airport = f3.destination_airport
+              WHERE f3.plane_id = p.plane_id
+                AND LOWER(f3.status) <> 'cancelled'
+                AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
+              ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
+              LIMIT 1
+            ) = %s
+          )
+        ORDER BY p.plane_id
+        """,
+        (1 if is_long else 0, new_end_dt, new_start_dt, new_start_dt, new_start_dt, origin),
+    )
+    planes = cursor.fetchall()
+
+    # ---- Crew filters ----
+    long_clause = "AND ac.long_flight_training = 1" if is_long else ""
+
+    # ---- Pilots ----
+    cursor.execute(
+        f"""
+        SELECT w.id, w.first_name, w.last_name
+        FROM Worker w
+        JOIN Pilot p2   ON p2.id = w.id
+        JOIN AirCrew ac ON ac.id = w.id
+        WHERE
+          NOT EXISTS (SELECT 1 FROM Manager m WHERE m.id = w.id)
+          {long_clause}
+
+          -- (A) time availability (ignore cancelled)
+          AND NOT EXISTS (
+            SELECT 1
+            FROM Flight f
+            JOIN Airway a
+              ON a.origin_airport = f.origin_airport
+             AND a.destination_airport = f.destination_airport
+            JOIN FlightCrewPlacement fcp ON fcp.flight_id = f.flight_id
+            WHERE fcp.id = w.id
+              AND LOWER(f.status) <> 'cancelled'
+              AND (
+                TIMESTAMP(f.departure_date, f.departure_time) < %s
+                AND DATE_ADD(TIMESTAMP(f.departure_date, f.departure_time), INTERVAL a.duration MINUTE) > %s
+              )
+          )
+
+          -- (B) location-at-departure (or NULL => first assignment)
+          AND (
+            (
+              SELECT f3.destination_airport
+              FROM FlightCrewPlacement fcp3
+              JOIN Flight f3 ON f3.flight_id = fcp3.flight_id
+              JOIN Airway a3
+                ON a3.origin_airport = f3.origin_airport
+               AND a3.destination_airport = f3.destination_airport
+              WHERE fcp3.id = w.id
+                AND LOWER(f3.status) <> 'cancelled'
+                AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
+              ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
+              LIMIT 1
+            ) IS NULL
+            OR
+            (
+              SELECT f3.destination_airport
+              FROM FlightCrewPlacement fcp3
+              JOIN Flight f3 ON f3.flight_id = fcp3.flight_id
+              JOIN Airway a3
+                ON a3.origin_airport = f3.origin_airport
+               AND a3.destination_airport = f3.destination_airport
+              WHERE fcp3.id = w.id
+                AND LOWER(f3.status) <> 'cancelled'
+                AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
+              ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
+              LIMIT 1
+            ) = %s
+          )
+        ORDER BY w.last_name, w.first_name
+        """,
+        (new_end_dt, new_start_dt, new_start_dt, new_start_dt, origin),
+    )
+    pilots = cursor.fetchall()
+
+    # ---- Flight Attendants ----
+    cursor.execute(
+        f"""
+        SELECT w.id, w.first_name, w.last_name
+        FROM Worker w
+        JOIN FlightAttendant fa ON fa.id = w.id
+        JOIN AirCrew ac         ON ac.id = w.id
+        WHERE
+          NOT EXISTS (SELECT 1 FROM Manager m WHERE m.id = w.id)
+          {long_clause}
+
+          -- (A) time availability (ignore cancelled)
+          AND NOT EXISTS (
+            SELECT 1
+            FROM Flight f
+            JOIN Airway a
+              ON a.origin_airport = f.origin_airport
+             AND a.destination_airport = f.destination_airport
+            JOIN FlightCrewPlacement fcp ON fcp.flight_id = f.flight_id
+            WHERE fcp.id = w.id
+              AND LOWER(f.status) <> 'cancelled'
+              AND (
+                TIMESTAMP(f.departure_date, f.departure_time) < %s
+                AND DATE_ADD(TIMESTAMP(f.departure_date, f.departure_time), INTERVAL a.duration MINUTE) > %s
+              )
+          )
+
+          -- (B) location-at-departure (or NULL => first assignment)
+          AND (
+            (
+              SELECT f3.destination_airport
+              FROM FlightCrewPlacement fcp3
+              JOIN Flight f3 ON f3.flight_id = fcp3.flight_id
+              JOIN Airway a3
+                ON a3.origin_airport = f3.origin_airport
+               AND a3.destination_airport = f3.destination_airport
+              WHERE fcp3.id = w.id
+                AND LOWER(f3.status) <> 'cancelled'
+                AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
+              ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
+              LIMIT 1
+            ) IS NULL
+            OR
+            (
+              SELECT f3.destination_airport
+              FROM FlightCrewPlacement fcp3
+              JOIN Flight f3 ON f3.flight_id = fcp3.flight_id
+              JOIN Airway a3
+                ON a3.origin_airport = f3.origin_airport
+               AND a3.destination_airport = f3.destination_airport
+              WHERE fcp3.id = w.id
+                AND LOWER(f3.status) <> 'cancelled'
+                AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
+              ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
+              LIMIT 1
+            ) = %s
+          )
+        ORDER BY w.last_name, w.first_name
+        """,
+        (new_end_dt, new_start_dt, new_start_dt, new_start_dt, origin),
+    )
+    attendants = cursor.fetchall()
+
+    return planes, pilots, attendants
+
+
 @admin_bp.route("/flights/new", methods=["GET", "POST"])
 def admin_add_flight():
     guard = _require_admin()
@@ -340,7 +645,6 @@ def admin_add_flight():
         if not origin or not destination or not dep_date or not dep_time:
             return render_template("admin_add_flight.html", step=1, error="All fields are required.", data=None)
 
-        # airway duration
         with db_cur() as cursor:
             cursor.execute(
                 """
@@ -357,12 +661,12 @@ def admin_add_flight():
 
         duration_min = int(airway["duration"])
         is_long = duration_min > 360
-        pilots_needed = 3 if is_long else 2
-        fa_needed = 6 if is_long else 3
+
+        pilots_needed = None
+        fa_needed = None
 
         try:
             new_start_dt, new_end_dt = _flight_window(dep_date, dep_time, duration_min)
-            # Block creating flights in the past (server-side enforcement)
             now = datetime.now()
             if new_start_dt <= now:
                 return render_template(
@@ -376,7 +680,11 @@ def admin_add_flight():
 
         with db_cur() as cursor:
             planes, pilots, attendants = _fetch_step2_lists(
-                cursor, is_long=is_long, new_start_dt=new_start_dt, new_end_dt=new_end_dt
+                cursor,
+                is_long=is_long,
+                new_start_dt=new_start_dt,
+                new_end_dt=new_end_dt,
+                origin=origin,
             )
 
         data = {
@@ -386,9 +694,12 @@ def admin_add_flight():
             "departure_time": dep_time,
             "duration_min": duration_min,
             "is_long": is_long,
+
+            # UI: unknown until plane selection
             "pilots_needed": pilots_needed,
             "fa_needed": fa_needed,
-            "planes": planes,
+
+            "planes": planes,        # includes is_big
             "pilots": pilots,
             "attendants": attendants,
         }
@@ -411,7 +722,6 @@ def admin_add_flight():
         regular_price = request.form.get("regular_price", type=float)
         business_price = request.form.get("business_price", type=float)
 
-        # fetch duration again
         with db_cur() as cursor:
             cursor.execute(
                 """
@@ -427,13 +737,10 @@ def admin_add_flight():
             return render_template("admin_add_flight.html", step=1, error="No airway exists for this route.", data=None)
 
         duration_min = int(airway["duration"])
-        is_long = duration_min > 360  # long > 360, short <= 360
+        is_long = duration_min > 360
 
-        # compute window
         try:
             new_start_dt, new_end_dt = _flight_window(dep_date, dep_time, duration_min)
-
-            # Block creating flights in the past (server-side enforcement)
             now = datetime.now()
             if new_start_dt <= now:
                 return render_template(
@@ -442,12 +749,14 @@ def admin_add_flight():
                     error="Departure date/time must be in the future.",
                     data=None,
                 )
-
         except Exception as e:
-            # best-effort: rebuild lists with "now" window so template can render
             with db_cur() as cursor:
                 planes, pilots, attendants = _fetch_step2_lists(
-                    cursor, is_long=is_long, new_start_dt=datetime.now(), new_end_dt=datetime.now()
+                    cursor,
+                    is_long=is_long,
+                    new_start_dt=datetime.now(),
+                    new_end_dt=datetime.now(),
+                    origin=origin,
                 )
             data = {
                 "origin": origin,
@@ -464,20 +773,30 @@ def admin_add_flight():
                 "selected_fa_ids": set(str(x) for x in fa_ids),
                 "regular_price": regular_price,
                 "business_price": business_price,
-                # defaults (will be overwritten if plane selected)
-                "pilots_needed": 3 if is_long else 2,
-                "fa_needed": 6 if is_long else 3,
+                "pilots_needed": None,
+                "fa_needed": None,
                 "is_big_selected": None,
             }
             return render_template("admin_add_flight.html", step=2, error=f"Invalid date/time: {e}", data=data)
 
-        # fetch lists for this window
         with db_cur() as cursor:
             planes, pilots, attendants = _fetch_step2_lists(
-                cursor, is_long=is_long, new_start_dt=new_start_dt, new_end_dt=new_end_dt
+                cursor,
+                is_long=is_long,
+                new_start_dt=new_start_dt,
+                new_end_dt=new_end_dt,
+                origin=origin,
             )
 
-        # Build base data object (needs will be adjusted AFTER we know plane size)
+        # Determine plane size if selected (for accurate UI + validations)
+        is_big_plane = None
+        pilots_needed = None
+        fa_needed = None
+        if plane_id:
+            with db_cur() as cursor:
+                is_big_plane = _plane_is_big(cursor, plane_id)
+            pilots_needed, fa_needed = _crew_needed_for_plane(is_big_plane)
+
         data = {
             "origin": origin,
             "destination": destination,
@@ -485,7 +804,7 @@ def admin_add_flight():
             "departure_time": dep_time,
             "duration_min": duration_min,
             "is_long": is_long,
-            "planes": planes,
+            "planes": planes,  # includes is_big
             "pilots": pilots,
             "attendants": attendants,
             "selected_plane_id": plane_id,
@@ -493,26 +812,27 @@ def admin_add_flight():
             "selected_fa_ids": set(str(x) for x in fa_ids),
             "regular_price": regular_price,
             "business_price": business_price,
-            # defaults (safe; UI will update after selection as well)
-            "pilots_needed": 3 if is_long else 2,
-            "fa_needed": 6 if is_long else 3,
-            "is_big_selected": None,
+            "pilots_needed": pilots_needed,
+            "fa_needed": fa_needed,
+            "is_big_selected": is_big_plane,
         }
 
         # =========================
-        # Validations & enforcement (per assignment)
+        # Validations & enforcement
         # =========================
         if not plane_id:
             return render_template("admin_add_flight.html", step=2, error="Plane is required.", data=data)
 
-        # Determine plane size: BigPlane or Small plane
-        with db_cur() as cursor:
-            cursor.execute("SELECT 1 FROM BigPlane WHERE plane_id=%s", (plane_id,))
-            is_big_plane = cursor.fetchone() is not None
+        # plane size already computed
+        if is_big_plane is None:
+            with db_cur() as cursor:
+                is_big_plane = _plane_is_big(cursor, plane_id)
+            pilots_needed, fa_needed = _crew_needed_for_plane(is_big_plane)
+            data["is_big_selected"] = is_big_plane
+            data["pilots_needed"] = pilots_needed
+            data["fa_needed"] = fa_needed
 
-        data["is_big_selected"] = is_big_plane
-
-        # Enforce: long flights must use Big plane
+        # Enforce: long flights must use Big plane (project rule)
         if is_long and not is_big_plane:
             return render_template(
                 "admin_add_flight.html",
@@ -521,13 +841,7 @@ def admin_add_flight():
                 data=data,
             )
 
-        # Crew requirements depend on PLANE SIZE (not on long/short)
-        pilots_needed = 3 if is_big_plane else 2
-        fa_needed = 6 if is_big_plane else 3
-        data["pilots_needed"] = pilots_needed
-        data["fa_needed"] = fa_needed
-
-        # Validate crew counts (after recalculating needs)
+        # Validate crew counts (accurate UI numbers)
         if len(pilot_ids) != pilots_needed:
             return render_template("admin_add_flight.html", step=2,
                                    error=f"Please select exactly {pilots_needed} pilots.", data=data)
@@ -540,18 +854,15 @@ def admin_add_flight():
         if regular_price is None or regular_price <= 0:
             return render_template("admin_add_flight.html", step=2, error="Regular price must be a positive number.", data=data)
 
-        # Enforce: Business price exists ONLY for Big planes
         has_business = is_big_plane
-
         if has_business and (business_price is None or business_price <= 0):
             return render_template("admin_add_flight.html", step=2,
                                    error="Business price is required for Big planes.", data=data)
-
         if not has_business:
             business_price = None
             data["business_price"] = None
 
-        # role checks
+        # Role checks + training (server-side)
         with db_cur() as cursor:
             for pid in pilot_ids:
                 cursor.execute("SELECT 1 FROM Pilot WHERE id=%s", (pid,))
@@ -560,6 +871,11 @@ def admin_add_flight():
                 cursor.execute("SELECT 1 FROM Manager WHERE id=%s", (pid,))
                 if cursor.fetchone():
                     return render_template("admin_add_flight.html", step=2, error=f"Worker {pid} is a Manager and cannot be assigned as Pilot.", data=data)
+                if is_long:
+                    cursor.execute("SELECT long_flight_training FROM AirCrew WHERE id=%s", (pid,))
+                    row = cursor.fetchone()
+                    if not row or int(row["long_flight_training"]) != 1:
+                        return render_template("admin_add_flight.html", step=2, error=f"Pilot {pid} is not trained for long flights.", data=data)
 
             for fid in fa_ids:
                 cursor.execute("SELECT 1 FROM FlightAttendant WHERE id=%s", (fid,))
@@ -568,25 +884,28 @@ def admin_add_flight():
                 cursor.execute("SELECT 1 FROM Manager WHERE id=%s", (fid,))
                 if cursor.fetchone():
                     return render_template("admin_add_flight.html", step=2, error=f"Worker {fid} is a Manager and cannot be assigned as Attendant.", data=data)
+                if is_long:
+                    cursor.execute("SELECT long_flight_training FROM AirCrew WHERE id=%s", (fid,))
+                    row = cursor.fetchone()
+                    if not row or int(row["long_flight_training"]) != 1:
+                        return render_template("admin_add_flight.html", step=2, error=f"Flight attendant {fid} is not trained for long flights.", data=data)
 
-        # overlap checks
+        # Availability checks (no buffer, ignore cancelled)
         with db_cur() as cursor:
-            if _overlap_exists(
+            if _overlap_exists_no_buffer(
                 cursor,
                 start_dt=new_start_dt,
                 end_dt=new_end_dt,
-                buffer_min=PLANE_BUFFER_MIN,
                 where_sql="f.plane_id = %s",
                 params=(plane_id,),
             ):
                 return render_template("admin_add_flight.html", step=2, error="Selected plane is not available at this time (overlap).", data=data)
 
             for pid in pilot_ids:
-                if _overlap_exists(
+                if _overlap_exists_no_buffer(
                     cursor,
                     start_dt=new_start_dt,
                     end_dt=new_end_dt,
-                    buffer_min=CREW_BUFFER_MIN,
                     where_sql="""
                         EXISTS (
                             SELECT 1
@@ -600,11 +919,10 @@ def admin_add_flight():
                     return render_template("admin_add_flight.html", step=2, error=f"Pilot {pid} is not available at this time (overlap).", data=data)
 
             for fid in fa_ids:
-                if _overlap_exists(
+                if _overlap_exists_no_buffer(
                     cursor,
                     start_dt=new_start_dt,
                     end_dt=new_end_dt,
-                    buffer_min=CREW_BUFFER_MIN,
                     where_sql="""
                         EXISTS (
                             SELECT 1
@@ -617,7 +935,38 @@ def admin_add_flight():
                 ):
                     return render_template("admin_add_flight.html", step=2, error=f"Flight attendant {fid} is not available at this time (overlap).", data=data)
 
-        # pre-check seats exist (avoid half-insert scenario)
+        # Location enforcement (server-side)
+        with db_cur() as cursor:
+            plane_loc = _last_location_plane(cursor, plane_id, new_start_dt)
+            if plane_loc is not None and plane_loc != origin:
+                return render_template(
+                    "admin_add_flight.html",
+                    step=2,
+                    error=f"Selected plane is not at {origin} at departure time (last known location: {plane_loc}).",
+                    data=data,
+                )
+
+            for pid in pilot_ids:
+                loc = _last_location_worker(cursor, int(pid), new_start_dt)
+                if loc is not None and loc != origin:
+                    return render_template(
+                        "admin_add_flight.html",
+                        step=2,
+                        error=f"Pilot {pid} is not at {origin} at departure time (last known location: {loc}).",
+                        data=data,
+                    )
+
+            for fid in fa_ids:
+                loc = _last_location_worker(cursor, int(fid), new_start_dt)
+                if loc is not None and loc != origin:
+                    return render_template(
+                        "admin_add_flight.html",
+                        step=2,
+                        error=f"Flight attendant {fid} is not at {origin} at departure time (last known location: {loc}).",
+                        data=data,
+                    )
+
+        # Seats exist (avoid half-insert)
         with db_cur() as cursor:
             cursor.execute("SELECT seat_id FROM Seat WHERE plane_id=%s", (plane_id,))
             seat_ids = [r["seat_id"] for r in cursor.fetchall()]
@@ -630,11 +979,8 @@ def admin_add_flight():
                 data=data,
             )
 
-        # =========================
-        # Create (best-effort with your autocommit db_cur)
-        # =========================
+        # Create
         try:
-            # 1) Flight
             with db_cur() as cursor:
                 cursor.execute(
                     """
@@ -646,7 +992,6 @@ def admin_add_flight():
                 cursor.execute("SELECT LAST_INSERT_ID() AS flight_id")
                 flight_id = cursor.fetchone()["flight_id"]
 
-            # 2) Pricing
             with db_cur() as cursor:
                 cursor.execute(
                     "INSERT INTO FlightPricing (flight_id, class_type, price) VALUES (%s, 'Regular', %s)",
@@ -658,7 +1003,6 @@ def admin_add_flight():
                         (flight_id, business_price),
                     )
 
-            # 3) Crew placement
             crew_ids = [int(x) for x in pilot_ids] + [int(x) for x in fa_ids]
             with db_cur() as cursor:
                 cursor.executemany(
@@ -666,7 +1010,6 @@ def admin_add_flight():
                     [(flight_id, cid) for cid in crew_ids],
                 )
 
-            # 4) Flight seats
             with db_cur() as cursor:
                 cursor.executemany(
                     "INSERT INTO FlightSeat (flight_id, seat_id, status) VALUES (%s, %s, 'available')",
@@ -675,8 +1018,6 @@ def admin_add_flight():
 
         except Exception as e:
             traceback.print_exc()
-
-            # (Optional cleanup) try to delete the flight if it was created, to avoid partial data
             try:
                 if "flight_id" in locals() and flight_id:
                     with db_cur() as cursor:
@@ -696,6 +1037,7 @@ def admin_add_flight():
 
         return redirect("/admin/flights?created=1")
 
+
 @admin_bp.route("/flights/cancel/<int:flight_id>", methods=["GET", "POST"])
 def admin_cancel_flight(flight_id):
     guard = _require_admin()
@@ -704,7 +1046,6 @@ def admin_cancel_flight(flight_id):
 
     from main import db_cur
 
-    # ---- fetch flight ----
     with db_cur() as cursor:
         cursor.execute(
             """
@@ -719,25 +1060,17 @@ def admin_cancel_flight(flight_id):
     if not flight:
         return "Flight not found", 404
 
-    # ---- normalize dep_dt ----
-    dep_time = flight["departure_time"]
-    if isinstance(dep_time, timedelta):
-        dep_time = (datetime.min + dep_time).time()
-
+    dep_time = _normalize_time(flight["departure_time"])
     dep_dt = datetime.combine(flight["departure_date"], dep_time)
 
-    # ---- compute derived status for UI & rules ----
     st_db = str(flight.get("status", "")).lower()
 
-    # cancelled => cancelled
     if st_db == "cancelled":
         derived_status = "cancelled"
     else:
-        # already departed => done
         if dep_dt <= datetime.now():
             derived_status = "done"
         else:
-            # future flight: check if full (no available seats)
             with db_cur() as cursor:
                 cursor.execute(
                     """
@@ -749,10 +1082,8 @@ def admin_cancel_flight(flight_id):
                     (flight_id,),
                 )
                 has_available = cursor.fetchone() is not None
-
             derived_status = "open" if has_available else "full"
 
-    # Can cancel ONLY if derived_status is open (active/bookable)
     can_cancel = (derived_status == "open")
 
     if request.method == "GET":
@@ -764,7 +1095,6 @@ def admin_cancel_flight(flight_id):
             can_cancel=can_cancel,
         )
 
-    # POST: enforce the same rule
     if not can_cancel:
         return render_template(
             "admin_cancel_flight.html",
@@ -774,7 +1104,6 @@ def admin_cancel_flight(flight_id):
             can_cancel=False,
         )
 
-    # 72h policy (only relevant for cancellable flights)
     hours_left = (dep_dt - datetime.now()).total_seconds() / 3600
     if hours_left < 72:
         return render_template(
@@ -785,7 +1114,7 @@ def admin_cancel_flight(flight_id):
             can_cancel=False,
         )
 
-    # Cancel in DB
+    # Per Eren: no cascading effect
     with db_cur() as cursor:
         cursor.execute("UPDATE Flight SET status='cancelled' WHERE flight_id=%s", (flight_id,))
         cursor.execute(
@@ -800,7 +1129,6 @@ def admin_cancel_flight(flight_id):
         cursor.execute("UPDATE FlightSeat SET status='available' WHERE flight_id=%s", (flight_id,))
 
     return redirect("/admin/flights")
-
 
 
 @admin_bp.route("/", methods=["GET"])

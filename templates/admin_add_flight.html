@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Add Flight | FLYTAU</title>
-  <link href='https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css' rel='stylesheet'>
+  <link href="https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/admin_add_flight.css">
 </head>
@@ -14,6 +14,7 @@
       <img src="{{ url_for('static', filename='logo.png') }}" alt="Company Logo" class="company-logo">
     </a>
   </header>
+
   <div class="wrapper">
 
     {% if error %}
@@ -27,15 +28,16 @@
 
         <form method="POST">
           <input type="hidden" name="step" value="1" />
+
           <div class="row">
             <div class="input-box">
               <input name="origin" placeholder="Origin (e.g. TLV)" required />
-              <i class='bx bx-plane'></i>
+              <i class="bx bx-plane"></i>
             </div>
 
             <div class="input-box">
               <input name="destination" placeholder="Destination (e.g. ATH)" required />
-              <i class='bx bx-map'></i>
+              <i class="bx bx-map"></i>
             </div>
 
             <div class="input-box">
@@ -72,6 +74,7 @@
           <input type="hidden" name="departure_time" value="{{ data.departure_time }}" />
 
           <hr>
+
           <div class="box">
             <h3 class="section-title">Select plane</h3>
 
@@ -79,31 +82,29 @@
               <div class="error-box">No available planes for this time window.</div>
               <p class="muted">Try another departure time/date, or a different route.</p>
             {% else %}
-              <select name="plane_id" id="planeSelect" required data-selected="{{ data.selected_plane_id or '' }}">
+              <select name="plane_id" id="planeSelect" required>
                 <option value="" disabled {% if not data.selected_plane_id %}selected{% endif %}>Select a plane…</option>
                 {% for p in data.planes %}
-  <option
-    value="{{ p.plane_id }}"
-    {% if data.selected_plane_id == p.plane_id %}selected{% endif %}
-    data-big="{{ 1 if p.is_big else 0 }}"
-  >
-    Plane {{ p.plane_id }} ({{ p.manufacturer }}) ({{ 'big' if p.is_big else 'small' }})
-  </option>
-{% endfor %}
-
+                  <option
+                    value="{{ p.plane_id }}"
+                    {% if data.selected_plane_id == p.plane_id %}selected{% endif %}
+                    data-big="{{ 1 if p.is_big else 0 }}"
+                  >
+                    Plane {{ p.plane_id }} ({{ p.manufacturer }}) ({{ 'big' if p.is_big else 'small' }})
+                  </option>
+                {% endfor %}
               </select>
-
-              <input type="hidden" id="isBigSelected" value="{% if data.is_big_selected is not none %}{{ 1 if data.is_big_selected else 0 }}{% else %}{% endif %}">
             {% endif %}
           </div>
 
           <hr>
+
           <div class="two-col">
             <div class="box">
               <h3 class="section-title">
                 Select pilots
-                <span class="pill">Need: <span class="count" id="pilotsNeed">{{ data.pilots_needed }}</span></span>
-                <span class="pill">Selected: <span class="count" id="pilotsSelected">{{ data.selected_pilot_ids|length if data.selected_pilot_ids else 0 }}</span>/<span class="count" id="pilotsNeed2">{{ data.pilots_needed }}</span></span>
+                <span class="pill">Need: <span class="count" id="pilotsNeed">{{ data.pilots_needed if data.pilots_needed is not none else "—" }}</span></span>
+                <span class="pill">Selected: <span class="count" id="pilotsSelected">{{ data.selected_pilot_ids|length if data.selected_pilot_ids else 0 }}</span>/<span class="count" id="pilotsNeed2">{{ data.pilots_needed if data.pilots_needed is not none else "—" }}</span></span>
               </h3>
 
               {% if not data.pilots %}
@@ -111,13 +112,18 @@
                 <p class="muted">Try another time/date or route.</p>
               {% else %}
                 <div class="list-box">
-                {% for pl in data.pilots %}
-                  <label>
-                    <input type="checkbox" class="pilot-checkbox" name="pilot_ids" value="{{ pl.id }}"
-                      {% if data.selected_pilot_ids and (pl.id|string) in data.selected_pilot_ids %}checked{% endif %}>
-                    {{ pl.id }} — {{ pl.first_name }} {{ pl.last_name }}
-                  </label>
-                {% endfor %}
+                  {% for pl in data.pilots %}
+                    <label>
+                      <input
+                        type="checkbox"
+                        class="pilot-checkbox"
+                        name="pilot_ids"
+                        value="{{ pl.id }}"
+                        {% if data.selected_pilot_ids and (pl.id|string) in data.selected_pilot_ids %}checked{% endif %}
+                      >
+                      {{ pl.id }} — {{ pl.first_name }} {{ pl.last_name }}
+                    </label>
+                  {% endfor %}
                 </div>
               {% endif %}
             </div>
@@ -125,8 +131,8 @@
             <div class="box">
               <h3 class="section-title">
                 Select attendants
-                <span class="pill">Need: <span class="count" id="faNeed">{{ data.fa_needed }}</span></span>
-                <span class="pill">Selected: <span class="count" id="faSelected">{{ data.selected_fa_ids|length if data.selected_fa_ids else 0 }}</span>/<span class="count" id="faNeed2">{{ data.fa_needed }}</span></span>
+                <span class="pill">Need: <span class="count" id="faNeed">{{ data.fa_needed if data.fa_needed is not none else "—" }}</span></span>
+                <span class="pill">Selected: <span class="count" id="faSelected">{{ data.selected_fa_ids|length if data.selected_fa_ids else 0 }}</span>/<span class="count" id="faNeed2">{{ data.fa_needed if data.fa_needed is not none else "—" }}</span></span>
               </h3>
 
               {% if not data.attendants %}
@@ -134,33 +140,50 @@
                 <p class="muted">Try another time/date or route.</p>
               {% else %}
                 <div class="list-box">
-                {% for fa in data.attendants %}
-                  <label>
-                    <input type="checkbox" class="fa-checkbox" name="fa_ids" value="{{ fa.id }}"
-                      {% if data.selected_fa_ids and (fa.id|string) in data.selected_fa_ids %}checked{% endif %}>
-                    {{ fa.id }} — {{ fa.first_name }} {{ fa.last_name }}
-                  </label>
-                {% endfor %}
+                  {% for fa in data.attendants %}
+                    <label>
+                      <input
+                        type="checkbox"
+                        class="fa-checkbox"
+                        name="fa_ids"
+                        value="{{ fa.id }}"
+                        {% if data.selected_fa_ids and (fa.id|string) in data.selected_fa_ids %}checked{% endif %}
+                      >
+                      {{ fa.id }} — {{ fa.first_name }} {{ fa.last_name }}
+                    </label>
+                  {% endfor %}
                 </div>
               {% endif %}
             </div>
           </div>
 
           <hr>
+
           <div class="box">
             <h3 class="section-title">Pricing</h3>
 
             <div class="input-box">
-              <input type="number" step="0.01" name="regular_price" placeholder="Regular price"
-                    value="{{ data.regular_price if data.regular_price is not none else '' }}" required />
-              <i class='bx bx-cash'></i>
+              <input
+                type="number"
+                step="0.01"
+                name="regular_price"
+                placeholder="Regular price"
+                value="{{ data.regular_price if data.regular_price is not none else '' }}"
+                required
+              />
+              <i class="bx bx-cash"></i>
             </div>
 
             <div class="input-box" id="businessPriceBox" style="display:none;">
-              <input type="number" step="0.01" name="business_price" id="businessPriceInput"
-                    placeholder="Business price"
-                    value="{{ data.business_price if data.business_price is not none else '' }}" />
-              <i class='bx bx-briefcase-alt-2'></i>
+              <input
+                type="number"
+                step="0.01"
+                name="business_price"
+                id="businessPriceInput"
+                placeholder="Business price"
+                value="{{ data.business_price if data.business_price is not none else '' }}"
+              />
+              <i class="bx bx-briefcase-alt-2"></i>
             </div>
 
             <p class="muted" id="businessNote" style="display:none;">
@@ -175,162 +198,179 @@
         </form>
       </div>
 
-<script>
-  (function () {
-    const NEEDS = {
-      big: { pilots: 3, fa: 6 },
-      small: { pilots: 2, fa: 3 }
-    };
+      <script>
+        (function () {
+          const NEEDS = {
+            big: { pilots: 3, fa: 6 },
+            small: { pilots: 2, fa: 3 }
+          };
 
-    const pilotsNeedEl = document.getElementById("pilotsNeed");
-    const pilotsNeed2El = document.getElementById("pilotsNeed2");
-    const faNeedEl = document.getElementById("faNeed");
-    const faNeed2El = document.getElementById("faNeed2");
+          const pilotsNeedEl = document.getElementById("pilotsNeed");
+          const pilotsNeed2El = document.getElementById("pilotsNeed2");
+          const faNeedEl = document.getElementById("faNeed");
+          const faNeed2El = document.getElementById("faNeed2");
 
-    const pilotBoxes = Array.from(document.querySelectorAll(".pilot-checkbox"));
-    const faBoxes = Array.from(document.querySelectorAll(".fa-checkbox"));
+          const pilotBoxes = Array.from(document.querySelectorAll(".pilot-checkbox"));
+          const faBoxes = Array.from(document.querySelectorAll(".fa-checkbox"));
 
-    const pilotsSelectedEl = document.getElementById("pilotsSelected");
-    const faSelectedEl = document.getElementById("faSelected");
+          const pilotsSelectedEl = document.getElementById("pilotsSelected");
+          const faSelectedEl = document.getElementById("faSelected");
 
-    const msgEl = document.getElementById("validationMsg");
-    const submitBtn = document.getElementById("submitBtn");
-    const planeSelect = document.getElementById("planeSelect");
+          const msgEl = document.getElementById("validationMsg");
+          const submitBtn = document.getElementById("submitBtn");
+          const planeSelect = document.getElementById("planeSelect");
 
-    const businessBox = document.getElementById("businessPriceBox");
-    const businessInput = document.getElementById("businessPriceInput");
-    const businessNote = document.getElementById("businessNote");
+          const businessBox = document.getElementById("businessPriceBox");
+          const businessInput = document.getElementById("businessPriceInput");
+          const businessNote = document.getElementById("businessNote");
 
-    const isBigSelectedHidden = document.getElementById("isBigSelected");
-    const isLong = {{ 1 if data.is_long else 0 }};
+          const isLong = {{ 1 if data.is_long else 0 }};
 
-    function setNeeds(isBig) {
-      const need = isBig ? NEEDS.big : NEEDS.small;
+          function setNeedText(pilotsText, faText) {
+            if (pilotsNeedEl) pilotsNeedEl.textContent = pilotsText;
+            if (pilotsNeed2El) pilotsNeed2El.textContent = pilotsText;
+            if (faNeedEl) faNeedEl.textContent = faText;
+            if (faNeed2El) faNeed2El.textContent = faText;
+          }
 
-      if (pilotsNeedEl) pilotsNeedEl.textContent = String(need.pilots);
-      if (pilotsNeed2El) pilotsNeed2El.textContent = String(need.pilots);
-      if (faNeedEl) faNeedEl.textContent = String(need.fa);
-      if (faNeed2El) faNeed2El.textContent = String(need.fa);
+          function setBusinessUI(isBig) {
+            if (!businessBox || !businessInput || !businessNote) return;
 
-      if (businessBox && businessInput && businessNote) {
-        if (isBig) {
-          businessBox.style.display = "";
-          businessNote.style.display = "";
-          businessInput.required = true;
-        } else {
-          businessBox.style.display = "none";
-          businessNote.style.display = "none";
-          businessInput.required = false;
-          businessInput.value = "";
-        }
-      }
+            if (isBig) {
+              businessBox.style.display = "";
+              businessNote.style.display = "";
+              businessInput.required = true;
+            } else {
+              businessBox.style.display = "none";
+              businessNote.style.display = "none";
+              businessInput.required = false;
+              businessInput.value = "";
+            }
+          }
 
-      return need;
-    }
+          function getIsBigFromPage() {
+            // No guessing: until a plane is selected, size is UNKNOWN
+            if (planeSelect && planeSelect.value) {
+              const opt = planeSelect.options[planeSelect.selectedIndex];
+              return opt && opt.dataset && opt.dataset.big === "1";
+            }
+            return null;
+          }
 
-    function getIsBigFromPage() {
-      // 1) If user selected a plane -> always trust the selected option's data-big
-      if (planeSelect && planeSelect.value) {
-        const opt = planeSelect.options[planeSelect.selectedIndex];
-        return opt && opt.dataset && opt.dataset.big === "1";
-      }
+          function updateGroupLimit(boxes, need, selectedEl) {
+            const selected = boxes.filter(b => b.checked).length;
+            if (selectedEl) selectedEl.textContent = String(selected);
+            boxes.forEach(b => { if (!b.checked) b.disabled = (selected >= need); });
+            return selected;
+          }
 
-      // 2) If long flight -> must be big (no plane picked yet)
-      if (isLong) return true;
+          function disableGroup(boxes, selectedEl) {
+            boxes.forEach(b => { b.disabled = true; });
+            if (selectedEl) selectedEl.textContent = String(boxes.filter(b => b.checked).length);
+          }
 
-      // 3) Fallback: server-provided hidden (after failed POST)
-      if (isBigSelectedHidden && isBigSelectedHidden.value !== "") {
-        return isBigSelectedHidden.value === "1";
-      }
+          function validateAll() {
+            const planeOk = planeSelect ? !!planeSelect.value : true;
+            const isBig = getIsBigFromPage();
 
-      // 4) Default
-      return false;
-    }
+            // Until plane selected: show "—", disable crew selection, disable submit.
+            if (!planeOk || isBig === null) {
+              setNeedText("—", "—");
+              setBusinessUI(false);
 
-    function updateGroupLimit(boxes, need, selectedEl) {
-      const selected = boxes.filter(b => b.checked).length;
-      if (selectedEl) selectedEl.textContent = String(selected);
-      boxes.forEach(b => { if (!b.checked) b.disabled = (selected >= need); });
-      return selected;
-    }
+              disableGroup(pilotBoxes, pilotsSelectedEl);
+              disableGroup(faBoxes, faSelectedEl);
 
-    function validateAll() {
-      const isBig = getIsBigFromPage();
-      const need = setNeeds(isBig);
+              if (msgEl) msgEl.textContent = "Please select a plane to calculate required crew.";
+              if (submitBtn) submitBtn.disabled = true;
+              return;
+            }
 
-      const pilotsSelected = updateGroupLimit(pilotBoxes, need.pilots, pilotsSelectedEl);
-      const faSelected = updateGroupLimit(faBoxes, need.fa, faSelectedEl);
+            // Now we know exact needs
+            const need = isBig ? NEEDS.big : NEEDS.small;
+            setNeedText(String(need.pilots), String(need.fa));
+            setBusinessUI(isBig);
 
-      const planeOk = planeSelect ? !!planeSelect.value : true;
-      const pilotsOk = (pilotBoxes.length === 0) ? true : (pilotsSelected === need.pilots);
-      const faOk = (faBoxes.length === 0) ? true : (faSelected === need.fa);
+            // Re-enable checkboxes (limit logic will re-disable as needed)
+            pilotBoxes.forEach(b => { if (!b.checked) b.disabled = false; });
+            faBoxes.forEach(b => { if (!b.checked) b.disabled = false; });
 
-      let businessOk = true;
-      if (isBig && businessInput) {
-        businessOk = !!businessInput.value && parseFloat(businessInput.value) > 0;
-      }
+            const pilotsSelected = updateGroupLimit(pilotBoxes, need.pilots, pilotsSelectedEl);
+            const faSelected = updateGroupLimit(faBoxes, need.fa, faSelectedEl);
 
-      let longOk = true;
-      if (isLong && !isBig) longOk = false;
+            const pilotsOk = (pilotBoxes.length === 0) ? true : (pilotsSelected === need.pilots);
+            const faOk = (faBoxes.length === 0) ? true : (faSelected === need.fa);
 
-      let msg = "";
-      if (!planeOk) msg = "Please select a plane.";
-      else if (!longOk) msg = "Long flights (> 360 minutes) must use a Big plane.";
-      else if (!pilotsOk) msg = `Please select exactly ${need.pilots} pilots.`;
-      else if (!faOk) msg = `Please select exactly ${need.fa} attendants.`;
-      else if (!businessOk) msg = "Please enter a valid Business price (Big planes only).";
-      else msg = "All set ✅ You can create the flight.";
+            let businessOk = true;
+            if (isBig && businessInput) {
+              businessOk = !!businessInput.value && parseFloat(businessInput.value) > 0;
+            }
 
-      if (msgEl) msgEl.textContent = msg;
-      if (submitBtn) submitBtn.disabled = !(planeOk && longOk && pilotsOk && faOk && businessOk);
-    }
+            // Long flight rule: once plane selected, enforce big
+            let longOk = true;
+            if (isLong && !isBig) longOk = false;
 
-    pilotBoxes.forEach(b => b.addEventListener("change", validateAll));
-    faBoxes.forEach(b => b.addEventListener("change", validateAll));
-    if (planeSelect) planeSelect.addEventListener("change", validateAll);
-    if (businessInput) businessInput.addEventListener("input", validateAll);
+            let msg = "";
+            if (!longOk) msg = "Long flights (> 360 minutes) must use a Big plane.";
+            else if (!pilotsOk) msg = `Please select exactly ${need.pilots} pilots.`;
+            else if (!faOk) msg = `Please select exactly ${need.fa} attendants.`;
+            else if (!businessOk) msg = "Please enter a valid Business price (Big planes only).";
+            else msg = "All set ✅ You can create the flight.";
 
-    validateAll();
-  })();
-</script>
+            if (msgEl) msgEl.textContent = msg;
+            if (submitBtn) submitBtn.disabled = !(planeOk && longOk && pilotsOk && faOk && businessOk);
+          }
 
+          pilotBoxes.forEach(b => b.addEventListener("change", validateAll));
+          faBoxes.forEach(b => b.addEventListener("change", validateAll));
+          if (planeSelect) planeSelect.addEventListener("change", validateAll);
+          if (businessInput) businessInput.addEventListener("input", validateAll);
+
+          validateAll();
+        })();
+      </script>
 
     {% endif %}
+
     <div class="footer">
       <a href="/admin/flights">
-        <i class='bx bx-arrow-left'></i>
+        <i class="bx bx-arrow-left"></i>
         Back to flights
       </a>
     </div>
   </div>
 
   <script>
-  const dateInput = document.getElementById("departure_date");
-  const timeInput = document.getElementById("departure_time");
+    const dateInput = document.getElementById("departure_date");
+    const timeInput = document.getElementById("departure_time");
 
-  const today = new Date().toISOString().split("T")[0];
-  dateInput.min = today;
+    // Only exists on step=1
+    if (dateInput && timeInput) {
+      const today = new Date().toISOString().split("T")[0];
+      dateInput.min = today;
 
-  function updateTimeMin() {
-    const selectedDate = new Date(dateInput.value);
-    const today = new Date();
+      function updateTimeMin() {
+        if (!dateInput.value) return;
 
-    if (!dateInput.value) return;
+        const selectedDate = new Date(dateInput.value);
+        const now = new Date();
 
-    if (
-      selectedDate.getFullYear() === today.getFullYear() &&
-      selectedDate.getMonth() === today.getMonth() &&
-      selectedDate.getDate() === today.getDate()
-    ) {
-      const nowTime = today.toTimeString().split(":");
-      timeInput.min = `${nowTime[0]}:${nowTime[1]}`;
-    } else {
-      timeInput.min = "00:00";
+        if (
+          selectedDate.getFullYear() === now.getFullYear() &&
+          selectedDate.getMonth() === now.getMonth() &&
+          selectedDate.getDate() === now.getDate()
+        ) {
+          const parts = now.toTimeString().split(":");
+          timeInput.min = `${parts[0]}:${parts[1]}`;
+        } else {
+          timeInput.min = "00:00";
+        }
+      }
+
+      dateInput.addEventListener("change", updateTimeMin);
+      updateTimeMin();
     }
-  }
-
-  dateInput.addEventListener("change", updateTimeMin);
-</script>
+  </script>
 
 </body>
 </html>
