@@ -1,96 +1,398 @@
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  font-family: "Assistant", sans-serif;
-}
-
-body {
-  background: #f6f7fb;
-  color: #111;
-}
-
+/* Top Bar */
 .top-bar {
-  height: 70px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  background-color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 30px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  z-index: 1000;
+}
+
+/* left side: logo + Hi + Reports */
+.topbar-left {
   display: flex;
   align-items: center;
-  padding: 0 24px;
-  background: #ffffff;
-  border-bottom: 1px solid rgba(0,0,0,0.07);
+  margin-left: 150px;
+  gap: 40px;
 }
 
-.logo-link img {
-  height: 40px;
-  display: block;
+/* middle group */
+.topbar-middle {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* logo */
+.company-logo {
+  height: 50px;
+  cursor: pointer;
+}
+
+/* right side */
+.topbar-right {
+  display: flex;
+  margin-right: 150px;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Body & Wrapper */
+body {
+  font-family: 'Assistant', sans-serif;
+  margin: 0;
+  background: url("/static/sky.jpg") no-repeat center center/cover;
+  padding-top: 80px;
 }
 
 .wrapper {
-  max-width: 900px;
-  margin: 70px auto;
-  padding: 0 18px;
-  text-align: center;
+  max-width: 960px;
+  margin: 20px auto 40px auto;
+  padding: 40px 30px 30px 30px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 12px;
+  border: 2px solid rgba(37,34,99,0.2);
+  backdrop-filter: blur(10px);
+  color: #252264;
+  text-align: left; /* מרכז את כל התוכן */
 }
 
-h1 {
-  font-size: 44px;
-  font-weight: 700;
-  margin-bottom: 10px;
+/* Title row */
+.title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 15px 0 25px 0;
+}
+
+.main-title {
+  font-size: 36px;
+  font-weight: 800;
+  margin: 0;
 }
 
 .subtitle {
   font-size: 16px;
   opacity: 0.8;
-  margin-bottom: 30px;
+  margin: 10px 0 20px 0;
 }
 
-.actions {
+.divider {
+  border: none;
+  height: 1px;
+  background: rgba(37,34,99,0.25);
+  margin: 20px auto;
+  width: 100%;
+}
+
+.actions-group {
   display: flex;
-  gap: 16px;
   justify-content: center;
+  gap: 20px;
   flex-wrap: wrap;
-  margin-top: 10px;
+  margin-top: 20px;
+  width: 100%;
 }
 
-.admin-btn {
+
+.pill-btn-add {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 18px;
-  border-radius: 14px;
-  background: #ffffff;
-  border: 1px solid rgba(0,0,0,0.08);
+  justify-content: center;
+  gap: 8px;
+  width: 100%;          /* תופס את כל רוחב ה-wrapper */
+  max-width: 420px;     /* מגביל רוחב כדי לא יהיה ענק */
+  height: 60px;         /* יותר גבוה */
+  padding: 10px 18px;
+  border-radius: 14px;  /* פחות עגול = יותר מלבני */
+  border: 2px solid rgba(37,34,99,0.25);
+  background: rgba(255,255,255,0.22);
+  color: #252264;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  font-size: 16px;
+  box-shadow: 0 8px 18px rgba(37,34,99,0.12);
+  transition: all 0.25s ease;
   text-decoration: none;
-  color: #111;
-  font-weight: 700;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
-  min-width: 240px;
+}
+
+
+.pill-btn-add:hover {
+  background-color: rgba(37,34,99,0.1);
+  border-color: rgb(37,34,99);
+  transform: translateY(-1px);
+}
+
+/* Pills / Buttons */
+.pill, .pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 16px;
+  border-radius: 50px;
+  border: 2px solid rgba(37,34,99,0.2);
+  text-decoration: none;
+  font-weight: 600;
+  color: #252264;
+  background-color: rgba(255,255,255,0.1);
+  transition: all 0.3s ease;
+}
+
+.pill-btn:hover, .pill:hover {
+  background-color: rgba(37,34,99,0.1);
+  border-color: rgb(37,34,99);
+  transform: translateY(-1px);
+}
+
+/* Box */
+.box {
+  background: rgba(255,255,255,0.15);
+  padding: 20px 25px;
+  border-radius: 12px;
+  border: 2px solid rgba(37,34,99,0.1);
+  margin-bottom: 20px;
+}
+
+/* ====== Modal Background ====== */
+.modal {
+  display: flex;
+  position: fixed;
+  z-index: 2000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
   justify-content: center;
 }
 
-.admin-btn i {
-  font-size: 20px;
+/* ====== Modal Content (Same as Wrapper) ====== */
+.modal-content {
+  width: 960px;
+  height: 550px;
+  background: #f7f8ff;
+  border: 2px solid rgba(44, 41, 116, 0.2);
+  backdrop-filter: blur(10px);
+  color: #252264;
+  border-radius: 12px;
+  padding: 30px 40px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  text-align: center;
+  position: relative;
+  margin-top: 100px;
+  max-height: 90vh;
+  overflow-y: auto;
+  
 }
 
-.admin-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(0,0,0,0.10);
+.modal-crew .modal-content {
+  width: 960px;
+  height: 670px;
+  margin-top: 45px;
+  padding: 30px 40px;
+  text-align: center;
 }
 
-.bottom-actions {
-  margin-top: 28px;
-}
-
-.back-link {
-  display: inline-flex;
+.modal-crew .input-box {
+  width: 60%;
+  display: flex;
+  margin: 12px auto;
   align-items: center;
-  gap: 8px;
-  color: #111;
-  text-decoration: none;
-  opacity: 0.85;
-  font-weight: 600;
+  position: relative;
+  height: 50px;
 }
 
-.back-link:hover {
-  opacity: 1;
-  text-decoration: underline;
+.modal-crew .input-box input,
+.modal-crew .input-box select {
+  flex: 1;
+  height: 50px;
+  background: transparent;
+  outline: none;
+  border: 2px solid rgba(37, 34, 99, 0.2);
+  border-radius: 40px;
+  font-size: 16px;
+  color: #252264;
+  padding: 0 20px 0 20px;
+  text-align: left;
 }
+
+.modal-crew .input-box i {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20px;
+  color: #252264;
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .modal-crew .two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+.modal-crew .two-col .input-box {
+  width: 100%;
+  margin: 10px 0;
+}
+
+/* Two column */
+.modal-crew .two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ====== Close Button ====== */
+.close {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  font-size: 26px;
+  cursor: pointer;
+  color: #252264;
+}
+
+/* ====== Title ====== */
+.modal-content h1 {
+  font-size: 34px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+/* ====== Error Box ====== */
+.error-box {
+  background: #ffe5e5;
+  color: #b00020;
+  border: 1px solid #ffb3b3;
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 15px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* ====== Input Box ====== */
+.input-box {
+  width: 60%;
+  display: flex;
+  margin: 22px auto;
+  align-items: center;
+  position: relative;
+  height: 50px;
+}
+
+.input-box input,
+.input-box select {
+  flex: 1;
+  height: 50px;
+  background: transparent;
+  outline: none;
+  border: 2px solid rgba(37, 34, 99, 0.2);
+  border-radius: 40px;
+  font-size: 16px;
+  color: #252264;
+  padding: 0 60px 0 20px; /* יותר מקום לאייקון */
+}
+
+.input-box i {
+  position: absolute;
+  right: 62px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20px;
+  color: #252264;
+  pointer-events: none;
+  z-index: 10;  /* חשוב! */
+}
+
+
+.input-box input:hover,
+.input-box input:focus,
+.input-box select:hover,
+.input-box select:focus {
+  border-color: #252264;
+  box-shadow: 0 0 5px rgba(37, 34, 100, 0.4);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* ====== Remove arrow from select ====== */
+.input-box select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: none;
+}
+
+/* ====== Button ====== */
+button {
+  background-color: rgb(37, 34, 99);
+  color: white;
+  border: none;
+  width: 100%;
+  padding: 12px;
+  font-size: 18px;
+  font-weight: 700;
+  border-radius: 50px;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  background-color: #130f42;
+  transform: translateY(-2px);
+}
+
+button:disabled {
+  background-color: rgba(37,34,99,0.3);
+  cursor: not-allowed;
+}
+
+.footer {
+    margin-top: 16px;
+    text-align: center;
+    margin: 25px 0 15px;
+}
+
+.footer a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #252264;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 600;
+    opacity: 0.75;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.footer i {
+    font-size: 20px;
+}
+
+.footer a:hover {
+    opacity: 1;
+    transform: translateX(-2px);
+}
+
+/* ====== Responsive ====== */
+@media (max-width: 1000px) {
+  .modal-content {
+    width: 90%;
+    padding: 25px 20px;
+  }
+
+  .input-box {
+    width: 80%;
+  }
+}
+
