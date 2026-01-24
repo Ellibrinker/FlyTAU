@@ -135,7 +135,7 @@ backdrop-filter: blur(10px);
 
 /* Modal */
 .modal {
-  display: flex;
+  display: none;
   position: fixed;
   z-index: 2000;
   left: 0;
@@ -147,6 +147,7 @@ backdrop-filter: blur(10px);
   align-items: flex-start;
   padding-top: 60px;
 }
+
 
 .modal-content {
     background: rgba(255,255,255,0.9);
