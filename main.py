@@ -38,7 +38,7 @@ def homepage():
 @app.route('/login', methods=['GET', 'POST'])
 def login_page():
     if request.method == 'POST':
-        user_email = request.form.get('email')
+        user_email = (request.form.get('email') or '').strip().lower()
         user_password = request.form.get('password')
 
         with db_cur() as cursor:

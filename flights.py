@@ -251,9 +251,11 @@ def select_seats():
     # 2) POST = confirm booking (can include mixed classes)
     if request.method == "POST":
         selected_ids = request.form.getlist("flight_seat_id")
-        guest_email = request.form.get("guest_email", "").strip()
 
-        email = session.get("user_email") or guest_email
+        # logged-in user OR guest email
+        guest_email = (request.form.get("guest_email") or "").strip().lower()
+        email = (session.get("user_email") or guest_email or "").strip().lower()
+
         if not email:
             return render_template(
                 "select_seats.html",
@@ -272,7 +274,7 @@ def select_seats():
                 error="Please select at least one seat.",
             )
 
-        # Validate: seats exist, available, belong to this flight & plane
+        # --- validate selected seats ---
         with db_cur() as cursor:
             fmt = ",".join(["%s"] * len(selected_ids))
             cursor.execute(
@@ -312,15 +314,78 @@ def select_seats():
             else:
                 return redirect(f"/select_seats?flight_id={flight_id}")
 
-        # Create order + items + mark seats booked
-        with db_cur() as cursor:
-            cursor.execute("SELECT email FROM Customer WHERE email=%s", (email,))
-            if not cursor.fetchone():
-                cursor.execute(
-                    "INSERT INTO Customer (email, first_name, last_name) VALUES (%s, %s, %s)",
-                    (email, "Guest", ""),
-                )
+        # --- ensure Customer exists with correct name + ensure phones saved ---
+        is_logged_in = bool(session.get("user_email"))
 
+        # For guests: read details from modal (but DO NOT save passport/birthdate anywhere)
+        guest_full_name = (request.form.get("guest_full_name") or "").strip()
+        guest_phones = request.form.getlist("guest_phone[]")  # from modal
+
+        # Clean phones: remove blanks + duplicates (keep order)
+        clean_phones = []
+        seen = set()
+        for p in guest_phones:
+            p = (p or "").strip()
+            if not p or p in seen:
+                continue
+            seen.add(p)
+            clean_phones.append(p)
+
+        # split guest name (only used if guest)
+        g_first, g_last = "Guest", ""
+        if guest_full_name:
+            parts = guest_full_name.split(" ", 1)
+            g_first = parts[0]
+            g_last = parts[1] if len(parts) > 1 else ""
+
+        with db_cur() as cursor:
+            # Does customer exist?
+            cursor.execute(
+                "SELECT email, first_name, last_name FROM Customer WHERE email=%s",
+                (email,),
+            )
+            customer = cursor.fetchone()
+
+            if not customer:
+                if is_logged_in:
+                    # DB should already contain this customer because signup creates it.
+                    # If it's missing, something is inconsistent -> block safely.
+                    return render_template(
+                        "select_seats.html",
+                        flight=flight,
+                        seats_by_class=seats_by_class,
+                        grid_by_class=grid_by_class,
+                        error="Account data is missing. Please log out and log in again, or contact support.",
+                    )
+                else:
+                    cursor.execute(
+                        "INSERT INTO Customer (email, first_name, last_name) VALUES (%s, %s, %s)",
+                        (email, g_first, g_last),
+                    )
+            else:
+                # If guest: optionally upgrade "Guest" name to actual provided name (one-time cleanup)
+                if not is_logged_in and guest_full_name:
+                    cur_fn = (customer.get("first_name") or "").strip()
+                    cur_ln = (customer.get("last_name") or "").strip()
+                    if (cur_fn.lower() == "guest" and not cur_ln) or (
+                        not cur_fn and not cur_ln
+                    ):
+                        cursor.execute(
+                            "UPDATE Customer SET first_name=%s, last_name=%s WHERE email=%s",
+                            (g_first, g_last, email),
+                        )
+
+            # Phones:
+            # - For registered users: phones are already saved in signup, we do NOT touch them.
+            # - For guests: we save the phones they entered now.
+            if not is_logged_in:
+                for phone in clean_phones:
+                    cursor.execute(
+                        "INSERT IGNORE INTO CustomerPhone (email, phone_number) VALUES (%s, %s)",
+                        (email, phone),
+                    )
+
+            # --- create order + items + mark seats booked ---
             cursor.execute(
                 """
                 INSERT INTO FlightOrder (flight_id, email, execution_date, status, total_payment)
