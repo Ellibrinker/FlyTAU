@@ -1,80 +1,87 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <title>Add Crew Member | FLYTAU</title>
-  <link href='https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css' rel='stylesheet'>
-  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/admin_add_flight.css">
+    <meta charset="UTF-8">
+    <title>FlyTAU - Add Crew Member</title>
+    <link rel="stylesheet" href="/static/admin_add_flight.css">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
 </head>
 <body>
-  <header class="top-bar">
-    <a href="/" class="logo-link">
-      <img src="/static/logo.png" alt="Logo" class="company-logo">
-    </a>
-  </header>
 
-  <div class="wrapper">
-    {% if error %}
-      <div class="error-box" style="background: #ffe6e6; color: #cc0000; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
-          {{ error }}
-      </div>
-    {% endif %}
-
-    <div class="box">
-      <h3 class="title">Add New Crew Member</h3>
-      <p class="muted">Register personal and professional details</p>
-
-      <form method="POST">
-        <div class="row">
-          <div class="input-box">
-            <input name="id" type="number" placeholder="ID" required />
-            <i class='bx bx-id-card'></i>
-          </div>
-          <div class="input-box">
-            <input name="first_name" placeholder="First Name" required />
-            <i class='bx bx-user'></i>
-          </div>
-          <div class="input-box">
-            <input name="last_name" placeholder="Last Name" required />
-            <i class='bx bx-user'></i>
-          </div>
+    <div class="top-bar">
+        <div class="logo-link">
+            <img src="/static/logo.png" alt="FlyTAU Logo" class="company-logo">
         </div>
-
-        <div class="row">
-          <div class="input-box">
-            <input name="phone" placeholder="Phone Number" />
-            <i class='bx bx-phone'></i>
-          </div>
-          <div class="input-box">
-            <input name="city" placeholder="City" />
-            <i class='bx bx-map'></i>
-          </div>
-        </div>
-
-        <div class="row" style="margin-top: 15px;">
-           <div class="input-box">
-            <select name="role" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd;">
-              <option value="" disabled selected>Select Role...</option>
-              <option value="pilot">Pilot</option>
-              <option value="attendant">Flight Attendant</option>
-            </select>
-          </div>
-          <div class="input-box" style="display: flex; align-items: center; gap: 10px; padding-left: 10px;">
-            <input type="checkbox" name="long_training" id="lt" style="width: 18px; height: 18px;">
-            <label for="lt" class="muted">Long Flight Training</label>
-          </div>
-        </div>
-
-        <div class="row" style="margin-top: 20px;">
-          <button type="submit" class="btn-primary">Register Member</button>
-        </div>
-      </form>
     </div>
 
-    <div class="footer">
-      <a href="/admin/flights"><i class='bx bx-arrow-left'></i> Back to Flights</a>
+    <div class="wrapper">
+        <h1>Add New Crew Member</h1>
+        <p class="muted">Enter personal details and professional role</p>
+
+        {% if error %}
+            <div class="error-box">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST">
+            <div class="input-box">
+                <input name="id" type="number" placeholder="ID Number" required />
+                <i class='bx bx-id-card'></i>
+            </div>
+            
+            <div class="two-col">
+                <div class="input-box" style="width: 100%;">
+                    <input name="first_name" placeholder="First Name" required />
+                    <i class='bx bx-user'></i>
+                </div>
+                <div class="input-box" style="width: 100%;">
+                    <input name="last_name" placeholder="Last Name" required />
+                    <i class='bx bx-user'></i>
+                </div>
+            </div>
+
+            <div class="two-col">
+                <div class="input-box" style="width: 100%;">
+                    <input name="phone" placeholder="Phone Number" />
+                    <i class='bx bx-phone'></i>
+                </div>
+                <div class="input-box" style="width: 100%;">
+                    <input name="city" placeholder="City" />
+                    <i class='bx bx-map'></i>
+                </div>
+            </div>
+
+            <div class="two-col">
+                <div class="input-box" style="width: 100%;">
+                    <input name="street" placeholder="Street" />
+                    <i class='bx bx-home-alt'></i>
+                </div>
+                <div class="input-box" style="width: 100%;">
+                    <input name="house_num" type="number" placeholder="House #" />
+                    <i class='bx bx-hash'></i>
+                </div>
+            </div>
+
+            <div class="input-box">
+                <select name="role" required>
+                    <option value="" disabled selected>Select Role...</option>
+                    <option value="pilot">Pilot</option>
+                    <option value="attendant">Flight Attendant</option>
+                </select>
+                <i class='bx bx-briefcase'></i>
+            </div>
+
+            <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 20px; color: #252264; font-weight: 600;">
+                <input type="checkbox" name="long_training" id="lt" style="width: 18px; height: 18px; cursor: pointer;">
+                <label for="lt" style="margin-bottom: 0; cursor: pointer;">Long Flight Training</label>
+            </div>
+
+            <button type="submit">Register Crew Member</button>
+        </form>
+
+        <div class="footer">
+            <a href="/admin/flights"><i class='bx bx-arrow-left'></i> Back to Dashboard</a>
+        </div>
     </div>
-  </div>
+
 </body>
 </html>
