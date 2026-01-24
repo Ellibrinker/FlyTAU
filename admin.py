@@ -810,6 +810,69 @@ def admin_home():
         return guard
     return render_template("admin_home.html")
 
+@admin_bp.route("/planes/new", methods=["GET", "POST"])
+def admin_add_plane():
+    guard = _require_admin()
+    if guard: return guard
+
+    if request.method == "POST":
+        manufacturer = request.form.get("manufacturer")
+        purchase_date = request.form.get("purchase_date")
+        plane_type = request.form.get("plane_type") 
+
+        from main import db_cur
+        try:
+            with db_cur() as cursor:
+                cursor.execute(
+                    "INSERT INTO Plane (manufacturer, purchase_date) VALUES (%s, %s)",
+                    (manufacturer, purchase_date)
+                )
+                
+                cursor.execute("SELECT LAST_INSERT_ID() AS plane_id")
+                new_id = cursor.fetchone()["plane_id"]
+
+                if plane_type == "big":
+                    cursor.execute("INSERT INTO BigPlane (plane_id) VALUES (%s)", (new_id,))
+                else:
+                    cursor.execute("INSERT INTO SmallPlane (plane_id) VALUES (%s)", (new_id,))
+            
+            return redirect("/admin/flights?msg=Plane+Added")
+        except Exception as e:
+            return render_template("admin_add_plane.html", error=str(e))
+            
+    return render_template("admin_add_plane.html")
+
+
+@admin_bp.route("/crew/new", methods=["GET", "POST"])
+def admin_add_crew():
+    guard = _require_admin()
+    if guard: return guard
+
+    if request.method == "POST":
+        data = request.form
+        from main import db_cur
+        try:
+            with db_cur() as cursor:
+                cursor.execute("""
+                    INSERT INTO Worker (id, first_name, last_name, phone_number, city, street, house_num, start_date)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, CURDATE())
+                """, (data['id'], data['first_name'], data['last_name'], data.get('phone'), 
+                      data.get('city'), data.get('street'), data.get('house_num')))
+                
+                cursor.execute("INSERT INTO AirCrew (id, long_flight_training) VALUES (%s, %s)", 
+                               (data['id'], 1 if data.get('long_training') else 0))
+
+                if data['role'] == "pilot":
+                    cursor.execute("INSERT INTO Pilot (id) VALUES (%s)", (data['id'],))
+                else:
+                    cursor.execute("INSERT INTO FlightAttendant (id) VALUES (%s)", (data['id'],))
+            
+            return redirect("/admin/flights?msg=Crew+Member+Added")
+        except Exception as e:
+            return render_template("admin_add_crew.html", error=str(e))
+            
+    return render_template("admin_add_crew.html")
+
 
 @admin_bp.route("/reports", methods=["GET"])
 def admin_reports():
