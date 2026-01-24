@@ -40,7 +40,7 @@
         <input
           type="text"
           name="origin"
-          placeholder="Input Origin"
+          placeholder="Input Origin (e.g. TLV)"
           value="{{ origin or request.args.get('origin', '') }}"
         >
         <i class='bxr bx-plane-take-off'></i>
@@ -50,7 +50,7 @@
         <input
           type="text"
           name="destination"
-          placeholder="Input Destination"
+          placeholder="Input Destination (e.g. PAR)"
           value="{{ destination or request.args.get('destination', '') }}"
         >
         <i class='bxr bx-plane-land'></i>
@@ -63,6 +63,7 @@
           name="departure_date"
           value="{{ departure_date or '' }}"
         >
+        <small class="optional-hint">Optional</small>
       </div>
 
       <button type="submit">Search Flights</button>

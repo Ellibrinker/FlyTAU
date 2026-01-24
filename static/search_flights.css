@@ -245,3 +245,11 @@ a button {
 a button:hover {
     background-color: #130f42;
 }
+
+.optional-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: #9aa0a6;
+  font-style: italic;
+}
