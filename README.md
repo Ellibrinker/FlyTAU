@@ -105,7 +105,7 @@ The system explicitly enforces real-world airline business rules and operational
 - Manager login prevents invalid role configurations where a single ID exists as both **Manager** and **AirCrew**.
 
 ### **Registration & guest usage rules**
-- Customer email addresses are normalized (lowercased) and must be unique.
+- Customer email addresses must be unique.
 - At least one phone number is required during registration; empty or duplicate phone entries are ignored.
 - Guests can retrieve an order only by providing both the order code (order_id) and the associated email address.
 
