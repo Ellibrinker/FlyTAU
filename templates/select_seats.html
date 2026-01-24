@@ -30,14 +30,16 @@
 
         <div class="row">
           <div class="small">Selected seats: <span id="count">0</span></div>
+        </div>
 
-          {% if not session.get('user_email') %}
+        {% if not session.get('user_email') %}
+          <div class="row">
             <div>
-              <span class="small">Guest email:</span><br>
+              <span class="small">Guest Email:</span><br>
               <input type="email" name="guest_email" placeholder="you@example.com" required>
             </div>
-          {% endif %}
-        </div>
+          </div>
+        {% endif %}
 
         <!-- Regular -->
         {% if seats_by_class.get('Regular') %}

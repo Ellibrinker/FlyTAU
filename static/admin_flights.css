@@ -9,43 +9,46 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 20px;
+  padding: 0 30px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
   z-index: 1000;
 }
 
-.topbar-right {
+/* left side: logo + Hi + Reports */
+.topbar-left {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding-right: 70px;
+  margin-left: 150px;
+  gap: 40px;
 }
 
-.top-bar .logo-link {
+/* middle group */
+.topbar-middle {
   display: flex;
   align-items: center;
+  gap: 20px;
 }
 
-.top-bar .company-logo {
-  height: 60px;
+/* logo */
+.company-logo {
+  height: 50px;
   cursor: pointer;
 }
 
+/* right side */
 .topbar-right {
   display: flex;
+  margin-right: 150px;
   align-items: center;
-  gap: 12px;
-}
-
-.topbar-right .muted {
-  color: #666;
-  font-size: 14px;
+  gap: 10px;
 }
 
 /* Actions row */
 .actions-row {
   display: flex;
   gap: 10px;
+  margin-right: 90px;
+  padding: 18px;
   flex-wrap: wrap;
   align-items: center;
 }
@@ -76,6 +79,46 @@ body {
   border-radius: 12px;
   border: 2px solid rgba(37,34,99,0.1);
   margin-bottom: 20px;
+}
+
+.title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 15px 0 25px 0;
+}
+
+.main-title {
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0;
+  color: #252264;
+}
+
+.pill-btn-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 220px;
+  height: 42px;
+  padding: 10px 18px;
+  border-radius: 25px;
+  border: 2px solid rgba(37,34,99,0.25);
+  background: rgba(255,255,255,0.22);
+  color: #252264;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  font-size: 15px;
+  box-shadow: 0 8px 18px rgba(37,34,99,0.12);
+  transition: all 0.25s ease;
+}
+
+
+.pill-btn-add:hover, .pill:hover {
+  background-color: rgba(37,34,99,0.1);
+  border-color: rgb(37,34,99);
+  transform: translateY(-1px);
 }
 
 /* Pills / Buttons */
@@ -113,6 +156,7 @@ select:focus {
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
+
 /* Row layout */
 .row {
   display: flex;
@@ -121,9 +165,29 @@ select:focus {
   align-items: center;
 }
 
+.inputs-row {
+  justify-content: space-between;
+}
+
+.actions-row-center {
+  justify-content: center;
+  margin-top: 15px;
+  gap: 14px;
+}
+
+.actions-row-center button,
+.actions-row-center .pill-clear {
+  width: 160px;
+  display: inline-flex;
+  align-items: center; 
+  justify-content: center;
+  text-align: center;
+}
+
 /* Inputs, selects, buttons */
 input, select, button {
   padding: 10px;
+  width: 22%;
   border-radius: 40px;
   border: 2px solid rgba(37,34,99,0.2);
   outline: none;
@@ -138,6 +202,7 @@ input:focus, select:focus {
 
 button {
   cursor: pointer;
+  width: 14%;
   border: none;
   background-color: rgb(37,34,99);
   color: #fff;
@@ -148,6 +213,25 @@ button {
 
 button:hover {
   background-color: #130f42;
+  transform: translateY(-1px);
+}
+
+.pill, .pill-clear {
+  display: inline-flex;
+  gap: 4px;
+  padding: 8px 16px;
+  border-radius: 50px;
+  border: 2px solid rgba(37,34,99,0.2);
+  text-decoration: none;
+  font-weight: 600;
+  color: #252264;
+  background-color: rgba(255,255,255,0.1);
+  transition: all 0.3s ease;
+}
+
+.pill-clear:hover, .pill:hover {
+  background-color: rgba(37,34,99,0.1);
+  border-color: rgb(37,34,99);
   transform: translateY(-1px);
 }
 

@@ -11,19 +11,22 @@
 
   <!-- Top Bar -->
   <header class="top-bar">
-    <a href="/" class="logo-link">
-      <img src="{{ url_for('static', filename='logo.png') }}" alt="Company Logo" class="company-logo">
-    </a>
-    <div class="topbar-right">
-      <span class="muted">Hi {{ session.get('manager_name') }}</span>
-      <div class="actions-row">
-        <a href="/admin/flights/new" class="pill-btn">+ Add New Flight</a>
+    <div class="topbar-left">
+      <a href="/" class="logo-link">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Company Logo" class="company-logo">
+      </a>
+
+      <div class="topbar-middle">
+        <span class="muted">Hi {{ session.get('manager_name') }}</span>
         <a href="/admin/reports" class="pill-btn">Reports</a>
-        <a href="/admin/logout" class="pill-btn">Logout</a>
+        <a href="/admin" class="pill-btn">Admin Panel</a>
       </div>
     </div>
-  </header>
 
+    <div class="topbar-right">
+      <a href="/admin/logout" class="pill-btn">Logout</a>
+    </div>
+  </header>
   <div class="wrapper">
 
     {% if created %}
@@ -33,10 +36,18 @@
       </div>
     {% endif %}
 
+  <div class="title-row">
+    <h1 class="main-title">Flight Managment</h1>
+    <div class="actions-group" style="display: flex; gap: 10px;">
+      <a href="/admin/flights/new" class="pill-btn-add">+ Add New Flight</a>
+      <a href="/admin/planes/new" class="pill-btn-add">+ Add New Plane</a> 
+      <a href="/admin/crew/new" class="pill-btn-add">+ Add New Crew Member</a>
+  </div>
+
     <div class="box">
       <h3>Search</h3>
       <form method="GET" action="/admin/flights">
-        <div class="row">
+        <div class="row inputs-row">
           <input name="origin" placeholder="Origin (e.g. TLV)" value="{{ request.args.get('origin','') }}">
           <input name="destination" placeholder="Destination (e.g. ATH)" value="{{ request.args.get('destination','') }}">
           <input type="date" name="departure_date" value="{{ request.args.get('departure_date','') }}">
@@ -49,14 +60,12 @@
             <option value="completed" {% if s=='completed' %}selected{% endif %}>Completed</option>
             <option value="cancelled" {% if s=='cancelled' %}selected{% endif %}>Cancelled</option>
           </select>
-
-          <button type="submit">Search</button>
-          <a class="pill-btn" href="/admin/flights">Clear</a>
         </div>
-
-        <p class="muted">
-          Tip: “Cancel” is available only for flights with DB status <b>open</b> (future + not cancelled).
-        </p>
+        
+        <div class="row actions-row-center">
+          <button type="submit">Search</button>
+          <a class="pill-clear" href="/admin/flights">Clear</a>
+        </div>
       </form>
     </div>
 
@@ -69,7 +78,7 @@
       <div class="box">
         <div class="row" style="justify-content: space-between;">
           <h3>Results</h3>
-          <span class="pill">Total: <b>{{ flights|length }}</b></span>
+          <span>Total: <b>{{ flights|length }}</b></span>
         </div>
 
         <table>
@@ -89,7 +98,7 @@
 
             <tr>
               <td><b>{{ f.flight_id }}</b></td>
-              <td><span class="pill"><b>{{ f.origin_airport }}</b> → <b>{{ f.destination_airport }}</b></span></td>
+              <td><span><b>{{ f.origin_airport }}</b> → <b>{{ f.destination_airport }}</b></span></td>
               <td>{{ f.departure_date }}</td>
               <td>{{ f.departure_time }}</td>
 
@@ -113,7 +122,7 @@
 
               <td>
                 <div class="actions">
-                  {% if dbst == 'open' %}
+                  {% if dbst == 'open'%}
                     <a class="danger-link" href="{{ url_for('admin.admin_cancel_flight', flight_id=f.flight_id) }}">Cancel</a>
                   {% else %}
                     <span class="disabled-link" title="Only flights with DB status 'open' can be cancelled">Cancel</span>

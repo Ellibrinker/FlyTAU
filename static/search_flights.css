@@ -13,11 +13,13 @@
 
 .top-bar .logo-link {
     display: flex;
+    margin-left: 90px;
     align-items: center;
 }
 
 .top-bar .company-logo {
     height: 60px;
+    margin-left: 90px;
     cursor: pointer;
 }
 
@@ -207,6 +209,11 @@ th, td {
     border-bottom: 1px solid rgba(37, 34, 99, 0.2);
     font-size: 16px;
     color: #252264;
+}
+
+td a {
+    display: flex;
+    justify-content: center;
 }
 
 th {

@@ -14,11 +14,13 @@
 
 .top-bar .logo-link {
     display: flex;
+    margin-left: 90px;
     align-items: center;
 }
 
 .top-bar .company-logo {
     height: 60px;
+    margin-left: 90px;
     cursor: pointer;
 }
 
