@@ -56,15 +56,23 @@
         <i class='bxr bx-plane-land'></i>
       </div>
 
-      <div class="input-box">
-        <!-- Optional date -->
+      <div class="input-box date-box">
+        <input
+          type="text"
+          id="date_text"
+          value="Anytime"
+          readonly
+        >
+
         <input
           type="date"
           name="departure_date"
-          value="{{ departure_date or '' }}"
+          id="date_real"
         >
-        <small class="optional-hint">Optional</small>
+
+        <i class='bxr bx-calendar'></i>
       </div>
+
 
       <button type="submit">Search Flights</button>
 
@@ -136,12 +144,29 @@
   </div>
 
   <script>
-    // Keep date optional, but prevent selecting past dates if user chooses a date
-    const dateInput = document.querySelector('input[type="date"]');
-    if (dateInput) {
-      const today = new Date().toISOString().split('T')[0];
-      dateInput.min = today;
+  const textInput = document.getElementById("date_text");
+  const dateInput = document.getElementById("date_real");
+
+  const today = new Date().toISOString().split("T")[0];
+  dateInput.min = today;
+
+  textInput.addEventListener("click", () => {
+    textInput.style.display = "none";
+    dateInput.style.display = "block";
+    dateInput.focus();
+  });
+
+    dateInput.addEventListener("click", () => {
+    if (dateInput.showPicker) {
+      dateInput.showPicker(); // Chrome / Edge
     }
+  });
+  dateInput.addEventListener("input", () => {
+  if (!dateInput.value) {
+    dateInput.style.display = "none";
+    textInput.style.display = "block";
+  }
+});
   </script>
 
 </body>
