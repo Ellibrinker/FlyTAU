@@ -18,7 +18,7 @@
       </a>
 
       <div class="topbar-middle">
-        <span class="muted">Hi Manager</span>
+        <span class="muted">Hi {{ session.get('manager_name') }}</span>
         <a href="/admin" class="pill-btn">Admin Panel</a>
         <a href="/admin/flights" class="pill-btn">Flight Management</a>
         <a href="/admin/reports" class="pill-btn">Reports</a>
