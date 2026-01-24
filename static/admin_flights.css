@@ -83,8 +83,9 @@ body {
 
 .title-row {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
   margin: 15px 0 25px 0;
 }
 
@@ -144,9 +145,9 @@ body {
 
 .actions-group {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
+  width: auto;
   gap: 20px;
-  width: 100%;
 }
 
 input:hover,
