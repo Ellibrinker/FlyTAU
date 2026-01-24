@@ -1,65 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Flight Booking</title>
-    <link rel="stylesheet" href="/static/search_flights.css">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&display=swap" rel="stylesheet">
-    <link href='https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css' rel='stylesheet'>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flight Booking</title>
+
+  <link rel="stylesheet" href="/static/search_flights.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link href="https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css" rel="stylesheet">
 </head>
+
 <body>
 
-    <header class="top-bar">
-        <a href="/" class="logo-link">
-            <img src="{{ url_for('static', filename='logo.png') }}" alt="Company Logo" class="company-logo">
-        </a>
-    </header>
+  <header class="top-bar">
+    <a href="/" class="logo-link">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Company Logo" class="company-logo">
+    </a>
+  </header>
 
-    <div class="content-container">
+  <div class="content-container">
 
-        {% if errors %}
-        <div class="errors">
-            <ul>
-            {% for error in errors %}
-                <li>{{ error }}</li>
-            {% endfor %}
-            </ul>
-        </div>
-        {% endif %}
+    {% if errors %}
+      <div class="errors">
+        <ul>
+          {% for error in errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
 
-        <!-- טופס חיפוש טיסות -->
-        <h1 class="search-title">Choose your destination ✈️</h1>
-        <p class="search-subtitle">Find the best flights in just a few clicks</p>
-        <form action="/search_flights" method="GET" class="search-form">
-            <div class="input-box">
-                <input type="text" name="origin" placeholder="Input Origin" value="{{ request.args.get('origin', '') }}">
-                <i class='bxr  bx-plane-take-off'></i>
-            </div>
+    <!-- Flight search form -->
+    <h1 class="search-title">Choose your destination ✈️</h1>
+    <p class="search-subtitle">Find the best flights in just a few clicks</p>
 
-            <div class="input-box">
-                <input type="text" name="destination" placeholder="Input Destination" value="{{ request.args.get('destination', '') }}">
-                <i class='bxr  bx-plane-land'></i>
-            </div>
+    <form action="/search_flights" method="GET" class="search-form">
 
-            <div class="input-box">
-                <input type="date" name="departure_date" value="{{ departure_date or '' }}" required>
-            </div>
+      <div class="input-box">
+        <input
+          type="text"
+          name="origin"
+          placeholder="Input Origin"
+          value="{{ origin or request.args.get('origin', '') }}"
+        >
+        <i class='bxr bx-plane-take-off'></i>
+      </div>
 
-            <button type="submit">Search Flights</button>
-            <a href="/" class="back-home">
-                <i class='bxr  bx-arrow-left'></i>
-                Back to Home
-            </a>
+      <div class="input-box">
+        <input
+          type="text"
+          name="destination"
+          placeholder="Input Destination"
+          value="{{ destination or request.args.get('destination', '') }}"
+        >
+        <i class='bxr bx-plane-land'></i>
+      </div>
 
-        </form>
+      <div class="input-box">
+        <!-- Optional date -->
+        <input
+          type="date"
+          name="departure_date"
+          value="{{ departure_date or '' }}"
+        >
+      </div>
 
-        <!-- טבלת טיסות -->
-        {% if flights %}
-        <div class="table-header-box">
-            <h1>Available Flights</h1>
-        </div>
+      <button type="submit">Search Flights</button>
 
-        <div class="table-wrapper">
+      <a href="/" class="back-home">
+        <i class='bxr bx-arrow-left'></i>
+        Back to Home
+      </a>
+
+    </form>
+
+    <!-- Flights table -->
+    {% if flights %}
+      <div class="table-header-box">
+        <h1>Available Flights</h1>
+      </div>
+
+      <div class="table-wrapper">
         <table>
           <thead>
             <tr>
@@ -82,8 +103,23 @@
                 <td>{{ flight.destination_airport }}</td>
                 <td>{{ flight.departure_date }}</td>
                 <td>{{ flight.departure_time }}</td>
-                <td>{% if flight.regular_price %}₪{{ "%.2f"|format(flight.regular_price) }}{% else %}—{% endif %}</td>
-                <td>{% if flight.business_price %}₪{{ "%.2f"|format(flight.business_price) }}{% else %}—{% endif %}</td>
+
+                <td>
+                  {% if flight.regular_price %}
+                    ₪{{ "%.2f"|format(flight.regular_price) }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+
+                <td>
+                  {% if flight.business_price %}
+                    ₪{{ "%.2f"|format(flight.business_price) }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+
                 <td>
                   <a href="/select_seats?flight_id={{ flight.flight_id }}">
                     <button type="button">Book Now</button>
@@ -93,14 +129,19 @@
             {% endfor %}
           </tbody>
         </table>
-        </div>
-        {% endif %}
+      </div>
+    {% endif %}
 
-    </div>
-    <script>
-      const dateInput = document.querySelector('input[type="date"]');
+  </div>
+
+  <script>
+    // Keep date optional, but prevent selecting past dates if user chooses a date
+    const dateInput = document.querySelector('input[type="date"]');
+    if (dateInput) {
       const today = new Date().toISOString().split('T')[0];
       dateInput.min = today;
-    </script>
+    }
+  </script>
+
 </body>
 </html>

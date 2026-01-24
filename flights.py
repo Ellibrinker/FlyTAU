@@ -3,15 +3,23 @@ from datetime import datetime, date, timedelta
 
 flights_bp = Blueprint("flights", __name__)
 
+
 @flights_bp.route("/search_flights", methods=["GET"])
 def search_flights():
-    origin = request.args.get("origin")
-    destination = request.args.get("destination")
-    departure_date = request.args.get("departure_date")
+    origin = (request.args.get("origin") or "").strip()
+    destination = (request.args.get("destination") or "").strip()
+    departure_date = (request.args.get("departure_date") or "").strip()  # אופציונלי
 
     # כניסה ראשונה לדף - בלי שגיאות
-    if origin is None and destination is None and departure_date is None:
-        return render_template("search_flights.html", errors=[], flights=[], departure_date="")
+    if not origin and not destination and not departure_date:
+        return render_template(
+            "search_flights.html",
+            errors=[],
+            flights=[],
+            origin="",
+            destination="",
+            departure_date=""
+        )
 
     errors = []
 
@@ -22,13 +30,12 @@ def search_flights():
     if origin and destination and origin == destination:
         errors.append("Origin and destination cannot be the same")
 
-    try:
-        if departure_date:
+    # ✅ תאריך אופציונלי: רק אם הוזן - נוודא שהוא תקין
+    if departure_date:
+        try:
             datetime.strptime(departure_date, "%Y-%m-%d")
-        else:
-            errors.append("Departure date is required")
-    except (ValueError, TypeError):
-        errors.append("Invalid date")
+        except (ValueError, TypeError):
+            errors.append("Invalid date")
 
     if errors:
         return render_template(
@@ -42,6 +49,7 @@ def search_flights():
 
     from main import db_cur
 
+    # בדיקת קיום נתיב (Airway) - עדיין רלוונטי גם בלי תאריך
     with db_cur() as cursor:
         cursor.execute("""
             SELECT 1
@@ -63,7 +71,10 @@ def search_flights():
     flights = get_bookable_flights(origin, destination, departure_date)
 
     if not flights:
-        errors.append("No flights available for booking on this date")
+        errors.append(
+            "No flights available for booking on this route"
+            + (" on this date" if departure_date else "")
+        )
 
     return render_template(
         "search_flights.html",
@@ -75,16 +86,18 @@ def search_flights():
     )
 
 
-def get_bookable_flights(origin, destination, departure_date):
+def get_bookable_flights(origin, destination, departure_date=None):
     """
-    Returns flights that are relevant for booking for customers:
+    Returns flights relevant for booking for customers:
     - not cancelled
     - departure datetime is in the future
     - has at least 1 available seat (not full)
+    - if departure_date is provided -> filter by that date
+      else -> allow any date (from now onwards)
     """
     from main import db_cur
 
-    query = """
+    base_query = """
         SELECT
             f.flight_id,
             f.origin_airport,
@@ -93,7 +106,6 @@ def get_bookable_flights(origin, destination, departure_date):
             f.departure_time,
             reg.price AS regular_price,
             bus.price AS business_price,
-            -- helpful info for UI (optional)
             (SELECT COUNT(*)
              FROM FlightSeat fs
              WHERE fs.flight_id = f.flight_id
@@ -106,7 +118,6 @@ def get_bookable_flights(origin, destination, departure_date):
           ON bus.flight_id = f.flight_id AND bus.class_type='Business'
         WHERE f.origin_airport=%s
           AND f.destination_airport=%s
-          AND f.departure_date=%s
           AND LOWER(f.status) <> 'cancelled'
           AND TIMESTAMP(f.departure_date, f.departure_time) > NOW()
           AND EXISTS (
@@ -115,13 +126,20 @@ def get_bookable_flights(origin, destination, departure_date):
               WHERE fs2.flight_id = f.flight_id
                 AND LOWER(fs2.status) = 'available'
           )
-        ORDER BY f.departure_time
     """
 
-    with db_cur() as cursor:
-        cursor.execute(query, (origin, destination, departure_date))
-        return cursor.fetchall()
+    params = [origin, destination]
 
+    # ✅ אם הוזן תאריך -> מוסיפים תנאי
+    if departure_date:
+        base_query += " AND f.departure_date=%s"
+        params.append(departure_date)
+
+    base_query += " ORDER BY f.departure_date, f.departure_time"
+
+    with db_cur() as cursor:
+        cursor.execute(base_query, tuple(params))
+        return cursor.fetchall()
 
 
 @flights_bp.route("/select_seats", methods=["GET", "POST"])
