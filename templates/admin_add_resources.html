@@ -6,33 +6,197 @@
 
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/admin_add_resources.css">
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
   <link href='https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css' rel='stylesheet'>
 </head>
 
 <body>
   <header class="top-bar">
-    <a href="/admin/" class="logo-link">
-      <img src="/static/logo.png" alt="Logo">
-    </a>
+    <div class="topbar-left">
+      <a href="/admin/" class="logo-link">
+        <img src="/static/logo.png" alt="Logo" class="company-logo">
+      </a>
+
+      <div class="topbar-middle">
+        <span class="muted">Hi Manager</span>
+        <a href="/admin" class="pill-btn">Admin Panel</a>
+        <a href="/admin/flights" class="pill-btn">Flight Management</a>
+        <a href="/admin/reports" class="pill-btn">Reports</a>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <a href="/admin/logout" class="pill-btn">Logout</a>
+    </div>
   </header>
 
-  <div class="wrapper">
-    <h1>Resources Management</h1>
-    <p class="subtitle">Manage planes and crew members in the system.</p>
 
-    <div class="actions">
-      <a class="admin-btn" href="/admin/planes/new">
-        <i class='bx bx-plus-circle'></i> + Add New Plane
-      </a>
+<div class="wrapper">
+  <h1 class="main-title">Resources Management</h1>
+  <p class="subtitle">Here you can add new planes and crew members to the system.</p>
 
-      <a class="admin-btn" href="/admin/crew/new">
-        <i class='bx bx-user-plus'></i> + Add New Crew Member
-      </a>
-    </div>
+  <hr class="divider">
 
-    <div class="bottom-actions">
-      <a class="back-link" href="/admin/"><i class='bx bx-left-arrow-alt'></i> Back to Admin Panel</a>
+  <div class="actions-group">
+    <button class="pill-btn-add" id="openAddPlane" type="button">
+      <i class='bx bx-plus-circle'></i> Add New Plane
+    </button>
+    <button class="pill-btn-add" id="openAddCrew" type="button">
+      <i class='bx bx-user-plus'></i> Add New Crew Member
+    </button>
+  </div>
+   
+  <div class="footer">
+    <a href="/admin/">
+      <i class='bx bx-arrow-left'></i>
+      Back
+    </a>
+  </div>
+</div>
+
+  <!-- Modal -->
+<div id="addPlaneModal" class="modal modal-plane">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+
+    <h1>Add New Plane</h1>
+
+    <form method="POST" action="/admin/planes/new">
+      <div class="input-box">
+        <select name="manufacturer" required>
+          <option value="" disabled selected>Select Manufacturer...</option>
+          <option value="Boeing">Boeing</option>
+          <option value="Airbus">Airbus</option>
+          <option value="Dassault">Dassault</option>
+        </select>
+        <i class='bx bx-wrench'></i>
+      </div>
+
+      <div class="input-box">
+        <input type="date" name="purchase_date" required />
+      </div>
+
+      <div class="input-box">
+        <select name="plane_type" required>
+          <option value="" disabled selected>Select Plane Size...</option>
+          <option value="small">Small Plane</option>
+          <option value="big">Big Plane</option>
+        </select>
+        <i class='bx bx-expand-alt'></i>
+      </div>
+
+      <button type="submit">Create New Plane</button>
+    </form>
+  </div>
+  </div>
+
+<!-- Modal Crew -->
+<div id="addCrewModal" class="modal modal-crew">
+  <div class="modal-content crew-style">
+    <span class="close close-crew">&times;</span>
+
+    <h1>Add New Crew Member</h1>
+    <p class="muted">Enter personal details and professional role</p>
+
+    <form method="POST" action="/admin/crew/new">
+      <div class="input-box">
+        <input name="id" type="number" placeholder="ID Number" required />
+        <i class='bx bx-id-card'></i>
+      </div>
+
+      <div class="two-col">
+        <div class="input-box">
+          <input name="first_name" placeholder="First Name" required />
+          <i class='bx bx-user'></i>
+        </div>
+        <div class="input-box">
+          <input name="last_name" placeholder="Last Name" required />
+          <i class='bx bx-user'></i>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="input-box">
+          <input name="phone" placeholder="Phone Number" />
+          <i class='bx bx-phone'></i>
+        </div>
+        <div class="input-box">
+          <input name="city" placeholder="City" />
+          <i class='bx bx-map'></i>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="input-box">
+          <input name="street" placeholder="Street" />
+          <i class='bx bx-home-alt'></i>
+        </div>
+        <div class="input-box">
+          <input name="house_num" type="number" placeholder="House #" />
+          <i class='bx bx-hash'></i>
+        </div>
+      </div>
+
+      <div class="input-box">
+        <select name="role" required>
+          <option value="" disabled selected>Select Role...</option>
+          <option value="pilot">Pilot</option>
+          <option value="attendant">Flight Attendant</option>
+        </select>
+        <i class='bx bx-briefcase'></i>
+      </div>
+
+      <div class="checkbox-row">
+        <input type="checkbox" name="long_training" id="lt">
+        <label for="lt">Long Flight Training</label>
+      </div>
+
+      <button type="submit">Register Crew Member</button>
+    </form>
     </div>
   </div>
-</body>
+</div>
+
+
+
+
+
+  <script>
+    const modal = document.getElementById("addPlaneModal");
+    const openBtn = document.getElementById("openAddPlane");
+    const closeBtn = document.querySelector(".close");
+
+    const crewModal = document.getElementById("addCrewModal");
+    const openCrewBtn = document.getElementById("openAddCrew");
+    const closeCrewBtn = document.querySelector(".close-crew");
+
+    openBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      modal.style.display = "flex";
+    });
+
+    closeBtn.addEventListener("click", () => {
+      modal.style.display = "none";
+    });
+
+    openCrewBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      crewModal.style.display = "flex";
+    });
+
+    closeCrewBtn.addEventListener("click", () => {
+      crewModal.style.display = "none";
+    });
+
+    window.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        modal.style.display = "none";
+      } else if (e.target === crewModal) {
+        crewModal.style.display = "none";
+      }
+    });
+
+  </script>
+
+</body> 
 </html>
