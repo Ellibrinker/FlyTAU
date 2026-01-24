@@ -14,9 +14,14 @@
       <img src="{{ url_for('static', filename='logo.png') }}" alt="Company Logo" class="company-logo">
     </a>
 
+    <div class="topbar-middle">
+      <span class="muted">Hi {{ session.get('manager_name') }}</span>
+      <a href="/admin/flights" class="pill">Flight Managment</a>
+      <a href="/admin" class="pill">Admin Panel</a>
+    </div>
+
     <div class="header-actions">
-      <a href="/admin/flights" class="admin-btn">Flights</a>
-      <a href="/admin/logout" class="logout">Logout</a>
+      <a href="/admin/logout" class="logout pill">Logout</a>
     </div>
   </header>
 
@@ -31,12 +36,10 @@
     <form method="GET" style="text-align:center; margin-bottom:20px;">
       <div class="input-box">
         <input type="date" name="date_from" value="{{ date_from or '' }}">
-        <i class="bx bxs-calendar" onclick="this.previousElementSibling.showPicker()"></i>
       </div>
 
       <div class="input-box">
         <input type="date" name="date_to" value="{{ date_to or '' }}">
-        <i class="bx bxs-calendar" onclick="this.previousElementSibling.showPicker()"></i>
       </div>
 
       <div class="input-box">
@@ -74,9 +77,10 @@
       </div>
     </div>
   {% endif %}
-
-  <!-- Report Header -->
+<!-- Report Header + Results באותה קופסה -->
   <div class="box">
+
+    <!-- Report Header -->
     <div class="row" style="justify-content: space-between;">
       <div>
         <h2>{{ meta.title }}</h2>
@@ -84,7 +88,7 @@
           <div class="subtitle">{{ meta.subtitle }}</div>
         {% endif %}
       </div>
-      <span class="pill">Range: <b>{{ date_from }}</b> → <b>{{ date_to }}</b></span>
+      <span> Date Range: <b>{{ date_from }}</b> → <b>{{ date_to }}</b></span>
     </div>
 
     {% if meta.notes and meta.notes|length > 0 %}
@@ -94,13 +98,11 @@
         {% endfor %}
       </div>
     {% endif %}
-  </div>
 
-  <!-- Results -->
-  <div class="box">
-    <div class="row" style="justify-content: space-between;">
+    <!-- Results -->
+    <div class="row" style="justify-content: space-between; margin-top: 25px;">
       <h3>Results</h3>
-      <span class="pill">Rows: <b>{{ data|length if data else 0 }}</b></span>
+      <span>Rows: <b>{{ data|length if data else 0 }}</b></span>
     </div>
 
     {% if not data or data|length == 0 %}
@@ -134,7 +136,9 @@
         Back
       </a>
     </div>
+
   </div>
+
 
 </body>
 </html>
