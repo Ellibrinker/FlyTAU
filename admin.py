@@ -1171,7 +1171,7 @@ def admin_add_plane():
                 else:
                     cursor.execute("INSERT INTO SmallPlane (plane_id) VALUES (%s)", (new_id,))
             
-            return redirect("/admin/flights?msg=Plane+Added")
+            return redirect("/admin/resources?msg=Plane+Added")
         except Exception as e:
             return render_template("admin_add_plane.html", error=str(e))
             
@@ -1202,7 +1202,7 @@ def admin_add_crew():
                 else:
                     cursor.execute("INSERT INTO FlightAttendant (id) VALUES (%s)", (data['id'],))
             
-            return redirect("/admin/flights?msg=Crew+Member+Added")
+            return redirect("/admin/resources?msg=Crew+Member+Added")
         except Exception as e:
             return render_template("admin_add_crew.html", error=str(e))
             
