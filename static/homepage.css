@@ -52,8 +52,9 @@ to {
 }
 
 .guest-hello {
-  font-weight: 600;
-  opacity: 0.9;
+    font-weight: 600;
+    opacity: 0.9;
+    margin-right: auto;
 }
 
 .logo img {
