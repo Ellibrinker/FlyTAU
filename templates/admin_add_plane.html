@@ -23,8 +23,13 @@
 
         <form method="POST">
             <div class="input-box">
-                <input name="manufacturer" placeholder="Manufacturer (e.g. Boeing)" required />
-                <i class='bx bx-wrench'></i>
+                <select name="manufacturer" required>
+                    <option value="" disabled selected>Select Manufacturer...</option>
+                    <option value="Boeing">Boeing</option>
+                    <option value="Airbus">Airbus</option>
+                    <option value="Dassault">Dassault</option>
+                    </select>                
+                    <i class='bx bx-wrench'></i>
             </div>
 
             <div class="input-box">
