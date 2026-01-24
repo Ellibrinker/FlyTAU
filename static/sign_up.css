@@ -198,3 +198,21 @@ display: block;
     font-size: 14px;
     text-align: center;
 }
+
+/* Phones stack (multiple phone rows) */
+#phones {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;          /* רווח בין שורות טלפון */
+    align-items: center; /* כדי שיישאר ממורכז כמו שאר השדות */
+}
+
+/* לא לעשות margin כפול על כל input-box בתוך phones */
+#phones .input-box {
+    margin: 0 auto;     /* במקום margin: 15px auto; */
+}
+
+/* לא צריך margin-bottom על האינפוט עצמו כי gap כבר עושה את זה */
+#phones .phone-input {
+    margin-bottom: 0;
+}
