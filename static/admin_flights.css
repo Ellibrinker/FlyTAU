@@ -142,6 +142,13 @@ body {
   transform: translateY(-1px);
 }
 
+.actions-group {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  width: 100%;
+}
+
 input:hover,
 input:focus {
     border-color: #252264;
