@@ -18,15 +18,15 @@
 .topbar-left {
   display: flex;
   align-items: center;
-  margin-left: 90px;
-  gap: 20px;
+  margin-left: 150px;
+  gap: 40px;
 }
 
 /* middle group */
 .topbar-middle {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 20px;
 }
 
 /* logo */
