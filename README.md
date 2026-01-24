@@ -98,38 +98,50 @@ The interface is designed to support the following reports:
 
 The system explicitly enforces real-world airline business rules and operational constraints, including:
 
+---
+
 ### **Role-based access & separation**
 - Managers are automatically redirected from the public homepage to the admin dashboard.
 - Managers are strictly prohibited from purchasing flight tickets, either as registered users or as guests.
 - Managers cannot be assigned as flight crew:
   - Workers with a managerial role are excluded from pilot and flight-attendant selection lists.
   - Backend validation blocks assigning a manager to any crew role.
-- Manager login prevents invalid role configurations where a single ID exists as both **Manager** and **AirCrew**.
+- Manager login prevents invalid role configurations where a single ID exists simultaneously as **Manager** and **AirCrew**.
+
+---
 
 ### **Registration & guest usage rules**
 - Customer email addresses must be unique.
 - At least one phone number is required during registration; empty or duplicate phone entries are ignored.
-- Guests can retrieve an order only by providing both the order code (order_id) and the associated email address.
+- Guests can retrieve an order only by providing both the order code (`order_id`) and the associated email address.
+
+---
 
 ### **Flight publication & lifecycle**
 - Once a flight is successfully created by a manager, it is automatically published and becomes available for customer booking.
 - Flight duration and landing time are calculated automatically based on the selected route and are not entered manually by the manager.
 - Customers and managers view different flight boards:
-  - Customers see only flights that are relevant for booking.
+  - Customers see only flights that are eligible for booking.
   - Managers can view all flights, including active, full, completed, and cancelled flights.
 
+---
+
 ### **Flight visibility & booking eligibility**
-- Customers can only view flights that are eligible for booking:
+- Customers can only view flights that meet all of the following conditions:
   - Not cancelled
   - Departure time is in the future
   - At least one seat is available
 - Flights whose departure time has passed are not displayed to customers.
 - Operational actions (booking, crew assignment, flight cancellation) are blocked on flights that have already departed.
 
+---
+
 ### **Search validation (server-side)**
 - Origin, destination, and departure date are mandatory search parameters.
 - Origin and destination airports must be different.
 - The system verifies that a valid route (`Airway`) exists between the selected origin and destination.
+
+---
 
 ### **Seat selection & booking protection**
 - Booking is blocked for cancelled flights, past/departed flights, and fully booked flights.
@@ -138,9 +150,13 @@ The system explicitly enforces real-world airline business rules and operational
   - A single order may include seats from multiple classes (Regular and Business).
   - Pricing is calculated per seat according to its class type.
 
+---
+
 ### **Pricing rules**
 - Regular class pricing is mandatory for all flights.
-- Business class pricing is available only for aircraft classified as **Big Planes**.
+- Business class pricing is available **only** for aircraft classified as **Big Planes**.
+
+---
 
 ### **Order status & customer cancellation policy**
 - Order status is derived from the flight’s departure time:
@@ -152,25 +168,54 @@ The system explicitly enforces real-world airline business rules and operational
 - Partial cancellation of seats within an order is not allowed.
 - Upon cancellation, all seats in the order are released back to availability.
 
+---
+
 ### **Long vs. short flights**
 - Flights longer than **360 minutes** are classified as *long flights*.
 - Only aircraft classified as **Big Planes** may be assigned to long flights.
-- Only crew members who are qualified for long flights may be assigned to long flights.
+- Only crew members explicitly marked as long-flight qualified may be assigned to long flights.
 
-### **Availability, overlap prevention & scheduling buffers**
-- Aircraft and crew members cannot be assigned to overlapping flights.
-- Buffer times are enforced to prevent unrealistic scheduling:
-  - Aircraft require a **60-minute** buffer between flights.
-  - Crew members require a **120-minute** buffer between flights.
-- Overlaps are checked using padded time windows to ensure safe scheduling.
+---
+
+### **Resource location & timeline-based availability (Aircraft & Crew)**
+
+To reflect real-world airline scheduling, **both aircraft and crew members (pilots & attendants) are treated as being physically located at a specific airport at any point in time**.
+
+**Key principles (per course forum clarification):**
+- A resource may be assigned **only** to a flight that departs from the airport where it is located at the departure time.
+- The system does **not** assume that a plane or crew member “moved” between flights, regardless of how much time passed.
+- No separate calendar or manual location field is maintained for resources.  
+  Instead, location is **derived dynamically from the flight timeline**.
+
+#### **How resource location is determined**
+- For a new flight with departure datetime `T` and origin airport `O`,
+  the system identifies the **last non-cancelled flight** of the resource whose **landing time is ≤ T**.
+- The resource’s derived location at time `T` is the destination airport of that last flight.
+- **First assignment exception:**  
+  If a resource has no previous flights, no location constraint is applied, and it may be assigned to a flight departing from any airport.
+
+#### **Availability checks (time + location)**
+When creating a new flight, resources shown to the manager must satisfy:
+1. **Time overlap prevention:** a resource cannot be assigned to overlapping flights.
+2. **Location consistency at departure:** the resource must be located at the new flight’s origin airport at departure time, unless this is its first assignment.
+
+#### **Cancelled flights behavior**
+Cancelled flights are treated as non-existent for scheduling purposes:
+- Cancelled flights do not block availability.
+- Cancelled flights do not affect derived resource location.
+- Cancelling a flight has **no cascading effect** on future flights; the system does not attempt to repair dependent scheduling chains.
+
+---
 
 ### **Admin flight creation validations**
 - Flights cannot be created in the past (server-side enforcement).
-- A valid route must exist in the `Airway` table before a flight can be created.
+- A valid route must exist in the `Airway` table before flight creation.
 - Crew requirements depend on aircraft size:
   - **Big Plane**: 3 pilots and 6 flight attendants
   - **Small Plane**: 2 pilots and 3 flight attendants
-- Seat inventory must exist for the selected aircraft before flight creation.
+- Seat inventory must exist for the selected aircraft before a flight can be created.
+
+---
 
 ### **Resource creation & integrity**
 - Aircraft must be registered in the system before they can be assigned to flights.
@@ -182,13 +227,17 @@ The system explicitly enforces real-world airline business rules and operational
 - Crew members assigned to long flights must be explicitly marked as long-flight qualified.
 - Managers are explicitly blocked from being registered as air crew members.
 
+---
+
 ### **Flight cancellation policy (Admin)**
-- Only active/open flights can be cancelled (not full, not completed, not already cancelled).
+- Only active/open flights can be cancelled (not full, not completed, and not already cancelled).
 - Flight cancellation is blocked less than **72 hours** before departure.
 - Cancelling a flight triggers:
   - System cancellation of all active orders (full refund, total payment set to 0)
   - Release of all flight seats back to availability
-  - Release of assigned aircraft and crew, making them available for other flights in the same time window.
+  - Release of assigned aircraft and crew for future scheduling
+
+---
 
 ### **Data consistency safeguards**
 - Invalid `FlightSeat` records (seats that do not match the flight’s aircraft) are removed automatically.
