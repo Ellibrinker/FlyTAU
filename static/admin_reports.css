@@ -23,14 +23,12 @@
 .top-bar .logo-link {
     display: flex;
     align-items: center;
-    margin-left: 90px;
 }
 
 .company-logo {
   height: 50px;
   cursor: pointer;
 }
-
 
 .top-bar .nav-links {
     margin-right: 70px;
