@@ -51,6 +51,11 @@ to {
 }
 }
 
+.guest-hello {
+  font-weight: 600;
+  opacity: 0.9;
+}
+
 .logo img {
     height: 62px;
     object-fit: cover;
