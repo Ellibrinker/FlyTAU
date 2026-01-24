@@ -135,7 +135,7 @@ backdrop-filter: blur(10px);
 
 /* Modal */
 .modal {
-  display: none;
+  display: flex;
   position: fixed;
   z-index: 2000;
   left: 0;
@@ -144,15 +144,20 @@ backdrop-filter: blur(10px);
   height: 100%;
   background: rgba(0,0,0,0.5);
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
+  padding-top: 60px;
 }
 
 .modal-content {
-  background: rgba(255,255,255,0.9);
-  border-radius: 16px;
-  padding: 25px;
-  width: 90%;
-  max-width: 500px;
+    background: rgba(255,255,255,0.9);
+    border-radius: 16px;
+    padding: 25px;
+    width: 90%;
+    max-width: 500px;
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
 .modal-content h2 {
@@ -200,6 +205,41 @@ backdrop-filter: blur(10px);
   border: 2px solid #252264;
   background: transparent;
   cursor: pointer;
+  transition: 0.2s ease; 
+  font-weight: 600;
+}
+
+/* Hover */
+.phone-row .add-phone:hover {
+  background: rgba(37, 34, 99, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Active (כשלוחצים) */
+.phone-row .add-phone:active {
+  background: #252264;
+  color: #fff;
+  transform: translateY(0px);
+}
+
+
+.remove-phone {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 2px solid #b00020;
+  background: transparent;
+  cursor: pointer;
+  color: #b00020;
+}
+
+.remove-phone:hover {
+  background: rgba(176, 0, 32, 0.1);
+}
+
+.modal-actions {
+  margin-top: auto;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .grid {
