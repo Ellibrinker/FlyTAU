@@ -13,12 +13,7 @@
     <a href="/" class="logo-link">
       <img src="{{ url_for('static', filename='logo.png') }}" alt="Company Logo" class="company-logo">
     </a>
-    <a href="/admin/flights" class="back-home">
-      <i class='bx bx-arrow-left'></i>
-      Back to flights
-    </a>
   </header>
-
   <div class="wrapper">
 
     {% if error %}
@@ -27,7 +22,7 @@
 
     {% if step == 1 %}
       <div class="box">
-        <h3 class="section-title">Step 1: Choose route & departure</h3>
+        <h3 class="title">Choose route & departure</h3>
         <p class="muted">We’ll check flight duration, and show only available planes & crew</p>
 
         <form method="POST">
@@ -44,15 +39,15 @@
             </div>
 
             <div class="input-box">
-              <input type="date" name="departure_date" required />
+              <input type="date" name="departure_date" id="departure_date" required />
             </div>
 
             <div class="input-box">
-              <input type="time" name="departure_time" required />
+              <input type="time" name="departure_time" id="departure_time" required />
             </div>
           </div>
 
-          <div class="row" style="margin-top: 12px;">
+          <div class="row" style="margin-top: 12px; width: 80%; margin: 12px auto;">
             <button type="submit">Next</button>
           </div>
         </form>
@@ -60,7 +55,7 @@
 
     {% else %}
       <div class="box">
-        <h3 class="section-title">Step 2: Select plane, crew & pricing</h3>
+        <h3 class="title">Select plane, crew & pricing</h3>
 
         <p class="row" style="flex-wrap: wrap; gap:8px;">
           <span class="pill">Route: <b>{{ data.origin }}</b> → <b>{{ data.destination }}</b></span>
@@ -114,6 +109,7 @@
                 <p class="muted">Try another time/date or route.</p>
               {% else %}
                 <p class="hint" id="pilotsHint">You can select exactly {{ data.pilots_needed }} pilots.</p>
+                <div class="list-box">
                 {% for pl in data.pilots %}
                   <label>
                     <input type="checkbox" class="pilot-checkbox" name="pilot_ids" value="{{ pl.id }}"
@@ -121,6 +117,7 @@
                     {{ pl.id }} — {{ pl.first_name }} {{ pl.last_name }}
                   </label>
                 {% endfor %}
+                </div>
               {% endif %}
             </div>
 
@@ -136,6 +133,7 @@
                 <p class="muted">Try another time/date or route.</p>
               {% else %}
                 <p class="hint" id="faHint">You can select exactly {{ data.fa_needed }} attendants.</p>
+                <div class="list-box">
                 {% for fa in data.attendants %}
                   <label>
                     <input type="checkbox" class="fa-checkbox" name="fa_ids" value="{{ fa.id }}"
@@ -143,6 +141,7 @@
                     {{ fa.id }} — {{ fa.first_name }} {{ fa.last_name }}
                   </label>
                 {% endfor %}
+                </div>
               {% endif %}
             </div>
           </div>
@@ -296,6 +295,41 @@
 
 
     {% endif %}
+    <div class="footer">
+      <a href="/admin/flights">
+        <i class='bx bx-arrow-left'></i>
+        Back to flights
+      </a>
+    </div>
   </div>
+
+  <script>
+  const dateInput = document.getElementById("departure_date");
+  const timeInput = document.getElementById("departure_time");
+
+  const today = new Date().toISOString().split("T")[0];
+  dateInput.min = today;
+
+  function updateTimeMin() {
+    const selectedDate = new Date(dateInput.value);
+    const today = new Date();
+
+    if (!dateInput.value) return;
+
+    if (
+      selectedDate.getFullYear() === today.getFullYear() &&
+      selectedDate.getMonth() === today.getMonth() &&
+      selectedDate.getDate() === today.getDate()
+    ) {
+      const nowTime = today.toTimeString().split(":");
+      timeInput.min = `${nowTime[0]}:${nowTime[1]}`;
+    } else {
+      timeInput.min = "00:00";
+    }
+  }
+
+  dateInput.addEventListener("change", updateTimeMin);
+</script>
+
 </body>
 </html>
