@@ -132,6 +132,51 @@ body {
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  pointer-events: none;
+}
+
+input[type="date"]::-webkit-inner-spin-button,
+input[type="date"]::-webkit-clear-button {
+  display: none;
+}
+
+.date-box {
+  position: relative;
+}
+
+#date_real {
+  display: none;
+}
+
+#date_text {
+  cursor: pointer;
+}
+
+.date-box input {
+    cursor: pointer;
+    position: relative;
+    z-index: 2;
+}
+
+.date-placeholder {
+    position: absolute;
+    left: 40px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    color: #252264;
+    opacity: 0.7;
+    pointer-events: none;
+    transition: 0.2s ease;
+}
+
+.date-box input:focus + .date-placeholder,
+.date-box input:not(:placeholder-shown) + .date-placeholder {
+  opacity: 0;
+}
+
 
 /* ===== BUTTONS ===== */
 button {
