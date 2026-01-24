@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>Select Seats</title>
   <link rel="stylesheet" href="/static/select_seats.css">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.7.0/fonts/remixicon.css" rel="stylesheet"/>
 </head>
 
 <body>
@@ -33,28 +34,48 @@
         </div>
 
       {% if not session.get('user_email') %}
-        <div class="row">
-          <div class="input-box">
-            <span class="small">Full Name:</span><br>
-            <input type="text" name="guest_full_name" placeholder="Full Name" required>
-          </div>
-        </div>
+      <div id="personalModal" class="modal">
+        <div class="modal-content">
+          <span class="close-btn">&times;</span>
+          <h2>Personal Details</h2>
 
-        <div class="row">
-          <div class="input-box">
-            <span class="small">Email:</span><br>
-            <input type="email" name="guest_email" placeholder="you@example.com" required>
-          </div>
-        </div>
+          <form id="personalForm">
+            <div class="modal-row">
+              <label>Full Name</label>
+              <input type="text" name="guest_full_name" required>
+            </div>
 
-        <div class="row">
-          <div class="input-box">
-            <span class="small">Phone Number:</span><br>
-            <input type="tel" name="guest_phone" placeholder="+972 5X-XXXXXXX" required>
-          </div>
+            <div class="modal-row">
+              <label>Email</label>
+              <input type="email" name="guest_email" required>
+            </div>
+
+            <div class="modal-row">
+              <label>Passport Number</label>
+              <input type="text" name="guest_passport" required>
+            </div>
+
+            <div class="modal-row">
+              <label>Birth Date</label>
+              <input type="date" name="guest_birthdate" required>
+            </div>
+
+            <div class="modal-row phone-row">
+              <label>Phone Number</label>
+              <input type="tel" name="guest_phone[]" required>
+              <button type="button" class="add-phone">+ Add phone</button>
+            </div>
+
+            <div id="extraPhones"></div>
+
+            <button type="submit" class="btn">Continue</button>
+          </form>
         </div>
+      </div>
       {% endif %}
-        
+
+
+
         <!-- Regular -->
         {% if seats_by_class.get('Regular') %}
           <h3 style="margin-top:16px;">
@@ -143,6 +164,50 @@
         syncHiddenInputs();
       });
     });
+
+      const modal = document.getElementById("personalModal");
+      const closeBtn = document.querySelector(".close-btn");
+      const personalForm = document.getElementById("personalForm");
+      const extraPhones = document.getElementById("extraPhones");
+      const addPhoneBtn = document.querySelector(".add-phone");
+
+      // Open modal automatically for unregistered users
+      {% if not session.get('user_email') %}
+        modal.style.display = "flex";
+      {% endif %}
+
+      closeBtn.onclick = () => modal.style.display = "none";
+      window.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; }
+
+      // Add phone button
+      addPhoneBtn.addEventListener("click", () => {
+        const div = document.createElement("div");
+        div.className = "modal-row";
+        div.innerHTML = `
+          <label>Additional Phone</label>
+          <input type="tel" name="guest_phone[]" required>
+        `;
+        extraPhones.appendChild(div);
+      });
+
+      // On submit -> close modal and transfer data to real form
+      personalForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        // create hidden inputs in the real form
+        const mainForm = document.querySelector("form[action='/select_seats']");
+        const formData = new FormData(personalForm);
+
+        for (let [name, value] of formData.entries()) {
+          const inp = document.createElement("input");
+          inp.type = "hidden";
+          inp.name = name;
+          inp.value = value;
+          mainForm.appendChild(inp);
+        }
+
+        modal.style.display = "none";
+      });
   </script>
 
 </body>
