@@ -173,13 +173,21 @@ backdrop-filter: blur(10px);
 }
 
 .modal-row input {
-  width: 100%;
+  width: 80%;
   height: 45px;
   border-radius: 12px;
   border: 2px solid rgba(37,34,99,0.2);
   padding: 0 15px;
   font-size: 14px;
 }
+
+.modal-row input:hover,
+.modal-row input:focus {
+  border-color: #252264;
+  box-shadow: 0 0 5px rgba(37, 34, 100, 0.4);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
 
 .phone-row {
   display: flex;
