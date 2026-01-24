@@ -108,7 +108,6 @@
                 <div class="error-box">No available pilots for this time window.</div>
                 <p class="muted">Try another time/date or route.</p>
               {% else %}
-                <p class="hint" id="pilotsHint">You can select exactly {{ data.pilots_needed }} pilots.</p>
                 <div class="list-box">
                 {% for pl in data.pilots %}
                   <label>
@@ -132,7 +131,6 @@
                 <div class="error-box">No available attendants for this time window.</div>
                 <p class="muted">Try another time/date or route.</p>
               {% else %}
-                <p class="hint" id="faHint">You can select exactly {{ data.fa_needed }} attendants.</p>
                 <div class="list-box">
                 {% for fa in data.attendants %}
                   <label>
