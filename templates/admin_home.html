@@ -7,9 +7,9 @@
   <link rel="stylesheet" href="/static/admin_home.css">
   <link href='https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css' rel='stylesheet'>
 </head>
-</head>
+
 <body>
-      <header class="top-bar">
+  <header class="top-bar">
     <a href="/" class="logo-link">
       <img src="/static/logo.png" alt="Logo">
     </a>
@@ -18,10 +18,14 @@
   <div class="wrapper">
     <h2>Hi {{ session.get("manager_name") }} 👋</h2>
     <h1>Admin Panel</h1>
+
     <div class="header-actions">
       <a href="/admin/flights" class="admin-btn"><i class='bx bx-plane'></i>Flights Management</a>
       <a href="/admin/reports" class="admin-btn"><i class='bx bx-bar-chart'></i>Management Reports</a>
-      <a href="/admin/logout" class="logout"><i class='bxr  bx-arrow-out-left-square-half'></i> Log Out</a>
+
+      <a href="/admin/resources" class="admin-btn"><i class='bx bx-cog'></i>Resources Management</a>
+
+      <a href="/admin/logout" class="logout"><i class='bxr bx-arrow-out-left-square-half'></i> Log Out</a>
     </div>
   </div>
 </body>

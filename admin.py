@@ -810,6 +810,13 @@ def admin_home():
         return guard
     return render_template("admin_home.html")
 
+@admin_bp.route("/resources", methods=["GET"])
+def admin_add_resources():
+    guard = _require_admin()
+    if guard:
+        return guard
+    return render_template("admin_add_resources.html")
+
 @admin_bp.route("/planes/new", methods=["GET", "POST"])
 def admin_add_plane():
     guard = _require_admin()
