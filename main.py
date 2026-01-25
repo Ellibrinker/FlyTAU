@@ -163,7 +163,7 @@ def sign_up_page():
 
         return redirect('/login')
 
-    return render_template('signup.html', error=None, , data={})
+    return render_template('signup.html', error=None, data={})
 
 
 @app.route('/logout')
