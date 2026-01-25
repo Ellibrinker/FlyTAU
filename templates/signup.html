@@ -36,7 +36,6 @@
           type="text"
           name="name"
           placeholder="Full Name"
-          value="{{ data.get('name', '') }}"
           required
           minlength="2"
           maxlength="60"
@@ -56,7 +55,6 @@
           type="email"
           name="email"
           placeholder="Email Address"
-          value="{{ data.get('email', '') }}"
           required
           maxlength="254"
           autocomplete="email"
@@ -89,7 +87,6 @@
         <input
           type="date"
           name="date_of_birth"
-          value="{{ data.get('date_of_birth', '') }}"
           required
           id="dob"
           autocomplete="bday"
@@ -108,7 +105,6 @@
             type="tel"
             name="phone"
             placeholder="Phone number (Required)"
-            value="{{ data.getlist('phone')[0] if data.getlist('phone') else '' }}"
             required
             minlength="8"
             maxlength="16"
