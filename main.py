@@ -102,7 +102,8 @@ def sign_up_page():
         passport_number = request.form.get('passport_number', '').strip()
         date_of_birth = request.form.get('date_of_birth', '').strip()  # yyyy-mm-dd
         phones = request.form.getlist('phone')
-        # ---- basic validations ----
+        
+        # בדיקת תקינות של הפרטים שהוזנו
         if not full_name or not email or not password or not passport_number or not date_of_birth:
             return render_template('signup.html', error="Please fill in all required fields.")
 
@@ -118,11 +119,11 @@ def sign_up_page():
                 continue
             seen.add(p)
             clean_phones.append(p)
-
+        #אם לא הוזן מספר טלפון
         if len(clean_phones) == 0:
             return render_template('signup.html', error="Please enter at least one phone number.")
 
-        # ---- : passport + phone format validation ----
+        #  בדיקת קלט של מספר דרכון ומספר טלפון
         if not is_valid_passport(passport_number):
             return render_template("signup.html", error="Invalid passport number format. Use 6–12 letters/numbers (no spaces or symbols).")
 
@@ -383,7 +384,7 @@ def cancel_order():
         departure_dt = order["departure_dt"]
         now = datetime.now()
 
-        # 36 שעות לפני
+        # אפשר לבטל אם נותרו לפחות 36 שעות
         hours_left = (departure_dt - now).total_seconds() / 3600
         if hours_left < 36:
             # לא מאפשרים ביטול
