@@ -1,6 +1,9 @@
+/* יצירת סכמה לניהול נתונים על לקוחות, עובדי צוות אוויר, מנהלים, מטוסים והזמנות */
+
 CREATE DATABASE IF NOT EXISTS `ellibrinker$flytau`;
 USE `ellibrinker$flytau`;
 
+/* פרטים עבור לקוחות, ופרטים נוספים עבור לקוחות רשומים */
 CREATE TABLE Customer (
   email VARCHAR(255) NOT NULL,
   first_name VARCHAR(50),
@@ -24,6 +27,8 @@ CREATE TABLE RegisteredCustomer (
   PRIMARY KEY (email),
   FOREIGN KEY (email) REFERENCES Customer(email)
 );
+
+/* ניהול נתונים עבור עבד כללי, והזנת נתונים נוספים לפי סוג העובד */
 
 CREATE TABLE Worker (
   id INT NOT NULL,
@@ -67,6 +72,8 @@ CREATE TABLE FlightAttendant (
     ON DELETE CASCADE
 );
 
+/* ניהול נתונים על מטוסים, מחלקות ומושבים במטוסים */
+
 CREATE TABLE Plane (
   plane_id INT NOT NULL AUTO_INCREMENT,
   manufacturer VARCHAR(50) NOT NULL,
@@ -105,6 +112,8 @@ CREATE TABLE Seat (
   FOREIGN KEY (plane_id, class_type) REFERENCES Class(plane_id, class_type),
   UNIQUE (plane_id, row_num, column_number)
 );
+
+/* ניהול נתונים על טיסות והזמנתן - נתיבי אוויר, תמחור, מושבים בטיסה ושיבוץ עובדים לטיסה ספציפית */
 
 CREATE TABLE Airway (
   origin_airport VARCHAR(255) NOT NULL,
