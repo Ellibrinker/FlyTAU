@@ -63,11 +63,13 @@
 <div id="addPlaneModal" class="modal modal-plane">
   <div class="modal-content">
     <span class="close">&times;</span>
+    
     {% if request.args.get('modal') == 'addPlane' and request.args.get('error') %}
       <div class="modal-error">
         {{ request.args.get('error') }}
       </div>
     {% endif %}
+
     <h1>Add New Plane</h1>
 
     <form method="POST" action="/admin/planes/new">
@@ -103,6 +105,12 @@
 <div id="addCrewModal" class="modal modal-crew">
   <div class="modal-content crew-style">
     <span class="close close-crew">&times;</span>
+
+    {% if request.args.get('modal') == 'addCrew' and request.args.get('error') %}
+      <div class="alert error">
+        {{ request.args.get('error') }}
+      </div>
+    {% endif %}
 
     <h1>Add New Crew Member</h1>
     <p class="muted">Enter personal details and professional role</p>
@@ -170,32 +178,32 @@
     const modal = document.getElementById("addPlaneModal");
     const openBtn = document.getElementById("openAddPlane");
     const closeBtn = document.querySelector(".close");
-
+    
     const crewModal = document.getElementById("addCrewModal");
     const openCrewBtn = document.getElementById("openAddCrew");
     const closeCrewBtn = document.querySelector(".close-crew");
-
+    
     const params = new URLSearchParams(window.location.search);
     const modalFromUrl = params.get("modal");
-
+    
     openBtn.addEventListener("click", (e) => {
       e.preventDefault();
       modal.style.display = "flex";
     });
-
+    
     closeBtn.addEventListener("click", () => {
       modal.style.display = "none";
     });
-
+    
     openCrewBtn.addEventListener("click", (e) => {
       e.preventDefault();
       crewModal.style.display = "flex";
     });
-
+    
     closeCrewBtn.addEventListener("click", () => {
       crewModal.style.display = "none";
     });
-
+    
     window.addEventListener("click", (e) => {
       if (e.target === modal) {
         modal.style.display = "none";
@@ -203,10 +211,12 @@
         crewModal.style.display = "none";
       }
     });
+    
+    // פתיחה לפי URL
     if (modalFromUrl === "addPlane") {
       modal.style.display = "flex";
     }
-
+    
     if (modalFromUrl === "addCrew") {
       crewModal.style.display = "flex";
     }
