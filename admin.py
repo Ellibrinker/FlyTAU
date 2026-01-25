@@ -1068,8 +1068,13 @@ def admin_add_crew():
         worker_id = (data.get("id") or "").strip()
 
         if not is_valid_israeli_id(worker_id):
-            error_msg = quote("Please enter a valid 9-digit ID.")
-            return redirect(f"/admin/resources?modal=addCrew&error={error_msg}")
+            error_msg = "Please enter a valid 9-digit ID."
+            return render_template(
+                "admin_add_resources.html",
+                modal="addCrew",
+                error=error_msg,
+                data=data
+            )
 
         try:
             with db_cur() as cursor:
@@ -1104,8 +1109,13 @@ def admin_add_crew():
             return redirect("/admin/resources?msg=Crew+Member+Added")
 
         except Exception as e:
-            error_msg = quote(str(e))
-            return redirect(f"/admin/resources?modal=addCrew&error={error_msg}")
+            error_msg = str(e)
+            return render_template(
+                "admin_add_resources.html",
+                modal="addCrew",
+                error=error_msg,
+                data=data
+            )
 
     return redirect("/admin/resources")
 
