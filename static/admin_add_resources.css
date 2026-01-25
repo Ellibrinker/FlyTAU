@@ -173,6 +173,10 @@ body {
   justify-content: center;
 }
 
+.modal.show {
+  display: flex;
+}
+
 /* ====== Modal Content (Same as Wrapper) ====== */
 .modal-content {
   width: 960px;
