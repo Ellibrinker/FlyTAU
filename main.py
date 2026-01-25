@@ -6,6 +6,16 @@ from datetime import date, datetime
 app = Flask(__name__)
 app.secret_key = 'flytau123'
 
+import re
+
+PHONE_RE = re.compile(r"^\+?[0-9]{8,15}$")      # E.164-ish
+PASSPORT_RE = re.compile(r"^[A-Za-z0-9]{6,12}$") # simple generic passport
+
+def is_valid_phone(p: str) -> bool:
+    return bool(PHONE_RE.fullmatch((p or "").strip()))
+
+def is_valid_passport(x: str) -> bool:
+    return bool(PASSPORT_RE.fullmatch((x or "").strip()))
 
 @contextmanager
 def db_cur():
@@ -61,6 +71,7 @@ def login_page():
     return render_template('login.html')
 
 
+
 @app.route('/signup', methods=['GET', 'POST'])
 def sign_up_page():
     if request.method == 'POST':
@@ -68,9 +79,10 @@ def sign_up_page():
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         passport_number = request.form.get('passport_number', '').strip()
-        date_of_birth = request.form.get('date_of_birth', '').strip()
+        date_of_birth = request.form.get('date_of_birth', '').strip()  # yyyy-mm-dd
         phones = request.form.getlist('phone')
 
+        # ---- basic validations ----
         if not full_name or not email or not password or not passport_number or not date_of_birth:
             return render_template('signup.html', error="Please fill in all required fields.")
 
@@ -91,6 +103,14 @@ def sign_up_page():
 
         if len(clean_phones) == 0:
             return render_template('signup.html', error="Please enter at least one phone number.")
+
+        # ---- NEW: passport + phone format validation ----
+        if not is_valid_passport(passport_number):
+            return render_template("signup.html", error="Invalid passport number format. Use 6–12 letters/numbers (no spaces or symbols).")
+
+        bad_phones = [p for p in clean_phones if not is_valid_phone(p)]
+        if bad_phones:
+            return render_template("signup.html", error="One or more phone numbers are invalid. Use digits only (8–15), optionally starting with +.")
 
         try:
             with db_cur() as cursor:
@@ -114,7 +134,7 @@ def sign_up_page():
                             "UPDATE Customer SET first_name=%s, last_name=%s WHERE email=%s",
                             (first_name, last_name, email),
                         )
-                    # else: keep the existing name as-is (or you can always update if you prefer)
+                    # else: keep existing name as-is
                 else:
                     # normal new signup
                     cursor.execute(

@@ -307,7 +307,6 @@ def select_seats():
                     return redirect(f"/select_seats?flight_id={flight_id}")
                 total_payment += float(reg_price)
             elif ct == "Business":
-                # if flight doesn't have business pricing -> can't book business seats
                 if bus_price is None:
                     return redirect(f"/select_seats?flight_id={flight_id}")
                 total_payment += float(bus_price)
@@ -331,6 +330,33 @@ def select_seats():
             seen.add(p)
             clean_phones.append(p)
 
+        # ---- NEW: guest validations (server-side) ----
+        if not is_logged_in:
+            if not guest_full_name:
+                return render_template(
+                    "select_seats.html",
+                    flight=flight,
+                    seats_by_class=seats_by_class,
+                    grid_by_class=grid_by_class,
+                    error="Please enter your full name.",
+                )
+            if len(clean_phones) == 0:
+                return render_template(
+                    "select_seats.html",
+                    flight=flight,
+                    seats_by_class=seats_by_class,
+                    grid_by_class=grid_by_class,
+                    error="Please enter at least one phone number.",
+                )
+            if any(not is_valid_phone(p) for p in clean_phones):
+                return render_template(
+                    "select_seats.html",
+                    flight=flight,
+                    seats_by_class=seats_by_class,
+                    grid_by_class=grid_by_class,
+                    error="Invalid phone number format. Use digits only (8–15), optionally starting with +.",
+                )
+
         # split guest name (only used if guest)
         g_first, g_last = "Guest", ""
         if guest_full_name:
@@ -348,8 +374,6 @@ def select_seats():
 
             if not customer:
                 if is_logged_in:
-                    # DB should already contain this customer because signup creates it.
-                    # If it's missing, something is inconsistent -> block safely.
                     return render_template(
                         "select_seats.html",
                         flight=flight,
@@ -417,6 +441,7 @@ def select_seats():
         grid_by_class=grid_by_class,
         error=None,
     )
+
 
 
 def _get_seats_and_grids_by_class(flight_id, plane_id):
