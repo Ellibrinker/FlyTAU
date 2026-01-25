@@ -71,6 +71,19 @@ def _overlap_exists(cursor, *, start_dt, end_dt, buffer_min, where_sql, params):
     return cursor.fetchone() is not None
 
 
+def is_valid_israeli_id(id_number: str) -> bool:
+    if not id_number or not id_number.isdigit() or len(id_number) != 9:
+        return False
+
+    total = 0
+    for i, digit in enumerate(id_number):
+        num = int(digit) * (1 if i % 2 == 0 else 2)
+        if num > 9:
+            num -= 9
+        total += num
+
+    return total % 10 == 0
+
 
 @admin_bp.route("/login", methods=["GET", "POST"])
 def admin_login():
@@ -1079,32 +1092,55 @@ def admin_add_plane():
 @admin_bp.route("/crew/new", methods=["GET", "POST"])
 def admin_add_crew():
     guard = _require_admin()
-    if guard: return guard
+    if guard:
+        return guard
 
     if request.method == "POST":
         data = request.form
         from main import db_cur
+
+        worker_id = (data.get("id") or "").strip()
+
+        # ---- NEW: Israeli ID validation ----
+        if not is_valid_israeli_id(worker_id):
+            return render_template(
+                "admin_add_crew.html",
+                error="Invalid Israeli ID number. Please enter a valid 9-digit ID."
+            )
+
         try:
             with db_cur() as cursor:
                 cursor.execute("""
-                    INSERT INTO Worker (id, first_name, last_name, phone_number, city, street, house_num, start_date)
+                    INSERT INTO Worker
+                    (id, first_name, last_name, phone_number, city, street, house_num, start_date)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, CURDATE())
-                """, (data['id'], data['first_name'], data['last_name'], data.get('phone'), 
-                      data.get('city'), data.get('street'), data.get('house_num')))
-                
-                cursor.execute("INSERT INTO AirCrew (id, long_flight_training) VALUES (%s, %s)", 
-                               (data['id'], 1 if data.get('long_training') else 0))
+                """, (
+                    worker_id,
+                    data.get('first_name'),
+                    data.get('last_name'),
+                    data.get('phone'),
+                    data.get('city'),
+                    data.get('street'),
+                    data.get('house_num')
+                ))
 
-                if data['role'] == "pilot":
-                    cursor.execute("INSERT INTO Pilot (id) VALUES (%s)", (data['id'],))
+                cursor.execute(
+                    "INSERT INTO AirCrew (id, long_flight_training) VALUES (%s, %s)",
+                    (worker_id, 1 if data.get('long_training') else 0)
+                )
+
+                if data.get('role') == "pilot":
+                    cursor.execute("INSERT INTO Pilot (id) VALUES (%s)", (worker_id,))
                 else:
-                    cursor.execute("INSERT INTO FlightAttendant (id) VALUES (%s)", (data['id'],))
-            
+                    cursor.execute("INSERT INTO FlightAttendant (id) VALUES (%s)", (worker_id,))
+
             return redirect("/admin/resources?msg=Crew+Member+Added")
+
         except Exception as e:
             return render_template("admin_add_crew.html", error=str(e))
-            
+
     return render_template("admin_add_crew.html")
+
 
 
 @admin_bp.route("/reports", methods=["GET"])
