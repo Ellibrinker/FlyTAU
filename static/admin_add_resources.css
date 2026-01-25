@@ -401,11 +401,16 @@ button:disabled {
 }
 
 .modal-error {
-  background: #f8d7da;
-  color: #721c24;
-  padding: 10px;
-  border-radius: 8px;
-  margin-bottom: 12px;
+  background: rgba(255, 230, 230, 0.9);
+  color: #b00020;
+  border: 1px solid rgba(176, 0, 32, 0.35);
+  padding: 12px 14px;
+  border-radius: 12px;
+  margin: 12px auto 18px auto;
+  font-weight: 700;
+  width: 70%;
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(176, 0, 32, 0.15);
 }
 
 .alert.success {
