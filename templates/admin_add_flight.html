@@ -36,18 +36,20 @@
             </div>
 
             <div class="input-box">
-              <input name="destination" placeholder="Destination (e.g. ATH)" required />
+              <input name="destination" placeholder="Destination (e.g. ATH, JFK)" required />
               <i class="bx bx-map"></i>
             </div>
 
-            <div class="input-box">
-              <input type="date" name="departure_date" id="departure_date" required />
-            </div>
+<div class="input-box">
+  <small class="hint">e.g. 2026-06-21</small>
+  <input type="date" name="departure_date" id="departure_date" required />
+</div>
 
-            <div class="input-box">
-              <input type="time" name="departure_time" id="departure_time" required />
-            </div>
-          </div>
+<div class="input-box">
+  <small class="hint">e.g. 09:00</small>
+  <input type="time" name="departure_time" id="departure_time" required />
+</div>
+
 
           <div class="row" style="margin-top: 12px; width: 80%; margin: 12px auto;">
             <button type="submit">Next</button>
@@ -58,6 +60,10 @@
     {% else %}
       <div class="box">
         <h3 class="title">Select plane, crew & pricing</h3>
+
+        <p class="muted" style="margin-top:6px;">
+  Showing only filtered, relevant resources (availability + location + aircraft type).
+</p>
 
         <p class="row" style="flex-wrap: wrap; gap:8px;">
           <span class="pill">Route: <b>{{ data.origin }}</b> → <b>{{ data.destination }}</b></span>
