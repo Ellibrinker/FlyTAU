@@ -3,7 +3,7 @@ from datetime import datetime, date, timedelta
 import traceback
 from urllib.parse import quote_plus, quote
 
-admin_bp = Blueprint("admin", __name__)  # בלי url_prefix כאן
+admin_bp = Blueprint("admin", __name__)  
 
 # =========================
 # Availability buffers (NO BUFFER)
@@ -13,16 +13,18 @@ CREW_BUFFER_MIN = 0
 
 
 def _require_admin():
+    '''
+    פונקציה שאוכפת הרשאות מנהל, ומונעת גישה למשתמשים שאינם מנהלים
+    '''
     if not session.get("is_manager"):
         return redirect("/admin/login")
     return None
 
 
 def _flight_window(dep_date_str: str, dep_time_str: str, duration_min: int):
-    """
-    Returns (start_dt, end_dt) for a flight based on date+time strings and duration (minutes).
-    dep_time_str can be 'HH:MM' or 'HH:MM:SS'
-    """
+    '''
+    פונקציה שמחזירה את זמן ההמראה והנחיתה, על ידי תאריך, שעת המראה ומשך טיסה
+    '''
     d = datetime.fromisoformat(dep_date_str).date()
 
     t = dep_time_str.strip()
@@ -37,10 +39,9 @@ def _flight_window(dep_date_str: str, dep_time_str: str, duration_min: int):
 
 
 def _db_error_message(e: Exception) -> str:
-    """
-    Safe DB error message: show errno/msg if exists, otherwise generic.
-    Does NOT require mysql imports (prevents site crash on import).
-    """
+    '''
+    מטפלת בתקלות, על ידי הצגת הודעת שגיאה למשתמש
+    '''
     errno = getattr(e, "errno", None)
     msg = getattr(e, "msg", None) or str(e)
     if errno:
@@ -49,10 +50,9 @@ def _db_error_message(e: Exception) -> str:
 
 
 def _overlap_exists(cursor, *, start_dt, end_dt, buffer_min, where_sql, params):
-    """
-    Checks overlap for plane/crew/etc in a padded window.
-    existing_start < padded_end AND existing_end > padded_start
-    """
+    '''
+    בודקת חפיפה בזמנים של מטוס/חבר צוות אוויר, תוך התחשבות במרווח ביטחון
+    '''
     padded_start = start_dt - timedelta(minutes=buffer_min)
     padded_end = end_dt + timedelta(minutes=buffer_min)
 
@@ -73,6 +73,9 @@ def _overlap_exists(cursor, *, start_dt, end_dt, buffer_min, where_sql, params):
 
 
 def is_valid_israeli_id(id_number: str) -> bool:
+    '''
+    פונקציה שמוודאת שהתז שהוקלד עומד בדרישות ומכילות 9 ספרות בלבד
+    '''
     return (
         bool(id_number)
         and id_number.isdigit()
@@ -82,6 +85,10 @@ def is_valid_israeli_id(id_number: str) -> bool:
 
 @admin_bp.route("/login", methods=["GET", "POST"])
 def admin_login():
+    '''
+    מבצעת בדיקה מול מסד הנתונים, ובודקת האם קיימת התאמה בינו לבין התונים שהוקלדו
+    אם קיימת התאמה, המשתמש יקבל הרשאות לפעולות של משתמש מנהל
+    '''
     if request.method == "POST":
         tz = request.form.get("tz", type=int)
         password = request.form.get("password", "")
@@ -124,12 +131,18 @@ def admin_login():
 
 @admin_bp.route("/logout")
 def admin_logout():
+    '''
+    מנתקת את חשבון המשתמש מנהל, ומחזירה אותו לדף הבית
+    '''
     session.clear()
     return redirect("/")
 
 
 @admin_bp.route("/flights")
 def admin_flights():
+    '''
+    מציגה למנהל לוח טיסות, עם סטטוס (התקיימה, פעילה, בוטלה, מלאה) ועם נתונים כמו שדות מקור ויעד
+    '''
     guard = _require_admin()
     if guard:
         return guard
@@ -224,30 +237,26 @@ def admin_flights():
         },
     )
 
-# =========================================================
-# 1) NO "cooldown"/buffer: once landed, can depart immediately
-# 2) Location is derived from the LAST relevant flight in timeline
-# 3) First assignment: NO location constraint (allowed anywhere)
-# 4) Cancelled flights should NOT block availability and should NOT affect location
-# 5) Cancelling a flight has NO cascading effect on future flights (we don't "fix chains")
-# =========================================================
-
-
 def _normalize_time(t):
+    '''
+    מנרמלת נתוני זמן מכמה פורמטים, כך שיהיה אפשר לבצע השוואות בין זמנים
+    '''
     if isinstance(t, timedelta):
         return (datetime.min + t).time()
     return t
 
 
 def _flight_end_expr():
+    '''
+    יוצרת ביטוי לחישוב זמן הנתחיתה של טיסה
+    '''
     return "DATE_ADD(TIMESTAMP(f.departure_date, f.departure_time), INTERVAL a.duration MINUTE)"
 
 
 def _overlap_exists_no_buffer(cursor, start_dt: datetime, end_dt: datetime, where_sql: str, params: tuple):
-    """
-    Per Eren: overlap only (no buffer). Ignore cancelled flights.
-    existing_start < new_end AND existing_end > new_start
-    """
+    '''
+    בודקת חפיפה בין מטוסים/אנשי צוות ללא התחשבות במרווח ביטחון
+    '''
     cursor.execute(
         f"""
         SELECT 1
@@ -269,6 +278,9 @@ def _overlap_exists_no_buffer(cursor, start_dt: datetime, end_dt: datetime, wher
 
 
 def _last_location_plane(cursor, plane_id: int, new_start_dt: datetime):
+    '''
+    מחזירה את מקום הנחיתה האחרון של מטוס, כדי לוודא זמינות לטיסה הבאה
+    '''
     cursor.execute(
         """
         SELECT f3.destination_airport AS last_dest
@@ -289,6 +301,9 @@ def _last_location_plane(cursor, plane_id: int, new_start_dt: datetime):
 
 
 def _last_location_worker(cursor, worker_id: int, new_start_dt: datetime):
+    '''
+    מאתרת את שדה התעופה האחרון בו עובד נמצא, כדי לוודא זמינות לטיסה הבאה
+    '''
     cursor.execute(
         """
         SELECT f3.destination_airport AS last_dest
@@ -310,25 +325,24 @@ def _last_location_worker(cursor, worker_id: int, new_start_dt: datetime):
 
 
 def _plane_is_big(cursor, plane_id: int) -> bool:
+    '''
+    פונקציה בוליאנית שממיינת את המטוס לגדול או קטן
+    '''
     cursor.execute("SELECT 1 FROM BigPlane WHERE plane_id=%s", (plane_id,))
     return cursor.fetchone() is not None
 
 
 def _crew_needed_for_plane(is_big_plane: bool):
-    # Project rule: crew count depends on PLANE SIZE
+    '''
+    מחזירה את מס' הטייסים והדיילים הדרושים, לפי גודל המטוס
+    '''
     return (3, 6) if is_big_plane else (2, 3)
 
 
 def _fetch_step2_lists(cursor, is_long: bool, new_start_dt: datetime, new_end_dt: datetime, origin: str):
-    """
-    Returns (planes, pilots, attendants)
-
-    Filters by:
-    - time overlap only (no buffer) AND ignoring cancelled
-    - location at departure: last_dest MUST equal origin (NO NULLS)
-    - long flights: pilots/attendants require AirCrew.long_flight_training = 1
-    - long flights: only Big planes are shown
-    """
+    '''
+    מחזירה מטוסים ואנשי צוות שזמינים לעבודה, מבחינת מיקום אחרון, הכשרה מתאימה וזמינות בזמן
+    '''
 
     # =========================
     # Planes
@@ -487,6 +501,11 @@ def _fetch_step2_lists(cursor, is_long: bool, new_start_dt: datetime, new_end_dt
 
 
 @admin_bp.route("/flights/new", methods=["GET", "POST"])
+'''
+יוצרת טיסה חדשה על ידי שני שלבים - 
+בחירת שדות מקור ויעד, וזמן המראה
+שיבוץ צוות לטיסה, וקביעת מחיר למחלקות, ורישום הטיסה במסד הנתונים 
+'''
 def admin_add_flight():
     guard = _require_admin()
     if guard:
@@ -690,7 +709,6 @@ def admin_add_flight():
         if not plane_id:
             return render_template("admin_add_flight.html", step=2, error="Plane is required.", data=data)
 
-        # plane size already computed
         if is_big_plane is None:
             with db_cur() as cursor:
                 is_big_plane = _plane_is_big(cursor, plane_id)
@@ -699,7 +717,6 @@ def admin_add_flight():
             data["pilots_needed"] = pilots_needed
             data["fa_needed"] = fa_needed
 
-        # Enforce: long flights must use Big plane (project rule)
         if is_long and not is_big_plane:
             return render_template(
                 "admin_add_flight.html",
@@ -708,7 +725,6 @@ def admin_add_flight():
                 data=data,
             )
 
-        # Validate crew counts (accurate UI numbers)
         if len(pilot_ids) != pilots_needed:
             return render_template("admin_add_flight.html", step=2,
                                    error=f"Please select exactly {pilots_needed} pilots.", data=data)
@@ -717,7 +733,6 @@ def admin_add_flight():
             return render_template("admin_add_flight.html", step=2,
                                    error=f"Please select exactly {fa_needed} attendants.", data=data)
 
-        # Pricing validations
         if regular_price is None or regular_price <= 0:
             return render_template("admin_add_flight.html", step=2, error="Regular price must be a positive number.", data=data)
 
@@ -729,7 +744,6 @@ def admin_add_flight():
             business_price = None
             data["business_price"] = None
 
-        # Role checks + training (server-side)
         with db_cur() as cursor:
             for pid in pilot_ids:
                 cursor.execute("SELECT 1 FROM Pilot WHERE id=%s", (pid,))
@@ -757,7 +771,6 @@ def admin_add_flight():
                     if not row or int(row["long_flight_training"]) != 1:
                         return render_template("admin_add_flight.html", step=2, error=f"Flight attendant {fid} is not trained for long flights.", data=data)
 
-        # Availability checks (no buffer, ignore cancelled)
         with db_cur() as cursor:
             if _overlap_exists_no_buffer(
                 cursor,
@@ -802,7 +815,6 @@ def admin_add_flight():
                 ):
                     return render_template("admin_add_flight.html", step=2, error=f"Flight attendant {fid} is not available at this time (overlap).", data=data)
 
-        # Location enforcement (server-side)  [NO NULL ALLOWED]
         with db_cur() as cursor:
             plane_loc = _last_location_plane(cursor, plane_id, new_start_dt)
             if plane_loc != origin:
@@ -842,7 +854,6 @@ def admin_add_flight():
                         data=data,
                     )
 
-        # Seats exist (avoid half-insert)
         with db_cur() as cursor:
             cursor.execute("SELECT seat_id FROM Seat WHERE plane_id=%s", (plane_id,))
             seat_ids = [r["seat_id"] for r in cursor.fetchall()]
@@ -915,6 +926,9 @@ def admin_add_flight():
 
 
 @admin_bp.route("/flights/cancel/<int:flight_id>", methods=["GET", "POST"])
+'''
+מימוש של ביטול טיסה על ידי מנהל, בתנאי ונותרו לפחות 72 שעות עד מועד הטיסה
+'''
 def admin_cancel_flight(flight_id):
     guard = _require_admin()
     if guard:
@@ -1008,6 +1022,9 @@ def admin_cancel_flight(flight_id):
 
 
 @admin_bp.route("/", methods=["GET"])
+'''
+מציג את דף הבית של ממשק משתמש מנהל
+'''
 def admin_home():
     guard = _require_admin()
     if guard:
@@ -1016,6 +1033,9 @@ def admin_home():
 
 @admin_bp.route("/resources", methods=["GET"])
 def admin_add_resources():
+    '''
+    מציג את דף ניהול המשאבים - מטוסים ואנשי צוות
+    '''
     guard = _require_admin()
     if guard:
         return guard
@@ -1023,6 +1043,9 @@ def admin_add_resources():
 
 @admin_bp.route("/planes/new", methods=["GET", "POST"])
 def admin_add_plane():
+    '''
+    פונקציה המאפשרת למנהל להוסיף לחברה מטוס חדש, על ידי מילוי פרטי היצרן, תאריך רכישה וסוג המטוס
+    '''
     guard = _require_admin()
     if guard: return guard
 
@@ -1057,6 +1080,9 @@ def admin_add_plane():
 
 @admin_bp.route("/crew/new", methods=["GET", "POST"])
 def admin_add_crew():
+    '''
+    ממשק המאפשר למנהל להוסיף לצוות אוויר טייס או דייל על ידי מילוי פרטים אישיים
+    '''
     guard = _require_admin()
     if guard:
         return guard
@@ -1113,6 +1139,9 @@ def admin_add_crew():
 
 @admin_bp.route("/reports", methods=["GET"])
 def admin_reports():
+    '''
+    מפיקה עבור המנהל דוחות המבוססים על שאילתות, ומספקים לו מידע על החברה לפי טווח תאריכים
+    '''
     guard = _require_admin()
     if guard:
         return guard
@@ -1121,7 +1150,6 @@ def admin_reports():
     date_to = request.args.get("date_to")
     report = request.args.get("report")  # בלי default
 
-    # כניסה ראשונית / Reset (אין report בכלל)
     if not report:
         return render_template(
             "admin_reports.html",
@@ -1135,7 +1163,6 @@ def admin_reports():
             error=None
         )
 
-    # המשתמש לחץ Run אבל לא מילא תאריכים
     if not date_from or not date_to:
         return render_template(
             "admin_reports.html",
