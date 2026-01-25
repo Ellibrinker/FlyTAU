@@ -71,7 +71,7 @@ def _overlap_exists(cursor, *, start_dt, end_dt, buffer_min, where_sql, params):
     return cursor.fetchone() is not None
 
 
-def _fetch_step2_lists(cursor, *, is_long: bool, new_start_dt: datetime, new_end_dt: datetime):
+def _fetch_step2_lists(cursor, *, is_long: bool, new_start_dt: datetime, new_end_dt: datetime, origin: str):
     # ---------- Planes ----------
     plane_padded_end = new_end_dt + timedelta(minutes=PLANE_BUFFER_MIN)
     plane_padded_start = new_start_dt - timedelta(minutes=PLANE_BUFFER_MIN)
@@ -91,6 +91,7 @@ def _fetch_step2_lists(cursor, *, is_long: bool, new_start_dt: datetime, new_end
         planes_sql += " AND bp.plane_id IS NOT NULL "
 
     planes_sql += """
+        -- Availability (no overlap)
         AND NOT EXISTS (
             SELECT 1
             FROM Flight f2
@@ -102,18 +103,85 @@ def _fetch_step2_lists(cursor, *, is_long: bool, new_start_dt: datetime, new_end
               AND TIMESTAMP(f2.departure_date, f2.departure_time) < %s
               AND DATE_ADD(TIMESTAMP(f2.departure_date, f2.departure_time), INTERVAL a2.duration MINUTE) > %s
         )
+
+        -- Location filter: last known location (arrival) before new_start_dt must be = origin
+        AND (
+            (
+                SELECT f3.destination_airport
+                FROM Flight f3
+                JOIN Airway a3
+                  ON a3.origin_airport = f3.origin_airport
+                 AND a3.destination_airport = f3.destination_airport
+                WHERE f3.plane_id = p.plane_id
+                  AND LOWER(f3.status) <> 'cancelled'
+                  AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
+                ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
+                LIMIT 1
+            ) IS NULL
+            OR
+            (
+                SELECT f3.destination_airport
+                FROM Flight f3
+                JOIN Airway a3
+                  ON a3.origin_airport = f3.origin_airport
+                 AND a3.destination_airport = f3.destination_airport
+                WHERE f3.plane_id = p.plane_id
+                  AND LOWER(f3.status) <> 'cancelled'
+                  AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
+                ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
+                LIMIT 1
+            ) = %s
+        )
+
         ORDER BY p.plane_id
     """
-    cursor.execute(planes_sql, (plane_padded_end, plane_padded_start))
+
+    cursor.execute(
+        planes_sql,
+        (plane_padded_end, plane_padded_start, new_start_dt, new_start_dt, origin),
+    )
     planes = cursor.fetchall()
 
     # ---------- Crew ----------
     crew_padded_end = new_end_dt + timedelta(minutes=CREW_BUFFER_MIN)
     crew_padded_start = new_start_dt - timedelta(minutes=CREW_BUFFER_MIN)
 
-    # אם טיסה ארוכה -> רק long_flight_training=1
     crew_training_cond = "AND ac.long_flight_training = 1" if is_long else ""
 
+    # shared location condition for crew (w.id)
+    crew_location_cond = """
+      AND (
+        (
+          SELECT f3.destination_airport
+          FROM FlightCrewPlacement fcp3
+          JOIN Flight f3 ON f3.flight_id = fcp3.flight_id
+          JOIN Airway a3
+            ON a3.origin_airport = f3.origin_airport
+           AND a3.destination_airport = f3.destination_airport
+          WHERE fcp3.id = w.id
+            AND LOWER(f3.status) <> 'cancelled'
+            AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
+          ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
+          LIMIT 1
+        ) IS NULL
+        OR
+        (
+          SELECT f3.destination_airport
+          FROM FlightCrewPlacement fcp3
+          JOIN Flight f3 ON f3.flight_id = fcp3.flight_id
+          JOIN Airway a3
+            ON a3.origin_airport = f3.origin_airport
+           AND a3.destination_airport = f3.destination_airport
+          WHERE fcp3.id = w.id
+            AND LOWER(f3.status) <> 'cancelled'
+            AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
+          ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
+          LIMIT 1
+        ) = %s
+      )
+    """
+
+    # Pilots
     cursor.execute(
         f"""
         SELECT w.id, w.first_name, w.last_name
@@ -135,12 +203,14 @@ def _fetch_step2_lists(cursor, *, is_long: bool, new_start_dt: datetime, new_end
               AND TIMESTAMP(f2.departure_date, f2.departure_time) < %s
               AND DATE_ADD(TIMESTAMP(f2.departure_date, f2.departure_time), INTERVAL a2.duration MINUTE) > %s
           )
+          {crew_location_cond}
         ORDER BY w.id
         """,
-        (crew_padded_end, crew_padded_start),
+        (crew_padded_end, crew_padded_start, new_start_dt, new_start_dt, origin),
     )
     pilots = cursor.fetchall()
 
+    # Attendants
     cursor.execute(
         f"""
         SELECT w.id, w.first_name, w.last_name
@@ -162,13 +232,15 @@ def _fetch_step2_lists(cursor, *, is_long: bool, new_start_dt: datetime, new_end
               AND TIMESTAMP(f2.departure_date, f2.departure_time) < %s
               AND DATE_ADD(TIMESTAMP(f2.departure_date, f2.departure_time), INTERVAL a2.duration MINUTE) > %s
           )
+          {crew_location_cond}
         ORDER BY w.id
         """,
-        (crew_padded_end, crew_padded_start),
+        (crew_padded_end, crew_padded_start, new_start_dt, new_start_dt, origin),
     )
     attendants = cursor.fetchall()
 
     return planes, pilots, attendants
+
 
 
 @admin_bp.route("/login", methods=["GET", "POST"])
@@ -754,10 +826,11 @@ def admin_add_flight():
                 planes, pilots, attendants = _fetch_step2_lists(
                     cursor,
                     is_long=is_long,
-                    new_start_dt=datetime.now(),
-                    new_end_dt=datetime.now(),
+                    new_start_dt=new_start_dt,
+                    new_end_dt=new_end_dt,
                     origin=origin,
                 )
+
             data = {
                 "origin": origin,
                 "destination": destination,
