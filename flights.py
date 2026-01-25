@@ -6,11 +6,13 @@ flights_bp = Blueprint("flights", __name__)
 
 @flights_bp.route("/search_flights", methods=["GET"])
 def search_flights():
+    '''
+    מנהל את דף חיפוש הטיסות לפי מוצא יעד ותאריך (אופציונלי), בודק האם קיימות טיסות רלוונטיות ומציג אותן 
+    '''
     origin = (request.args.get("origin") or "").strip()
     destination = (request.args.get("destination") or "").strip()
     departure_date = (request.args.get("departure_date") or "").strip()  # אופציונלי
 
-    # כניסה ראשונה לדף - בלי שגיאות
     if not origin and not destination and not departure_date:
         return render_template(
             "search_flights.html",
@@ -30,7 +32,6 @@ def search_flights():
     if origin and destination and origin == destination:
         errors.append("Origin and destination cannot be the same")
 
-    # ✅ תאריך אופציונלי: רק אם הוזן - נוודא שהוא תקין
     if departure_date:
         try:
             datetime.strptime(departure_date, "%Y-%m-%d")
@@ -49,7 +50,6 @@ def search_flights():
 
     from main import db_cur
 
-    # בדיקת קיום נתיב (Airway) - עדיין רלוונטי גם בלי תאריך
     with db_cur() as cursor:
         cursor.execute("""
             SELECT 1
@@ -87,14 +87,11 @@ def search_flights():
 
 
 def get_bookable_flights(origin, destination, departure_date=None):
-    """
-    Returns flights relevant for booking for customers:
-    - not cancelled
-    - departure datetime is in the future
-    - has at least 1 available seat (not full)
-    - if departure_date is provided -> filter by that date
-      else -> allow any date (from now onwards)
-    """
+    '''
+    מחזירה טיסות מהן ניתן להזמין
+    ממיינת לפי טיסה עתידית לא מבוטלת, ושקיים בה לפחות מושב אחד שזמין לרכישה
+    אם הוזן תאריך ספציפי, הוא יציג את הטיסות בתאריךזה. אם לא, יוצגו כל הטיסות העתידיות בין שדות המקור והיעד שמולאו
+    '''
     from main import db_cur
 
     base_query = """
@@ -144,6 +141,18 @@ def get_bookable_flights(origin, destination, departure_date=None):
 
 @flights_bp.route("/select_seats", methods=["GET", "POST"])
 def select_seats():
+    '''
+    ניהול תהליך בחירת המושבים והשלמת ההזמנה
+    בGET- מוודאים שהטיסה קיימץ, עתידית ולא מבוטלת
+    בודק זמינות של מושבים 
+    טוען את מפת המושבים התפוסים והפנויים, מסווגים למחלקות
+    מונע ממשתמש מנהל לרכוש כרטיסים
+
+    POST- קולט את המושבים שנבחרו על ידי הלקוח
+    בודק את פרטי האורח
+    מחשב מחיר סופי למושבים
+    פותח הזמנה, מעדכן את מסד הנתונים במושבים שנרכשו ובפרטי הלקוח
+    '''
     from main import db_cur
 
     flight_id = (
@@ -154,7 +163,6 @@ def select_seats():
     if not flight_id:
         return redirect("/search_flights")
 
-    # 1) Flight details + prices + status
     with db_cur() as cursor:
         cursor.execute(
             """
@@ -186,7 +194,6 @@ def select_seats():
             grid_by_class={},
         )
 
-    # ---- Business blocks: cancelled / past / fully booked ----
     if str(flight.get("status", "")).lower() == "cancelled":
         return render_template(
             "select_seats.html",
@@ -196,7 +203,6 @@ def select_seats():
             error="This flight is cancelled.",
         )
 
-    # past (handle TIME as timedelta sometimes)
     dep_time = flight["departure_time"]
     if isinstance(dep_time, timedelta):
         dep_time = (datetime.min + dep_time).time()
@@ -211,7 +217,6 @@ def select_seats():
             error="This flight has already departed.",
         )
 
-    # fully booked (no available seats at all)
     with db_cur() as cursor:
         cursor.execute(
             """
@@ -233,12 +238,10 @@ def select_seats():
             error="This flight is fully booked.",
         )
 
-    # Fetch seats for BOTH classes (Regular + Business if exists on this plane)
     seats_by_class, grid_by_class = _get_seats_and_grids_by_class(
         flight_id, flight["plane_id"]
     )
 
-    # Managers cannot purchase (GET+POST)
     if session.get("is_manager"):
         return render_template(
             "select_seats.html",
@@ -248,7 +251,6 @@ def select_seats():
             error="Managers are not allowed to purchase tickets.",
         )
 
-    # 2) POST = confirm booking (can include mixed classes)
     if request.method == "POST":
         selected_ids = request.form.getlist("flight_seat_id")
 
@@ -274,7 +276,6 @@ def select_seats():
                 error="Please select at least one seat.",
             )
 
-        # --- validate selected seats ---
         with db_cur() as cursor:
             fmt = ",".join(["%s"] * len(selected_ids))
             cursor.execute(
@@ -313,14 +314,11 @@ def select_seats():
             else:
                 return redirect(f"/select_seats?flight_id={flight_id}")
 
-        # --- ensure Customer exists with correct name + ensure phones saved ---
         is_logged_in = bool(session.get("user_email"))
 
-        # For guests: read details from modal (but DO NOT save passport/birthdate anywhere)
         guest_full_name = (request.form.get("guest_full_name") or "").strip()
         guest_phones = request.form.getlist("guest_phone[]")  # from modal
 
-        # Clean phones: remove blanks + duplicates (keep order)
         clean_phones = []
         seen = set()
         for p in guest_phones:
@@ -330,7 +328,6 @@ def select_seats():
             seen.add(p)
             clean_phones.append(p)
 
-        # ---- NEW: guest validations (server-side) ----
         if not is_logged_in:
             if not guest_full_name:
                 return render_template(
@@ -357,7 +354,6 @@ def select_seats():
                     error="Invalid phone number format. Use digits only (8–15), optionally starting with +.",
                 )
 
-        # split guest name (only used if guest)
         g_first, g_last = "Guest", ""
         if guest_full_name:
             parts = guest_full_name.split(" ", 1)
@@ -399,9 +395,6 @@ def select_seats():
                             (g_first, g_last, email),
                         )
 
-            # Phones:
-            # - For registered users: phones are already saved in signup, we do NOT touch them.
-            # - For guests: we save the phones they entered now.
             if not is_logged_in:
                 for phone in clean_phones:
                     cursor.execute(
@@ -409,7 +402,6 @@ def select_seats():
                         (email, phone),
                     )
 
-            # --- create order + items + mark seats booked ---
             cursor.execute(
                 """
                 INSERT INTO FlightOrder (flight_id, email, execution_date, status, total_payment)
@@ -433,7 +425,6 @@ def select_seats():
 
         return redirect(f"/order_success?order_id={order_id}&email={email}")
 
-    # 3) GET: show seats (mixed classes)
     return render_template(
         "select_seats.html",
         flight=flight,
@@ -445,14 +436,11 @@ def select_seats():
 
 
 def _get_seats_and_grids_by_class(flight_id, plane_id):
-    """
-    Returns:
-      seats_by_class: {"Regular": [...], "Business": [...]}  (only classes that exist / have seats)
-      grid_by_class:  {"Regular": {"rows": X, "cols": Y}, "Business": {...}}
-    """
+    '''
+    פונקציה הבונה את מפת המושבים למטוס הספציפי, בחלוקה למחלקה רגילה ועסקים (אם קיימת)
+    '''
     from main import db_cur
 
-    # Delete invalid FlightSeat rows (seat not belonging to the flight plane)
     with db_cur() as cursor:
         cursor.execute(
             """
@@ -464,7 +452,6 @@ def _get_seats_and_grids_by_class(flight_id, plane_id):
             (flight_id, plane_id),
         )
 
-    # Ensure FlightSeat exists for this flight (create from all plane seats if missing)
     with db_cur() as cursor:
         cursor.execute("SELECT COUNT(*) AS cnt FROM FlightSeat WHERE flight_id=%s", (flight_id,))
         if cursor.fetchone()["cnt"] == 0:
@@ -510,7 +497,6 @@ def _get_seats_and_grids_by_class(flight_id, plane_id):
             )
             seats = cursor.fetchall()
 
-        # keep only classes that actually exist/have seats
         if seats:
             seats_by_class[class_type] = seats
             grid_by_class[class_type] = {
