@@ -107,7 +107,7 @@
     <span class="close close-crew">&times;</span>
 
     {% if request.args.get('modal') == 'addCrew' and request.args.get('error') %}
-      <div class="alert error">
+      <div class="modal-error">
         {{ request.args.get('error') }}
       </div>
     {% endif %}
