@@ -330,19 +330,35 @@ def _fetch_step2_lists(cursor, is_long: bool, new_start_dt: datetime, new_end_dt
 
     Filters by:
     - time overlap only (no buffer) AND ignoring cancelled
-    - location at departure: last_dest must equal origin OR NULL (first assignment)
+    - location at departure: last_dest MUST equal origin (NO NULLS)
     - long flights: pilots/attendants require AirCrew.long_flight_training = 1
     - long flights: only Big planes are shown
     """
 
-    # ---- Planes ----
+    # =========================
+    # Planes
+    # =========================
     cursor.execute(
         """
         SELECT
           p.plane_id,
           p.manufacturer,
           p.purchase_date,
-          CASE WHEN bp.plane_id IS NOT NULL THEN 1 ELSE 0 END AS is_big
+          CASE WHEN bp.plane_id IS NOT NULL THEN 1 ELSE 0 END AS is_big,
+
+          (
+            SELECT f3.destination_airport
+            FROM Flight f3
+            JOIN Airway a3
+              ON a3.origin_airport = f3.origin_airport
+             AND a3.destination_airport = f3.destination_airport
+            WHERE f3.plane_id = p.plane_id
+              AND LOWER(f3.status) <> 'cancelled'
+              AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
+            ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
+            LIMIT 1
+          ) AS last_loc
+
         FROM Plane p
         LEFT JOIN BigPlane bp ON bp.plane_id = p.plane_id
         WHERE
@@ -358,53 +374,42 @@ def _fetch_step2_lists(cursor, is_long: bool, new_start_dt: datetime, new_end_dt
              AND a.destination_airport = f.destination_airport
             WHERE f.plane_id = p.plane_id
               AND LOWER(f.status) <> 'cancelled'
-              AND (
-                TIMESTAMP(f.departure_date, f.departure_time) < %s
-                AND DATE_ADD(TIMESTAMP(f.departure_date, f.departure_time), INTERVAL a.duration MINUTE) > %s
-              )
+              AND TIMESTAMP(f.departure_date, f.departure_time) < %s
+              AND DATE_ADD(TIMESTAMP(f.departure_date, f.departure_time), INTERVAL a.duration MINUTE) > %s
           )
 
-          -- (B) location-at-departure (or NULL => first assignment)
-          AND (
-            (
-              SELECT f3.destination_airport
-              FROM Flight f3
-              JOIN Airway a3
-                ON a3.origin_airport = f3.origin_airport
-               AND a3.destination_airport = f3.destination_airport
-              WHERE f3.plane_id = p.plane_id
-                AND LOWER(f3.status) <> 'cancelled'
-                AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
-              ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
-              LIMIT 1
-            ) IS NULL
-            OR
-            (
-              SELECT f3.destination_airport
-              FROM Flight f3
-              JOIN Airway a3
-                ON a3.origin_airport = f3.origin_airport
-               AND a3.destination_airport = f3.destination_airport
-              WHERE f3.plane_id = p.plane_id
-                AND LOWER(f3.status) <> 'cancelled'
-                AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
-              ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
-              LIMIT 1
-            ) = %s
-          )
+        HAVING last_loc = %s
         ORDER BY p.plane_id
         """,
-        (1 if is_long else 0, new_end_dt, new_start_dt, new_start_dt, new_start_dt, origin),
+        (new_start_dt, 1 if is_long else 0, new_end_dt, new_start_dt, origin),
     )
     planes = cursor.fetchall()
 
     # ---- Crew filters ----
     long_clause = "AND ac.long_flight_training = 1" if is_long else ""
 
-    # ---- Pilots ----
+    # =========================
+    # Pilots
+    # =========================
     cursor.execute(
         f"""
-        SELECT w.id, w.first_name, w.last_name
+        SELECT
+          w.id, w.first_name, w.last_name,
+
+          (
+            SELECT f3.destination_airport
+            FROM FlightCrewPlacement fcp3
+            JOIN Flight f3 ON f3.flight_id = fcp3.flight_id
+            JOIN Airway a3
+              ON a3.origin_airport = f3.origin_airport
+             AND a3.destination_airport = f3.destination_airport
+            WHERE fcp3.id = w.id
+              AND LOWER(f3.status) <> 'cancelled'
+              AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
+            ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
+            LIMIT 1
+          ) AS last_loc
+
         FROM Worker w
         JOIN Pilot p2   ON p2.id = w.id
         JOIN AirCrew ac ON ac.id = w.id
@@ -422,52 +427,39 @@ def _fetch_step2_lists(cursor, is_long: bool, new_start_dt: datetime, new_end_dt
             JOIN FlightCrewPlacement fcp ON fcp.flight_id = f.flight_id
             WHERE fcp.id = w.id
               AND LOWER(f.status) <> 'cancelled'
-              AND (
-                TIMESTAMP(f.departure_date, f.departure_time) < %s
-                AND DATE_ADD(TIMESTAMP(f.departure_date, f.departure_time), INTERVAL a.duration MINUTE) > %s
-              )
+              AND TIMESTAMP(f.departure_date, f.departure_time) < %s
+              AND DATE_ADD(TIMESTAMP(f.departure_date, f.departure_time), INTERVAL a.duration MINUTE) > %s
           )
 
-          -- (B) location-at-departure (or NULL => first assignment)
-          AND (
-            (
-              SELECT f3.destination_airport
-              FROM FlightCrewPlacement fcp3
-              JOIN Flight f3 ON f3.flight_id = fcp3.flight_id
-              JOIN Airway a3
-                ON a3.origin_airport = f3.origin_airport
-               AND a3.destination_airport = f3.destination_airport
-              WHERE fcp3.id = w.id
-                AND LOWER(f3.status) <> 'cancelled'
-                AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
-              ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
-              LIMIT 1
-            ) IS NULL
-            OR
-            (
-              SELECT f3.destination_airport
-              FROM FlightCrewPlacement fcp3
-              JOIN Flight f3 ON f3.flight_id = fcp3.flight_id
-              JOIN Airway a3
-                ON a3.origin_airport = f3.origin_airport
-               AND a3.destination_airport = f3.destination_airport
-              WHERE fcp3.id = w.id
-                AND LOWER(f3.status) <> 'cancelled'
-                AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
-              ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
-              LIMIT 1
-            ) = %s
-          )
+        HAVING last_loc = %s
         ORDER BY w.last_name, w.first_name
         """,
-        (new_end_dt, new_start_dt, new_start_dt, new_start_dt, origin),
+        (new_start_dt, new_end_dt, new_start_dt, origin),
     )
     pilots = cursor.fetchall()
 
-    # ---- Flight Attendants ----
+    # =========================
+    # Flight Attendants
+    # =========================
     cursor.execute(
         f"""
-        SELECT w.id, w.first_name, w.last_name
+        SELECT
+          w.id, w.first_name, w.last_name,
+
+          (
+            SELECT f3.destination_airport
+            FROM FlightCrewPlacement fcp3
+            JOIN Flight f3 ON f3.flight_id = fcp3.flight_id
+            JOIN Airway a3
+              ON a3.origin_airport = f3.origin_airport
+             AND a3.destination_airport = f3.destination_airport
+            WHERE fcp3.id = w.id
+              AND LOWER(f3.status) <> 'cancelled'
+              AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
+            ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
+            LIMIT 1
+          ) AS last_loc
+
         FROM Worker w
         JOIN FlightAttendant fa ON fa.id = w.id
         JOIN AirCrew ac         ON ac.id = w.id
@@ -485,45 +477,14 @@ def _fetch_step2_lists(cursor, is_long: bool, new_start_dt: datetime, new_end_dt
             JOIN FlightCrewPlacement fcp ON fcp.flight_id = f.flight_id
             WHERE fcp.id = w.id
               AND LOWER(f.status) <> 'cancelled'
-              AND (
-                TIMESTAMP(f.departure_date, f.departure_time) < %s
-                AND DATE_ADD(TIMESTAMP(f.departure_date, f.departure_time), INTERVAL a.duration MINUTE) > %s
-              )
+              AND TIMESTAMP(f.departure_date, f.departure_time) < %s
+              AND DATE_ADD(TIMESTAMP(f.departure_date, f.departure_time), INTERVAL a.duration MINUTE) > %s
           )
 
-          -- (B) location-at-departure (or NULL => first assignment)
-          AND (
-            (
-              SELECT f3.destination_airport
-              FROM FlightCrewPlacement fcp3
-              JOIN Flight f3 ON f3.flight_id = fcp3.flight_id
-              JOIN Airway a3
-                ON a3.origin_airport = f3.origin_airport
-               AND a3.destination_airport = f3.destination_airport
-              WHERE fcp3.id = w.id
-                AND LOWER(f3.status) <> 'cancelled'
-                AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
-              ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
-              LIMIT 1
-            ) IS NULL
-            OR
-            (
-              SELECT f3.destination_airport
-              FROM FlightCrewPlacement fcp3
-              JOIN Flight f3 ON f3.flight_id = fcp3.flight_id
-              JOIN Airway a3
-                ON a3.origin_airport = f3.origin_airport
-               AND a3.destination_airport = f3.destination_airport
-              WHERE fcp3.id = w.id
-                AND LOWER(f3.status) <> 'cancelled'
-                AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
-              ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
-              LIMIT 1
-            ) = %s
-          )
+        HAVING last_loc = %s
         ORDER BY w.last_name, w.first_name
         """,
-        (new_end_dt, new_start_dt, new_start_dt, new_start_dt, origin),
+        (new_start_dt, new_end_dt, new_start_dt, origin),
     )
     attendants = cursor.fetchall()
 
@@ -846,34 +807,43 @@ def admin_add_flight():
                 ):
                     return render_template("admin_add_flight.html", step=2, error=f"Flight attendant {fid} is not available at this time (overlap).", data=data)
 
-        # Location enforcement (server-side)
+        # Location enforcement (server-side)  [NO NULL ALLOWED]
         with db_cur() as cursor:
             plane_loc = _last_location_plane(cursor, plane_id, new_start_dt)
-            if plane_loc is not None and plane_loc != origin:
+            if plane_loc != origin:
                 return render_template(
                     "admin_add_flight.html",
                     step=2,
-                    error=f"Selected plane is not at {origin} at departure time (last known location: {plane_loc}).",
+                    error=(
+                        f"Selected plane is not at {origin} at departure time "
+                        f"(last known location: {plane_loc})."
+                    ),
                     data=data,
                 )
 
             for pid in pilot_ids:
                 loc = _last_location_worker(cursor, int(pid), new_start_dt)
-                if loc is not None and loc != origin:
+                if loc != origin:
                     return render_template(
                         "admin_add_flight.html",
                         step=2,
-                        error=f"Pilot {pid} is not at {origin} at departure time (last known location: {loc}).",
+                        error=(
+                            f"Pilot {pid} is not at {origin} at departure time "
+                            f"(last known location: {loc})."
+                        ),
                         data=data,
                     )
 
             for fid in fa_ids:
                 loc = _last_location_worker(cursor, int(fid), new_start_dt)
-                if loc is not None and loc != origin:
+                if loc != origin:
                     return render_template(
                         "admin_add_flight.html",
                         step=2,
-                        error=f"Flight attendant {fid} is not at {origin} at departure time (last known location: {loc}).",
+                        error=(
+                            f"Flight attendant {fid} is not at {origin} at departure time "
+                            f"(last known location: {loc})."
+                        ),
                         data=data,
                     )
 
