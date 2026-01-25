@@ -73,17 +73,11 @@ def _overlap_exists(cursor, *, start_dt, end_dt, buffer_min, where_sql, params):
 
 
 def is_valid_israeli_id(id_number: str) -> bool:
-    if not id_number or not id_number.isdigit() or len(id_number) != 9:
-        return False
-
-    total = 0
-    for i, digit in enumerate(id_number):
-        num = int(digit) * (1 if i % 2 == 0 else 2)
-        if num > 9:
-            num -= 9
-        total += num
-
-    return total % 10 == 0
+    return (
+        bool(id_number)
+        and id_number.isdigit()
+        and len(id_number) == 9
+    )
 
 
 @admin_bp.route("/login", methods=["GET", "POST"])
@@ -1073,11 +1067,10 @@ def admin_add_crew():
 
         worker_id = (data.get("id") or "").strip()
 
-        # ---- NEW: Israeli ID validation ----
         if not is_valid_israeli_id(worker_id):
             return render_template(
                 "admin_add_crew.html",
-                error="Invalid Israeli ID number. Please enter a valid 9-digit ID.",
+                error="Please enter a valid 9-digit ID.",
                 data=data
             )
 
