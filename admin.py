@@ -5,10 +5,10 @@ import traceback
 admin_bp = Blueprint("admin", __name__)  # בלי url_prefix כאן
 
 # =========================
-# Availability buffers
+# Availability buffers (NO BUFFER)
 # =========================
-PLANE_BUFFER_MIN = 60
-CREW_BUFFER_MIN = 120
+PLANE_BUFFER_MIN = 0
+CREW_BUFFER_MIN = 0
 
 
 def _require_admin():
@@ -69,177 +69,6 @@ def _overlap_exists(cursor, *, start_dt, end_dt, buffer_min, where_sql, params):
     """
     cursor.execute(sql, tuple(params) + (padded_end, padded_start))
     return cursor.fetchone() is not None
-
-
-def _fetch_step2_lists(cursor, *, is_long: bool, new_start_dt: datetime, new_end_dt: datetime, origin: str):
-    # ---------- Planes ----------
-    plane_padded_end = new_end_dt + timedelta(minutes=PLANE_BUFFER_MIN)
-    plane_padded_start = new_start_dt - timedelta(minutes=PLANE_BUFFER_MIN)
-
-    planes_sql = """
-        SELECT
-          p.plane_id,
-          p.manufacturer,
-          CASE WHEN bp.plane_id IS NULL THEN 0 ELSE 1 END AS is_big
-        FROM Plane p
-        LEFT JOIN BigPlane bp ON bp.plane_id = p.plane_id
-        WHERE 1=1
-    """
-
-    # אם טיסה ארוכה -> רק מטוסים גדולים
-    if is_long:
-        planes_sql += " AND bp.plane_id IS NOT NULL "
-
-    planes_sql += """
-        -- Availability (no overlap)
-        AND NOT EXISTS (
-            SELECT 1
-            FROM Flight f2
-            JOIN Airway a2
-              ON a2.origin_airport = f2.origin_airport
-             AND a2.destination_airport = f2.destination_airport
-            WHERE f2.plane_id = p.plane_id
-              AND LOWER(f2.status) <> 'cancelled'
-              AND TIMESTAMP(f2.departure_date, f2.departure_time) < %s
-              AND DATE_ADD(TIMESTAMP(f2.departure_date, f2.departure_time), INTERVAL a2.duration MINUTE) > %s
-        )
-
-        -- Location filter: last known location (arrival) before new_start_dt must be = origin
-        AND (
-            (
-                SELECT f3.destination_airport
-                FROM Flight f3
-                JOIN Airway a3
-                  ON a3.origin_airport = f3.origin_airport
-                 AND a3.destination_airport = f3.destination_airport
-                WHERE f3.plane_id = p.plane_id
-                  AND LOWER(f3.status) <> 'cancelled'
-                  AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
-                ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
-                LIMIT 1
-            ) IS NULL
-            OR
-            (
-                SELECT f3.destination_airport
-                FROM Flight f3
-                JOIN Airway a3
-                  ON a3.origin_airport = f3.origin_airport
-                 AND a3.destination_airport = f3.destination_airport
-                WHERE f3.plane_id = p.plane_id
-                  AND LOWER(f3.status) <> 'cancelled'
-                  AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
-                ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
-                LIMIT 1
-            ) = %s
-        )
-
-        ORDER BY p.plane_id
-    """
-
-    cursor.execute(
-        planes_sql,
-        (plane_padded_end, plane_padded_start, new_start_dt, new_start_dt, origin),
-    )
-    planes = cursor.fetchall()
-
-    # ---------- Crew ----------
-    crew_padded_end = new_end_dt + timedelta(minutes=CREW_BUFFER_MIN)
-    crew_padded_start = new_start_dt - timedelta(minutes=CREW_BUFFER_MIN)
-
-    crew_training_cond = "AND ac.long_flight_training = 1" if is_long else ""
-
-    # shared location condition for crew (w.id)
-    crew_location_cond = """
-      AND (
-        (
-          SELECT f3.destination_airport
-          FROM FlightCrewPlacement fcp3
-          JOIN Flight f3 ON f3.flight_id = fcp3.flight_id
-          JOIN Airway a3
-            ON a3.origin_airport = f3.origin_airport
-           AND a3.destination_airport = f3.destination_airport
-          WHERE fcp3.id = w.id
-            AND LOWER(f3.status) <> 'cancelled'
-            AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
-          ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
-          LIMIT 1
-        ) IS NULL
-        OR
-        (
-          SELECT f3.destination_airport
-          FROM FlightCrewPlacement fcp3
-          JOIN Flight f3 ON f3.flight_id = fcp3.flight_id
-          JOIN Airway a3
-            ON a3.origin_airport = f3.origin_airport
-           AND a3.destination_airport = f3.destination_airport
-          WHERE fcp3.id = w.id
-            AND LOWER(f3.status) <> 'cancelled'
-            AND DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) <= %s
-          ORDER BY DATE_ADD(TIMESTAMP(f3.departure_date, f3.departure_time), INTERVAL a3.duration MINUTE) DESC
-          LIMIT 1
-        ) = %s
-      )
-    """
-
-    # Pilots
-    cursor.execute(
-        f"""
-        SELECT w.id, w.first_name, w.last_name
-        FROM Pilot p
-        JOIN AirCrew ac ON ac.id = p.id
-        JOIN Worker w ON w.id = ac.id
-        LEFT JOIN Manager m ON m.id = w.id
-        WHERE m.id IS NULL
-          {crew_training_cond}
-          AND NOT EXISTS (
-            SELECT 1
-            FROM FlightCrewPlacement fcp
-            JOIN Flight f2 ON f2.flight_id = fcp.flight_id
-            JOIN Airway a2
-              ON a2.origin_airport = f2.origin_airport
-             AND a2.destination_airport = f2.destination_airport
-            WHERE fcp.id = w.id
-              AND LOWER(f2.status) <> 'cancelled'
-              AND TIMESTAMP(f2.departure_date, f2.departure_time) < %s
-              AND DATE_ADD(TIMESTAMP(f2.departure_date, f2.departure_time), INTERVAL a2.duration MINUTE) > %s
-          )
-          {crew_location_cond}
-        ORDER BY w.id
-        """,
-        (crew_padded_end, crew_padded_start, new_start_dt, new_start_dt, origin),
-    )
-    pilots = cursor.fetchall()
-
-    # Attendants
-    cursor.execute(
-        f"""
-        SELECT w.id, w.first_name, w.last_name
-        FROM FlightAttendant fa
-        JOIN AirCrew ac ON ac.id = fa.id
-        JOIN Worker w ON w.id = ac.id
-        LEFT JOIN Manager m ON m.id = w.id
-        WHERE m.id IS NULL
-          {crew_training_cond}
-          AND NOT EXISTS (
-            SELECT 1
-            FROM FlightCrewPlacement fcp
-            JOIN Flight f2 ON f2.flight_id = fcp.flight_id
-            JOIN Airway a2
-              ON a2.origin_airport = f2.origin_airport
-             AND a2.destination_airport = f2.destination_airport
-            WHERE fcp.id = w.id
-              AND LOWER(f2.status) <> 'cancelled'
-              AND TIMESTAMP(f2.departure_date, f2.departure_time) < %s
-              AND DATE_ADD(TIMESTAMP(f2.departure_date, f2.departure_time), INTERVAL a2.duration MINUTE) > %s
-          )
-          {crew_location_cond}
-        ORDER BY w.id
-        """,
-        (crew_padded_end, crew_padded_start, new_start_dt, new_start_dt, origin),
-    )
-    attendants = cursor.fetchall()
-
-    return planes, pilots, attendants
 
 
 
@@ -395,10 +224,6 @@ def admin_flights():
 # 5) Cancelling a flight has NO cascading effect on future flights (we don't "fix chains")
 # =========================================================
 
-# Per Eren: no cooling period
-CREW_BUFFER_MIN = 0
-PLANE_BUFFER_MIN = 0
-
 
 def _normalize_time(t):
     if isinstance(t, timedelta):
@@ -494,7 +319,7 @@ def _fetch_step2_lists(cursor, is_long: bool, new_start_dt: datetime, new_end_dt
     - time overlap only (no buffer) AND ignoring cancelled
     - location at departure: last_dest must equal origin OR NULL (first assignment)
     - long flights: pilots/attendants require AirCrew.long_flight_training = 1
-    - long flights: only Big planes are shown (UX improvement; still enforced on POST)
+    - long flights: only Big planes are shown
     """
 
     # ---- Planes ----
@@ -511,7 +336,7 @@ def _fetch_step2_lists(cursor, is_long: bool, new_start_dt: datetime, new_end_dt
           -- If long flight: show only Big planes
           (%s = 0 OR bp.plane_id IS NOT NULL)
 
-          -- (A) time availability (ignore cancelled)
+          -- (A) time availability (NO buffer, ignore cancelled)
           AND NOT EXISTS (
             SELECT 1
             FROM Flight f
