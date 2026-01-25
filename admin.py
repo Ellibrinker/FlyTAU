@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, session
 from datetime import datetime, date, timedelta
 import traceback
+from urllib.parse import quote_plus
 
 admin_bp = Blueprint("admin", __name__)  # בלי url_prefix כאן
 
@@ -1054,10 +1055,10 @@ def admin_add_plane():
             
             return redirect("/admin/resources?msg=Plane+Added")
         except Exception as e:
-            # ❌ Error → back to resources + open plane modal
-            return render_template("admin_add_plane.html", error=str(e))
+            error_msg = quote_plus(str(e))
+            return redirect(f"/admin/resources?modal=addPlane&error={error_msg}")
     # GET fallback (usually not used if opened only via modal)
-    return render_template("admin_add_crew.html")
+    return redirect("/admin/resources")
 
 
 @admin_bp.route("/crew/new", methods=["GET", "POST"])
