@@ -127,7 +127,6 @@ def get_bookable_flights(origin, destination, departure_date=None):
 
     params = [origin, destination]
 
-    # ✅ אם הוזן תאריך -> מוסיפים תנאי
     if departure_date:
         base_query += " AND f.departure_date=%s"
         params.append(departure_date)
@@ -184,7 +183,7 @@ def select_seats():
             (flight_id,),
         )
         flight = cursor.fetchone()
-
+    #אם לא נמצאה טיסה מתאימה
     if not flight:
         return render_template(
             "select_seats.html",
@@ -241,7 +240,7 @@ def select_seats():
     seats_by_class, grid_by_class = _get_seats_and_grids_by_class(
         flight_id, flight["plane_id"]
     )
-
+    #אם מנהל מנסה לרכוש כרטיס - לא נאשר את ההזמנה
     if session.get("is_manager"):
         return render_template(
             "select_seats.html",
@@ -254,7 +253,7 @@ def select_seats():
     if request.method == "POST":
         selected_ids = request.form.getlist("flight_seat_id")
 
-        # logged-in user OR guest email
+        # משתמש רשום או אורח
         guest_email = (request.form.get("guest_email") or "").strip().lower()
         email = (session.get("user_email") or guest_email or "").strip().lower()
 
@@ -383,7 +382,6 @@ def select_seats():
                         (email, g_first, g_last),
                     )
             else:
-                # If guest: optionally upgrade "Guest" name to actual provided name (one-time cleanup)
                 if not is_logged_in and guest_full_name:
                     cur_fn = (customer.get("first_name") or "").strip()
                     cur_ln = (customer.get("last_name") or "").strip()
@@ -394,7 +392,7 @@ def select_seats():
                             "UPDATE Customer SET first_name=%s, last_name=%s WHERE email=%s",
                             (g_first, g_last, email),
                         )
-
+            
             if not is_logged_in:
                 for phone in clean_phones:
                     cursor.execute(
@@ -465,7 +463,7 @@ def _get_seats_and_grids_by_class(flight_id, plane_id):
 
     seats_by_class = {}
     grid_by_class = {}
-
+    #יצירת מספר שורות וטורים למחלקות
     for class_type in ("Regular", "Business"):
         with db_cur() as cursor:
             cursor.execute(
