@@ -1087,7 +1087,7 @@ def admin_add_plane():
             # ❌ Error → back to resources + open plane modal
             return render_template("admin_add_plane.html", error=str(e))
     # GET fallback (usually not used if opened only via modal)
-    return redirect("/admin/resources")
+    return render_template("admin_add_crew.html")
 
 
 @admin_bp.route("/crew/new", methods=["GET", "POST"])
