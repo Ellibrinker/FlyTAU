@@ -1,5 +1,5 @@
 USE `ellibrinker$flytau`;
-
+/* הזנת נתונים למערכת */
 -- =========================
 -- 1) Customers: 2 registered + 2 guests
 -- =========================
