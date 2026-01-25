@@ -24,7 +24,6 @@
     cursor: pointer;
 }
 
-/* גוף הדף ורקע */
 body {
     font-family: 'Assistant', sans-serif;
     margin: 0;
@@ -39,7 +38,6 @@ body {
     background-position: center;
 }
 
-/* תיבת ההרשמה */
 .wrapper {
     width: 520px;
     background: transparent;
@@ -199,7 +197,6 @@ display: block;
     text-align: center;
 }
 
-/* Phones stack (multiple phone rows) */
 #phones {
     display: flex;
     flex-direction: column;
@@ -207,12 +204,74 @@ display: block;
     align-items: center; /* כדי שיישאר ממורכז כמו שאר השדות */
 }
 
-/* לא לעשות margin כפול על כל input-box בתוך phones */
 #phones .input-box {
-    margin: 0 auto;     /* במקום margin: 15px auto; */
+    margin: 0 auto;
 }
 
-/* לא צריך margin-bottom על האינפוט עצמו כי gap כבר עושה את זה */
 #phones .phone-input {
     margin-bottom: 0;
+}
+
+.hint {
+  display: block;
+  text-align: center;
+  color: #252264;
+  opacity: 0.75;
+  font-size: 13px;
+  margin: -6px 0 10px;
+}
+
+.add-phone-btn {
+  background-color: rgba(37, 34, 99, 0.2);
+  color: #252264;
+  height: 46px;
+  border-radius: 40px;
+  border: 1px solid rgba(37, 34, 99, 0.2);
+  cursor: pointer;
+  width: 70%;
+  max-width: 320px;
+  margin: 10px auto 10px;  /* במקום margin: 100px */
+  font-size: 15px;
+  font-weight: 700;
+  display: block;
+  transition: all 0.2s ease;
+}
+
+.add-phone-btn:hover {
+  background-color: rgba(37, 34, 99, 0.3);
+  transform: translateY(-1px);
+}
+
+.remove-phone-btn {
+  background: rgba(176, 0, 32, 0.12);
+  color: #b00020;
+  border: 1px solid rgba(176, 0, 32, 0.25);
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  width: auto;
+  margin-top: 0;
+  margin-left: 10px;
+  transition: all 0.2s ease;
+}
+
+.remove-phone-btn:hover {
+  background: rgba(176, 0, 32, 0.18);
+  transform: translateY(-1px);
+}
+
+.phone-row {
+  justify-content: center;
+}
+
+.phone-row .phone-input {
+  width: 100%;
+}
+
+.input-box input:invalid:focus {
+  border-color: #b00020;
+  box-shadow: 0 0 5px rgba(176, 0, 32, 0.25);
 }

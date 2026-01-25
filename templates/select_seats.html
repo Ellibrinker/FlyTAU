@@ -5,6 +5,7 @@
   <title>Select Seats</title>
   <link rel="stylesheet" href="/static/select_seats.css">
   <link href="https://cdn.jsdelivr.net/npm/remixicon@4.7.0/fonts/remixicon.css" rel="stylesheet"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
 
 <body>
@@ -16,7 +17,7 @@
 
   <div class="card">
     {% if error %}
-      <div class="error">{{ error }}</div>
+      <div class="error" role="alert" aria-live="polite">{{ error }}</div>
     {% endif %}
 
     {% if flight %}
@@ -27,7 +28,7 @@
       </p>
 
       <!-- MAIN FORM -->
-      <form method="POST" action="/select_seats" id="mainForm">
+      <form method="POST" action="/select_seats" id="mainForm" novalidate>
         <input type="hidden" name="flight_id" value="{{ flight.flight_id }}">
 
         <div class="row">
@@ -83,7 +84,6 @@
           <button class="btn" type="submit">Confirm booking</button>
         </div>
       </form>
-
     {% endif %}
 
     <!-- PERSONAL DETAILS MODAL -->
@@ -92,30 +92,76 @@
       <div class="modal-content">
         <h2>Personal Details</h2>
 
-        <form id="personalForm">
+        <!-- Client error box inside modal -->
+        <div id="modalError" class="error" style="display:none;" role="alert" aria-live="polite"></div>
+
+        <form id="personalForm" novalidate>
           <div class="modal-row">
             <label>Full Name</label>
-            <input type="text" name="guest_full_name" required>
+            <input
+              type="text"
+              name="guest_full_name"
+              required
+              minlength="2"
+              maxlength="60"
+              autocomplete="name"
+              pattern="^[A-Za-zÀ-ž\u0590-\u05FF]+([ '\-][A-Za-zÀ-ž\u0590-\u05FF]+)+$|^[A-Za-zÀ-ž\u0590-\u05FF]{2,60}$"
+              title="Enter your full name."
+            >
           </div>
 
           <div class="modal-row">
             <label>Email</label>
-            <input type="email" name="guest_email" required>
+            <input
+              type="email"
+              name="guest_email"
+              required
+              maxlength="254"
+              autocomplete="email"
+            >
           </div>
 
           <div class="modal-row">
             <label>Passport Number</label>
-            <input type="text" name="guest_passport" required>
+            <input
+              type="text"
+              name="guest_passport"
+              required
+              minlength="6"
+              maxlength="12"
+              pattern="^[A-Za-z0-9]{6,12}$"
+              title="6–12 letters/numbers only"
+              autocomplete="off"
+            >
           </div>
 
           <div class="modal-row">
             <label>Birth Date</label>
-            <input type="date" name="guest_birthdate" required>
+            <input
+              type="date"
+              name="guest_birthdate"
+              required
+              id="guestDob"
+              autocomplete="bday"
+            >
           </div>
+          <small class="hint" style="display:block;margin:-6px 0 10px;opacity:.8;">
+            You must be at least 16 years old.
+          </small>
 
           <div class="modal-row phone-row">
             <label>Phone Number</label>
-            <input type="tel" name="guest_phone[]" required>
+            <input
+              type="tel"
+              name="guest_phone[]"
+              required
+              minlength="8"
+              maxlength="16"
+              pattern="^\+?[0-9]{8,15}$"
+              title="8–15 digits, optionally starting with +"
+              autocomplete="tel"
+              inputmode="tel"
+            >
             <button type="button" class="add-phone">+ Add phone</button>
           </div>
 
@@ -125,14 +171,18 @@
             <a class="btn secondary" href="/search_flights">Back</a>
             <button type="submit" class="btn">Continue</button>
           </div>
-
         </form>
       </div>
     </div>
     {% endif %}
-
+  </div>
 
   <script>
+    // ---- Shared regex ----
+    const PHONE_REGEX = /^\+?[0-9]{8,15}$/;
+    const PASSPORT_REGEX = /^[A-Za-z0-9]{6,12}$/;
+
+    // ---- Seat selection ----
     const selected = new Set();
     const hidden = document.getElementById("hiddenInputs");
     const count = document.getElementById("count");
@@ -165,56 +215,157 @@
       });
     });
 
-      const modal = document.getElementById("personalModal");
-      const personalForm = document.getElementById("personalForm");
-      const extraPhones = document.getElementById("extraPhones");
-      const addPhoneBtn = document.querySelector(".add-phone");
+    // ---- Modal logic (guests) ----
+    const modal = document.getElementById("personalModal");
+    const personalForm = document.getElementById("personalForm");
+    const extraPhones = document.getElementById("extraPhones");
+    const addPhoneBtn = document.querySelector(".add-phone");
+    const modalError = document.getElementById("modalError");
 
-      // Open modal automatically for unregistered users
-      {% if not session.get('user_email') %}
-        modal.style.display = "flex";
-      {% endif %}
+    function showModalError(msg) {
+      if (!modalError) return;
+      modalError.innerText = msg;
+      modalError.style.display = "block";
+    }
+    function clearModalError() {
+      if (!modalError) return;
+      modalError.innerText = "";
+      modalError.style.display = "none";
+    }
+    function normalizePhone(raw) {
+      return (raw || "").trim().replace(/\s+/g, "");
+    }
 
-      // Add phone button
+    // DOB max: today - 16 years
+    (function setGuestDobMax() {
+      const dob = document.getElementById("guestDob");
+      if (!dob) return;
+      const today = new Date();
+      const max = new Date(today.getFullYear() - 16, today.getMonth(), today.getDate());
+      const yyyy = max.getFullYear();
+      const mm = String(max.getMonth() + 1).padStart(2, "0");
+      const dd = String(max.getDate()).padStart(2, "0");
+      dob.max = `${yyyy}-${mm}-${dd}`;
+    })();
+
+    // Open modal automatically for guests
+    {% if not session.get('user_email') %}
+      if (modal) modal.style.display = "flex";
+    {% endif %}
+
+    // Add phone
+    if (addPhoneBtn) {
       addPhoneBtn.addEventListener("click", () => {
         const div = document.createElement("div");
         div.className = "modal-row phone-row";
 
         div.innerHTML = `
           <label>Additional Phone</label>
-          <input type="tel" name="guest_phone[]" required>
+          <input type="tel" name="guest_phone[]" required minlength="8" maxlength="16"
+                 pattern="^\\+?[0-9]{8,15}$"
+                 title="8–15 digits, optionally starting with +"
+                 autocomplete="tel" inputmode="tel">
           <button type="button" class="remove-phone">Remove</button>
         `;
 
         extraPhones.appendChild(div);
 
-        // Remove button functionality
         div.querySelector(".remove-phone").addEventListener("click", () => {
           div.remove();
         });
       });
+    }
 
-      personalForm.addEventListener("submit", (e) => {
-        e.preventDefault();
+    // Intercept MAIN form submit for guests:
+    // If guest and modal still open -> block & prompt
+    const mainForm = document.getElementById("mainForm");
+    if (mainForm) {
+      mainForm.addEventListener("submit", (e) => {
+        {% if not session.get('user_email') %}
+          // Require modal completion before allowing submit
+          if (modal && modal.style.display !== "none") {
+            e.preventDefault();
+            showModalError("Please fill your personal details first, then click Continue.");
+            return;
+          }
+        {% endif %}
 
-        if (!personalForm.checkValidity()) {
-          alert("Please fill all details.");
+        // Always require at least 1 seat
+        if (selected.size === 0) {
+          e.preventDefault();
+          alert("Please select at least one seat.");
           return;
         }
+      });
+    }
 
-        const mainForm = document.querySelector("form[action='/select_seats']");
+    // Modal submit -> validate, normalize phones, append hidden inputs to main form
+    if (personalForm) {
+      personalForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        clearModalError();
+
+        // Browser-level validation
+        if (!personalForm.checkValidity()) {
+          const invalid = personalForm.querySelector(":invalid");
+          const n = invalid?.getAttribute("name") || "";
+          if (n === "guest_full_name") return showModalError("Please enter your full name.");
+          if (n === "guest_email") return showModalError("Please enter a valid email address.");
+          if (n === "guest_passport") return showModalError("Passport number must be 6–12 letters/numbers only.");
+          if (n === "guest_birthdate") return showModalError("Please choose a valid birth date (at least 16 years old).");
+          if (n.startsWith("guest_phone")) return showModalError("Phone must be 8–15 digits, optionally starting with +.");
+          return showModalError("Please check the fields and try again.");
+        }
+
+        // Extra custom checks
+        const passport = (personalForm.querySelector("input[name='guest_passport']")?.value || "").trim();
+        if (!PASSPORT_REGEX.test(passport)) {
+          return showModalError("Passport number must be 6–12 letters/numbers only.");
+        }
+
+        // phones: normalize + dedupe + validate
+        const phoneInputs = Array.from(personalForm.querySelectorAll("input[name='guest_phone[]']"));
+        const normalized = phoneInputs
+          .map(i => normalizePhone(i.value))
+          .filter(v => v.length > 0);
+
+        const unique = [];
+        const seen = new Set();
+        for (const p of normalized) {
+          if (seen.has(p)) continue;
+          seen.add(p);
+          unique.push(p);
+        }
+
+        if (unique.length === 0) return showModalError("Please enter at least one phone number.");
+
+        const bad = unique.find(p => !PHONE_REGEX.test(p));
+        if (bad) return showModalError("One or more phone numbers are invalid. Use digits only (8–15), optionally starting with +.");
+
+        // Update inputs with unique normalized values
+        phoneInputs.forEach((inp, idx) => {
+          inp.value = unique[idx] || "";
+        });
+
+        // Append modal fields to main form as hidden inputs (so Flask reads request.form)
         const formData = new FormData(personalForm);
+
+        // Clean up old hidden inputs from previous tries
+        mainForm.querySelectorAll("input[data-from='modal']").forEach(x => x.remove());
 
         for (let [name, value] of formData.entries()) {
           const inp = document.createElement("input");
           inp.type = "hidden";
           inp.name = name;
-          inp.value = value;
+          inp.value = (value || "").trim();
+          inp.setAttribute("data-from", "modal");
           mainForm.appendChild(inp);
         }
 
-        modal.style.display = "none";
+        // Close modal
+        if (modal) modal.style.display = "none";
       });
+    }
   </script>
 
 </body>

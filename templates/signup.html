@@ -5,6 +5,9 @@
   <title>Sign Up</title>
   <link rel="stylesheet" href="/static/sign_up.css" />
   <link href="https://cdn.boxicons.com/3.0.6/fonts/basic/boxicons.min.css" rel="stylesheet" />
+
+  <!-- Optional: makes browser validation messages nicer in some cases -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
 
 <body>
@@ -15,47 +18,124 @@
   </header>
 
   <div class="wrapper">
+
+    <!-- Server error (Flask) -->
     {% if error %}
-      <div class="error-box">{{ error }}</div>
+      <div class="error-box" role="alert" aria-live="polite">{{ error }}</div>
     {% endif %}
+
+    <!-- Client error (JS) -->
+    <div id="clientError" class="error-box" style="display:none;" role="alert" aria-live="polite"></div>
 
     <h1>Sign Up</h1>
 
-    <form action="/signup" method="POST">
+    <form action="/signup" method="POST" id="signupForm" novalidate>
+      <!-- Full Name -->
       <div class="input-box">
-        <input type="text" name="name" placeholder="Full Name" required />
+        <input
+          type="text"
+          name="name"
+          placeholder="Full Name"
+          required
+          minlength="2"
+          maxlength="60"
+          autocomplete="name"
+          pattern="^[A-Za-zÀ-ž\u0590-\u05FF]+([ '\-][A-Za-zÀ-ž\u0590-\u05FF]+)+$|^[A-Za-zÀ-ž\u0590-\u05FF]{2,60}$"
+          title="Enter your full name (letters only)."
+        />
         <i class="bx bx-user"></i>
       </div>
+      <small class="hint" style="display:block;margin:-6px 0 10px;opacity:.8;">
+        Example: John Smith / אלי ברינקר
+      </small>
 
+      <!-- Email -->
       <div class="input-box">
-        <input type="email" name="email" placeholder="Email Address" required />
+        <input
+          type="email"
+          name="email"
+          placeholder="Email Address"
+          required
+          maxlength="254"
+          autocomplete="email"
+        />
         <i class="bx bx-envelope"></i>
       </div>
 
+      <!-- Passport -->
       <div class="input-box">
-        <input type="text" name="passport_number" placeholder="Passport Number" required />
+        <input
+          type="text"
+          name="passport_number"
+          placeholder="Passport Number"
+          required
+          minlength="6"
+          maxlength="12"
+          pattern="^[A-Za-z0-9]{6,12}$"
+          title="Passport should be 6–12 characters (letters/numbers only)."
+          autocomplete="off"
+          inputmode="text"
+        />
         <i class="bx bx-user-id-card"></i>
       </div>
+      <small class="hint" style="display:block;margin:-6px 0 10px;opacity:.8;">
+        6–12 letters/numbers (no spaces or symbols)
+      </small>
 
+      <!-- Birth date -->
       <div class="input-box">
-        <input type="date" name="date_of_birth" required />
+        <input
+          type="date"
+          name="date_of_birth"
+          required
+          id="dob"
+          autocomplete="bday"
+        />
         <i class="bx bx-calendar"></i>
       </div>
+      <small class="hint" style="display:block;margin:-6px 0 10px;opacity:.8;">
+        You must be at least 16 years old.
+      </small>
 
-      <!-- Phones container (stacked) -->
+      <!-- Phones container -->
       <div id="phones">
         <div class="input-box phone-row">
-          <input class="phone-input" type="tel" name="phone" placeholder="Phone number (Required)" required />
+          <input
+            class="phone-input"
+            type="tel"
+            name="phone"
+            placeholder="Phone number (Required)"
+            required
+            minlength="8"
+            maxlength="16"
+            pattern="^\+?[0-9]{8,15}$"
+            title="Phone should be 8–15 digits, optionally starting with +"
+            autocomplete="tel"
+            inputmode="tel"
+          />
           <i class="bx bx-phone"></i>
         </div>
       </div>
 
       <button type="button" class="add-phone-btn" onclick="addPhone()">+ Add another phone</button>
 
+      <!-- Password -->
       <div class="input-box">
-        <input type="password" name="password" placeholder="Password" required />
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          required
+          minlength="8"
+          maxlength="64"
+          autocomplete="new-password"
+          id="password"
+        />
         <i class="bx bx-lock"></i>
       </div>
+      <small class="hint" style="display:block;margin:-6px 0 10px;opacity:.8;">
+        At least 8 characters.
+      </small>
 
       <button type="submit">Create Account</button>
     </form>
@@ -74,6 +154,27 @@
   </div>
 
   <script>
+    // ---- Config ----
+    const PHONE_REGEX = /^\+?[0-9]{8,15}$/;
+    const PASSPORT_REGEX = /^[A-Za-z0-9]{6,12}$/;
+
+    function showClientError(msg) {
+      const box = document.getElementById("clientError");
+      box.innerText = msg;
+      box.style.display = "block";
+      box.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    function clearClientError() {
+      const box = document.getElementById("clientError");
+      box.innerText = "";
+      box.style.display = "none";
+    }
+
+    function normalizePhone(raw) {
+      return (raw || "").trim().replace(/\s+/g, "");
+    }
+
     function addPhone() {
       const container = document.getElementById("phones");
 
@@ -85,14 +186,114 @@
       input.name = "phone"; // so request.form.getlist('phone') works
       input.placeholder = "Phone number (Optional)";
       input.className = "phone-input";
+      input.minLength = 8;
+      input.maxLength = 16;
+      input.pattern = "^\\+?[0-9]{8,15}$";
+      input.title = "Phone should be 8–15 digits, optionally starting with +";
+      input.autocomplete = "tel";
+      input.inputMode = "tel";
 
       const icon = document.createElement("i");
       icon.className = "bx bx-phone";
 
+      // Optional remove button (nice UX)
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "remove-phone-btn";
+      removeBtn.innerText = "Remove";
+      removeBtn.style.marginLeft = "10px";
+      removeBtn.onclick = () => row.remove();
+
       row.appendChild(input);
       row.appendChild(icon);
+      row.appendChild(removeBtn);
+
       container.appendChild(row);
     }
+
+    // DOB: set max date = today - 16 years (basic rule)
+    (function setDobMax() {
+      const dob = document.getElementById("dob");
+      if (!dob) return;
+
+      const today = new Date();
+      const max = new Date(today.getFullYear() - 16, today.getMonth(), today.getDate());
+      const yyyy = max.getFullYear();
+      const mm = String(max.getMonth() + 1).padStart(2, "0");
+      const dd = String(max.getDate()).padStart(2, "0");
+      dob.max = `${yyyy}-${mm}-${dd}`;
+    })();
+
+    // Form submit validation with nicer messages + dedupe phones
+    document.getElementById("signupForm").addEventListener("submit", (e) => {
+      clearClientError();
+
+      const form = e.target;
+
+      // Let browser validate required/min/max/pattern first
+      // but we intercept to show nicer message
+      if (!form.checkValidity()) {
+        e.preventDefault();
+
+        // Find first invalid field & map to friendly message
+        const invalid = form.querySelector(":invalid");
+        if (!invalid) return;
+
+        const name = invalid.getAttribute("name") || "";
+        if (name === "name") return showClientError("Please enter your full name (at least 2 characters).");
+        if (name === "email") return showClientError("Please enter a valid email address (example: name@example.com).");
+        if (name === "passport_number") return showClientError("Passport number must be 6–12 letters/numbers only (no spaces or symbols).");
+        if (name === "date_of_birth") return showClientError("Please choose a valid birth date (you must be at least 16).");
+        if (name === "password") return showClientError("Password must be at least 8 characters.");
+        if (name === "phone") return showClientError("Phone number must be 8–15 digits, optionally starting with +.");
+
+        return showClientError("Please check the form fields and try again.");
+      }
+
+      // Additional custom checks:
+      const passport = (form.querySelector("input[name='passport_number']")?.value || "").trim();
+      if (!PASSPORT_REGEX.test(passport)) {
+        e.preventDefault();
+        return showClientError("Passport number must be 6–12 letters/numbers only.");
+      }
+
+      // Collect phones, normalize, validate, dedupe, ensure at least 1
+      const phoneInputs = Array.from(form.querySelectorAll("input[name='phone']"));
+      const normalized = phoneInputs
+        .map(i => normalizePhone(i.value))
+        .filter(v => v.length > 0);
+
+      const unique = [];
+      const seen = new Set();
+      for (const p of normalized) {
+        if (seen.has(p)) continue;
+        seen.add(p);
+        unique.push(p);
+      }
+
+      if (unique.length === 0) {
+        e.preventDefault();
+        return showClientError("Please enter at least one phone number.");
+      }
+
+      const bad = unique.find(p => !PHONE_REGEX.test(p));
+      if (bad) {
+        e.preventDefault();
+        return showClientError("One or more phone numbers are invalid. Use digits only (8–15), optionally starting with +.");
+      }
+
+      // Write normalized unique values back to inputs:
+      // Keep first N inputs, remove extra phone rows, repopulate clean phones
+      // (important: server will still do its own clean, but this makes UX clean)
+      phoneInputs.forEach((inp, idx) => {
+        if (idx < unique.length) {
+          inp.value = unique[idx];
+        } else {
+          // clear extras so they don't submit garbage
+          inp.value = "";
+        }
+      });
+    });
   </script>
 </body>
 </html>
