@@ -1083,11 +1083,9 @@ def admin_add_plane():
                     cursor.execute("INSERT INTO SmallPlane (plane_id) VALUES (%s)", (new_id,))
             
             return redirect("/admin/resources?msg=Plane+Added")
-        except Exception:
+        except Exception as e:
             # ❌ Error → back to resources + open plane modal
-            return redirect(
-                "/admin/resources?modal=addPlane&error=Failed+to+add+plane"
-            )
+            return render_template("admin_add_plane.html", error=str(e))
     # GET fallback (usually not used if opened only via modal)
     return redirect("/admin/resources")
 
