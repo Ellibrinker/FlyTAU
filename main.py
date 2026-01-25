@@ -12,13 +12,22 @@ PHONE_RE = re.compile(r"^\+?[0-9]{8,15}$")      # E.164-ish
 PASSPORT_RE = re.compile(r"^[A-Za-z0-9]{6,12}$") # simple generic passport
 
 def is_valid_phone(p: str) -> bool:
+    '''
+    מנקה רווחים מיותריםובודקת את תקינות מספר הטלפון שהוזן
+    '''
     return bool(PHONE_RE.fullmatch((p or "").strip()))
 
 def is_valid_passport(x: str) -> bool:
+    '''
+    מוודאת שאין תווים מיוחדים או רווחים, ובודקת תקינות של מספר הטלפון
+    '''
     return bool(PASSPORT_RE.fullmatch((x or "").strip()))
 
 @contextmanager
 def db_cur():
+    '''
+    יצירת חיבור למסד הנתונים וניהול הקשר עימו
+    '''
     mydb = None
     cursor = None
     try:
@@ -40,6 +49,9 @@ def db_cur():
 
 @app.route('/')
 def homepage():
+    '''
+    מפנה לדף הבית הכללי או של המנהלים, לפי סוג המשתמש
+    '''
     if session.get("is_manager"):
         return redirect("/admin/")
     return render_template('homepage.html', user_name=session.get('user_name'))
@@ -47,6 +59,9 @@ def homepage():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login_page():
+    '''
+    בודק התאמה בין האימייל והסיסמה שהוזנו למסד הנתונים
+    '''
     if request.method == 'POST':
         user_email = (request.form.get('email') or '').strip().lower()
         user_password = request.form.get('password')
@@ -74,6 +89,12 @@ def login_page():
 
 @app.route('/signup', methods=['GET', 'POST'])
 def sign_up_page():
+    '''
+    מאפשר להירשם לאתר, על ידי פרטים אישיים
+    בדיקת תקינות של הפרטים שמולאו
+    בדיקה האם הלקוח רשום כבר כאורח או כרשום
+    אם זהו משתמש חדש, מכניס את פרטיו למסד הנתונים
+    '''
     if request.method == 'POST':
         full_name = request.form.get('name', '').strip()
         email = request.form.get('email', '').strip().lower()
@@ -85,12 +106,10 @@ def sign_up_page():
         if not full_name or not email or not password or not passport_number or not date_of_birth:
             return render_template('signup.html', error="Please fill in all required fields.")
 
-        # split name
         name_parts = full_name.split(' ', 1)
         first_name = name_parts[0]
         last_name = name_parts[1] if len(name_parts) > 1 else ""
 
-        # clean phones: remove blanks + duplicates (keep order)
         clean_phones = []
         seen = set()
         for p in phones:
@@ -103,7 +122,7 @@ def sign_up_page():
         if len(clean_phones) == 0:
             return render_template('signup.html', error="Please enter at least one phone number.")
 
-        # ---- NEW: passport + phone format validation ----
+        # ---- : passport + phone format validation ----
         if not is_valid_passport(passport_number):
             return render_template("signup.html", error="Invalid passport number format. Use 6–12 letters/numbers (no spaces or symbols).")
 
@@ -123,7 +142,6 @@ def sign_up_page():
                 existing_customer = cursor.fetchone()
 
                 if existing_customer:
-                    # upgrade guest -> registered: update name if it was placeholder/empty
                     cur_fn = (existing_customer.get("first_name") or "").strip()
                     cur_ln = (existing_customer.get("last_name") or "").strip()
 
@@ -133,15 +151,12 @@ def sign_up_page():
                             "UPDATE Customer SET first_name=%s, last_name=%s WHERE email=%s",
                             (first_name, last_name, email),
                         )
-                    # else: keep existing name as-is
                 else:
-                    # normal new signup
                     cursor.execute(
                         "INSERT INTO Customer (email, first_name, last_name) VALUES (%s, %s, %s)",
                         (email, first_name, last_name),
                     )
 
-                # 2) create RegisteredCustomer (this is the real "registered" indicator)
                 cursor.execute(
                     """
                     INSERT INTO RegisteredCustomer (email, passport_number, date_of_birth, registration_date, password)
@@ -150,7 +165,6 @@ def sign_up_page():
                     (email, passport_number, date_of_birth, date.today(), password),
                 )
 
-                # 3) phones (avoid duplicate crashes)
                 for phone in clean_phones:
                     cursor.execute(
                         "INSERT IGNORE INTO CustomerPhone (email, phone_number) VALUES (%s, %s)",
@@ -167,6 +181,9 @@ def sign_up_page():
 
 
 @app.route('/logout')
+'''
+מנקה את נתוני המשתמש ומחזירה לדף הבית
+'''
 def logout():
     session.clear()
     return redirect('/')
@@ -174,6 +191,9 @@ def logout():
 
 @app.route("/order_success")
 def order_success():
+    '''
+    מציג את אישור ההזמנה - עם קוד הזמנה, סכום לתשלום ופירוט מושבים שנרכשו
+    '''
     order_id = request.args.get("order_id", type=int)
     email = request.args.get("email", "")
 
@@ -199,14 +219,16 @@ def order_success():
 
 @app.route("/my_orders")
 def my_orders():
+    '''
+    מאפשר לראות את היסטוריות ההזמנות של המשתמש, עם סטטוס הטיסה
+    '''
     email = session.get("user_email")
     if not email:
         return redirect("/login")
 
-    status_filter = request.args.get("status", "").strip()  # paid/done/customer_cancelled/system_cancelled או ריק
+    status_filter = request.args.get("status", "").strip()  
 
     with db_cur() as cursor:
-        # האם המשתמש רשום?
         cursor.execute("SELECT 1 FROM RegisteredCustomer WHERE email=%s", (email,))
         if not cursor.fetchone():
             # אם בעתיד יהיה מצב של "מחובר כאורח" - כאן נחסום
@@ -257,7 +279,6 @@ def my_orders():
         cursor.execute(base_query, tuple(params))
         orders = cursor.fetchall()
 
-        # נביא מושבים לכל הזמנה
         order_ids = [o["order_id"] for o in orders]
         seats_by_order = {oid: [] for oid in order_ids}
         if order_ids:
@@ -287,6 +308,9 @@ def my_orders():
 
 @app.route("/order_lookup", methods=["GET", "POST"])
 def order_lookup():
+    '''
+    מאפשר למשתמשים לא רשומים לראות את הזמנתם על ידי אימייל וקוד הזמנה
+    '''
     if request.method == "GET":
         return render_template("order_lookup.html", error=None, order=None, seats=[])
 
@@ -326,6 +350,10 @@ def order_lookup():
 
 @app.route("/cancel_order", methods=["POST"])
 def cancel_order():
+    '''
+    מבטל עבור לקוח את הזמנתו, אם הטיסה פעילה, נותרו לפחות 36 שעות למועד הטיסה-
+    מחייב את הלקוח ב5% מסכום העסקה, והופך את המושבים שרכש לזמינים
+    '''
     order_id = request.form.get("order_id", type=int)
 
     # מי מבטל? מחובר -> email מהסשן, אורח -> מהטופס
