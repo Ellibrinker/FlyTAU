@@ -150,8 +150,6 @@ def admin_flights():
     origin = request.args.get("origin", "").strip()
     destination = request.args.get("destination", "").strip()
     dep_date = request.args.get("departure_date", "").strip()
-
-    # status filter from UI: active | full | completed | cancelled | (empty=all)
     status = request.args.get("status", "").strip().lower()
     created = request.args.get("created", "").strip()
 
@@ -207,8 +205,6 @@ def admin_flights():
             f.departure_time,
             f.status
     """
-
-    # filtering by computed status must be done using HAVING (because of aggregates)
     if status in ("active", "full", "completed", "cancelled"):
         if status == "cancelled":
             query += " HAVING manager_status = 'cancelled'"
@@ -674,7 +670,6 @@ def admin_add_flight():
                 origin=origin,
             )
 
-        # Determine plane size if selected (for accurate UI + validations)
         is_big_plane = None
         pilots_needed = None
         fa_needed = None
