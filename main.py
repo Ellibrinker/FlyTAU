@@ -74,6 +74,7 @@ def login_page():
 
 @app.route('/signup', methods=['GET', 'POST'])
 def sign_up_page():
+    form_data ={}
     if request.method == 'POST':
         full_name = request.form.get('name', '').strip()
         email = request.form.get('email', '').strip().lower()
@@ -158,7 +159,8 @@ def sign_up_page():
                         (email, phone),
                     )
 
-        except mysql.connector.Error:
+        except Exception as e: 
+            print(f"Database Error: {e}") 
             return render_template('signup.html', error="Database error. Please try again.", data=form_data)
 
         return redirect('/login')
