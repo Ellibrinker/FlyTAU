@@ -102,7 +102,7 @@ def sign_up_page():
             clean_phones.append(p)
 
         if len(clean_phones) == 0:
-            return render_template('signup.html', error="Please enter at least one phone number.")
+            return render_template('signup.html', error="Please enter at least one phone number.", data=form_data)
 
         # ---- NEW: passport + phone format validation ----
         if not is_valid_passport(passport_number):
