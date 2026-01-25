@@ -68,10 +68,9 @@ def sign_up_page():
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         passport_number = request.form.get('passport_number', '').strip()
-        date_of_birth = request.form.get('date_of_birth', '').strip()  # yyyy-mm-dd
-        phones = request.form.getlist('phone')  # מגיע מרשימה דינאמית
+        date_of_birth = request.form.get('date_of_birth', '').strip()
+        phones = request.form.getlist('phone')
 
-        # ---- basic validations ----
         if not full_name or not email or not password or not passport_number or not date_of_birth:
             return render_template('signup.html', error="Please fill in all required fields.")
 
@@ -85,40 +84,61 @@ def sign_up_page():
         seen = set()
         for p in phones:
             p = (p or "").strip()
-            if not p:
-                continue
-            if p in seen:
+            if not p or p in seen:
                 continue
             seen.add(p)
             clean_phones.append(p)
 
-        # at least one phone required (because UI says required)
         if len(clean_phones) == 0:
             return render_template('signup.html', error="Please enter at least one phone number.")
 
         try:
             with db_cur() as cursor:
-                # 1) Customer
-                sql_customer = "INSERT INTO Customer (email, first_name, last_name) VALUES (%s, %s, %s)"
-                cursor.execute(sql_customer, (email, first_name, last_name))
+                # 0) already registered?
+                cursor.execute("SELECT 1 FROM RegisteredCustomer WHERE email=%s", (email,))
+                if cursor.fetchone():
+                    return render_template('signup.html', error="This email is already registered. Please log in.")
 
-                # 2) RegisteredCustomer (כולל דרכון + תאריך לידה)
-                sql_reg = """
+                # 1) does Customer exist? (guest may have created it)
+                cursor.execute("SELECT first_name, last_name FROM Customer WHERE email=%s", (email,))
+                existing_customer = cursor.fetchone()
+
+                if existing_customer:
+                    # upgrade guest -> registered: update name if it was placeholder/empty
+                    cur_fn = (existing_customer.get("first_name") or "").strip()
+                    cur_ln = (existing_customer.get("last_name") or "").strip()
+
+                    is_placeholder = (cur_fn.lower() == "guest" and not cur_ln) or (not cur_fn and not cur_ln)
+                    if is_placeholder:
+                        cursor.execute(
+                            "UPDATE Customer SET first_name=%s, last_name=%s WHERE email=%s",
+                            (first_name, last_name, email),
+                        )
+                    # else: keep the existing name as-is (or you can always update if you prefer)
+                else:
+                    # normal new signup
+                    cursor.execute(
+                        "INSERT INTO Customer (email, first_name, last_name) VALUES (%s, %s, %s)",
+                        (email, first_name, last_name),
+                    )
+
+                # 2) create RegisteredCustomer (this is the real "registered" indicator)
+                cursor.execute(
+                    """
                     INSERT INTO RegisteredCustomer (email, passport_number, date_of_birth, registration_date, password)
                     VALUES (%s, %s, %s, %s, %s)
-                """
-                cursor.execute(sql_reg, (email, passport_number, date_of_birth, date.today(), password))
+                    """,
+                    (email, passport_number, date_of_birth, date.today(), password),
+                )
 
-                # 3) Phones (בלי הגבלה)
-                sql_phones = "INSERT INTO CustomerPhone (email, phone_number) VALUES (%s, %s)"
+                # 3) phones (avoid duplicate crashes)
                 for phone in clean_phones:
-                    cursor.execute(sql_phones, (email, phone))
+                    cursor.execute(
+                        "INSERT IGNORE INTO CustomerPhone (email, phone_number) VALUES (%s, %s)",
+                        (email, phone),
+                    )
 
-        except mysql.connector.Error as e:
-            # נפוץ: מייל כבר קיים (Duplicate entry)
-            msg = str(e).lower()
-            if "duplicate" in msg:
-                return render_template('signup.html', error="This email is already registered. Please log in.")
+        except mysql.connector.Error:
             return render_template('signup.html', error="Database error. Please try again.")
 
         return redirect('/login')

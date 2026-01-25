@@ -20,10 +20,10 @@ The project is divided into two main academic components:
 
 ## 🛠️ Technologies Used
 
-* **Backend:** Python, Flask
-* **Database:** MySQL
-* **Frontend:** HTML, CSS (Jinja templates)
-* **Deployment:** PythonAnywhere
+- **Backend:** Python (Flask)
+- **Database:** MySQL
+- **Frontend:** HTML, CSS (Jinja templates)
+- **Deployment:** PythonAnywhere
 
 ---
 
@@ -146,15 +146,18 @@ The system explicitly enforces real-world airline business rules and operational
 ### **Seat selection & booking protection**
 - Booking is blocked for cancelled flights, past/departed flights, and fully booked flights.
 - Seat selection is allowed only from the pool of available seats for the chosen flight.
-- Mixed-class booking is supported:
-  - A single order may include seats from multiple classes (Regular and Business).
-  - Pricing is calculated per seat according to its class type.
+- **Single-flight order constraint:** Each order is associated with exactly one flight.  
+  All seats included in an order must belong to the same flight, and it is not possible to combine seats from different flights within a single order.
+- Mixed-class booking is supported within a single flight:
+  - A single order may include seats from multiple classes (Regular and Business), provided they belong to the same flight.
 
 ---
 
 ### **Pricing rules**
+- Pricing is defined **per flight and per class type** (e.g., Regular, Business).
 - Regular class pricing is mandatory for all flights.
 - Business class pricing is available **only** for aircraft classified as **Big Planes**.
+- The total order price is calculated as the sum of the prices of the selected seats, based on their class type.
 
 ---
 
