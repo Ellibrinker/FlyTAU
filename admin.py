@@ -1106,6 +1106,7 @@ def admin_add_crew():
             return render_template(
                 "admin_add_crew.html",
                 error="Invalid Israeli ID number. Please enter a valid 9-digit ID."
+                data=data
             )
 
         try:
@@ -1137,9 +1138,9 @@ def admin_add_crew():
             return redirect("/admin/resources?msg=Crew+Member+Added")
 
         except Exception as e:
-            return render_template("admin_add_crew.html", error=str(e))
+            return render_template("admin_add_crew.html", error=str(e), data=data)
 
-    return render_template("admin_add_crew.html")
+    return render_template("admin_add_crew.html", data={})
 
 
 
