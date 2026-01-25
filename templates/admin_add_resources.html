@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <title>Resources Management - FlyTAU</title>
-
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/admin_add_resources.css">
   <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
@@ -11,6 +10,7 @@
 </head>
 
 <body>
+
   <header class="top-bar">
     <div class="topbar-left">
       <a href="/admin/" class="logo-link">
@@ -32,6 +32,11 @@
 
 
 <div class="wrapper">
+  {% if request.args.get('msg') %}
+    <div class="alert success">
+      {{ request.args.get('msg') }}
+    </div>
+  {% endif %}
   <h1 class="main-title">Resources Management</h1>
   <p class="subtitle">Here you can add new planes and crew members to the system.</p>
 
@@ -58,7 +63,11 @@
 <div id="addPlaneModal" class="modal modal-plane">
   <div class="modal-content">
     <span class="close">&times;</span>
-
+    {% if request.args.get('modal') == 'addPlane' and request.args.get('error') %}
+      <div class="modal-error">
+        {{ request.args.get('error') }}
+      </div>
+    {% endif %}
     <h1>Add New Plane</h1>
 
     <form method="POST" action="/admin/planes/new">
@@ -166,6 +175,9 @@
     const openCrewBtn = document.getElementById("openAddCrew");
     const closeCrewBtn = document.querySelector(".close-crew");
 
+    const params = new URLSearchParams(window.location.search);
+    const modalFromUrl = params.get("modal");
+
     openBtn.addEventListener("click", (e) => {
       e.preventDefault();
       modal.style.display = "flex";
@@ -191,7 +203,13 @@
         crewModal.style.display = "none";
       }
     });
+    if (modalFromUrl === "addPlane") {
+      modal.style.display = "flex";
+    }
 
+    if (modalFromUrl === "addCrew") {
+      crewModal.style.display = "flex";
+    }
   </script>
 
 </body> 
