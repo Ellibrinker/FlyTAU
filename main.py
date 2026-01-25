@@ -81,10 +81,10 @@ def sign_up_page():
         passport_number = request.form.get('passport_number', '').strip()
         date_of_birth = request.form.get('date_of_birth', '').strip()  # yyyy-mm-dd
         phones = request.form.getlist('phone')
-
+        form_data = request.form
         # ---- basic validations ----
         if not full_name or not email or not password or not passport_number or not date_of_birth:
-            return render_template('signup.html', error="Please fill in all required fields.")
+            return render_template('signup.html', error="Please fill in all required fields.", data=form_data)
 
         # split name
         name_parts = full_name.split(' ', 1)
@@ -106,11 +106,11 @@ def sign_up_page():
 
         # ---- NEW: passport + phone format validation ----
         if not is_valid_passport(passport_number):
-            return render_template("signup.html", error="Invalid passport number format. Use 6–12 letters/numbers (no spaces or symbols).")
+            return render_template("signup.html", error="Invalid passport number format. Use 6–12 letters/numbers (no spaces or symbols).", data=form_data)
 
         bad_phones = [p for p in clean_phones if not is_valid_phone(p)]
         if bad_phones:
-            return render_template("signup.html", error="One or more phone numbers are invalid. Use digits only (8–15), optionally starting with +.")
+            return render_template("signup.html", error="One or more phone numbers are invalid. Use digits only (8–15), optionally starting with +.", data=form_data)
 
         try:
             with db_cur() as cursor:
@@ -159,11 +159,11 @@ def sign_up_page():
                     )
 
         except mysql.connector.Error:
-            return render_template('signup.html', error="Database error. Please try again.")
+            return render_template('signup.html', error="Database error. Please try again.", data=form_data)
 
         return redirect('/login')
 
-    return render_template('signup.html', error=None)
+    return render_template('signup.html', error=None, , data={})
 
 
 @app.route('/logout')
