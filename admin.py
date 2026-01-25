@@ -1106,32 +1106,36 @@ def admin_add_crew():
         if not is_valid_israeli_id(worker_id):
             return render_template(
                 "admin_add_crew.html",
-                error="Invalid Israeli ID number. Please enter a valid 9-digit ID."
+                error="Invalid Israeli ID number. Please enter a valid 9-digit ID.",
                 data=data
             )
 
         try:
             with db_cur() as cursor:
-                cursor.execute("""
+                cursor.execute(
+                    """
                     INSERT INTO Worker
-                    (id, first_name, last_name, phone_number, city, street, house_num, start_date)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, CURDATE())
-                """, (
-                    worker_id,
-                    data.get('first_name'),
-                    data.get('last_name'),
-                    data.get('phone'),
-                    data.get('city'),
-                    data.get('street'),
-                    data.get('house_num')
-                ))
+                      (id, first_name, last_name, phone_number, city, street, house_num, start_date)
+                    VALUES
+                      (%s, %s, %s, %s, %s, %s, %s, CURDATE())
+                    """,
+                    (
+                        worker_id,
+                        data.get("first_name"),
+                        data.get("last_name"),
+                        data.get("phone"),
+                        data.get("city"),
+                        data.get("street"),
+                        data.get("house_num"),
+                    ),
+                )
 
                 cursor.execute(
                     "INSERT INTO AirCrew (id, long_flight_training) VALUES (%s, %s)",
-                    (worker_id, 1 if data.get('long_training') else 0)
+                    (worker_id, 1 if data.get("long_training") else 0),
                 )
 
-                if data.get('role') == "pilot":
+                if data.get("role") == "pilot":
                     cursor.execute("INSERT INTO Pilot (id) VALUES (%s)", (worker_id,))
                 else:
                     cursor.execute("INSERT INTO FlightAttendant (id) VALUES (%s)", (worker_id,))
