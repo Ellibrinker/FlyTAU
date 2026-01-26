@@ -542,9 +542,13 @@ def _fetch_step2_lists(cursor, is_long: bool, new_start_dt: datetime, new_end_dt
 
 
 
-# יוצרת טיסה חדשה על ידי שני שלבים...
 @admin_bp.route("/flights/new", methods=["GET", "POST"])
 def admin_add_flight():
+    '''
+    יוצרת טיסה חדשה על ידי שני שלבים -
+    בחירת שדות מקור ויעד, וזמן המראה
+    שיבוץ צוות לטיסה, וקביעת מחיר למחלקות, ורישום הטיסה במסד הנתונים
+    '''
     guard = _require_admin()
     if guard:
         return guard
