@@ -193,9 +193,10 @@ To reflect real-world airline scheduling, **both aircraft and crew members (pilo
 #### **How resource location is determined**
 - For a new flight with departure datetime `T` and origin airport `O`,
   the system identifies the **last non-cancelled flight** of the resource whose **landing time is ≤ T**.
-- The resource’s derived location at time `T` is the destination airport of that last flight.
-- **First assignment exception:**  
-  If a resource has no previous flights, no location constraint is applied, and it may be assigned to a flight departing from any airport.
+- The resource’s derived location at time `T` is defined as the **destination airport** of that last flight.
+- **Initial assignment rule (default base):**  
+  If a resource has no previous flights, it is assumed to be **initially stationed at TLV** and may be assigned **only** to flights departing from TLV.
+- In all other cases, a resource may be assigned **only** to a flight whose origin airport matches its derived location at time `T`.
 
 #### **Availability checks (time + location)**
 When creating a new flight, resources shown to the manager must satisfy:

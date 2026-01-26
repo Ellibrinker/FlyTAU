@@ -336,9 +336,20 @@ def _crew_needed_for_plane(is_big_plane: bool):
 
 
 def _fetch_step2_lists(cursor, is_long: bool, new_start_dt: datetime, new_end_dt: datetime, origin: str):
-    '''
-    מחזירה מטוסים ואנשי צוות שזמינים לעבודה, מבחינת מיקום אחרון, הכשרה מתאימה וזמינות בזמן
-    '''
+    """
+    Returns (planes, pilots, attendants)
+
+    Filters by:
+    - time overlap only (no buffer) AND ignoring cancelled
+    - location at departure:
+        * if last_loc IS NULL  -> allowed ONLY when origin = 'TLV' (default base for first assignment)
+        * else                 -> last_loc must equal origin
+    - long flights: pilots/attendants require AirCrew.long_flight_training = 1
+    - long flights: only Big planes are shown
+    """
+
+    # Default base for first assignment
+    DEFAULT_BASE = "TLV"
 
     # =========================
     # Planes
@@ -383,10 +394,22 @@ def _fetch_step2_lists(cursor, is_long: bool, new_start_dt: datetime, new_end_dt
               AND DATE_ADD(TIMESTAMP(f.departure_date, f.departure_time), INTERVAL a.duration MINUTE) > %s
           )
 
-        HAVING last_loc = %s
+        HAVING
+          (
+            last_loc = %s
+            OR (last_loc IS NULL AND %s = %s)
+          )
         ORDER BY p.plane_id
         """,
-        (new_start_dt, 1 if is_long else 0, new_end_dt, new_start_dt, origin),
+        (
+            new_start_dt,
+            1 if is_long else 0,
+            new_end_dt,
+            new_start_dt,
+            origin,
+            origin,
+            DEFAULT_BASE,
+        ),
     )
     planes = cursor.fetchall()
 
@@ -436,10 +459,21 @@ def _fetch_step2_lists(cursor, is_long: bool, new_start_dt: datetime, new_end_dt
               AND DATE_ADD(TIMESTAMP(f.departure_date, f.departure_time), INTERVAL a.duration MINUTE) > %s
           )
 
-        HAVING last_loc = %s
+        HAVING
+          (
+            last_loc = %s
+            OR (last_loc IS NULL AND %s = %s)
+          )
         ORDER BY w.last_name, w.first_name
         """,
-        (new_start_dt, new_end_dt, new_start_dt, origin),
+        (
+            new_start_dt,
+            new_end_dt,
+            new_start_dt,
+            origin,
+            origin,
+            DEFAULT_BASE,
+        ),
     )
     pilots = cursor.fetchall()
 
@@ -486,14 +520,26 @@ def _fetch_step2_lists(cursor, is_long: bool, new_start_dt: datetime, new_end_dt
               AND DATE_ADD(TIMESTAMP(f.departure_date, f.departure_time), INTERVAL a.duration MINUTE) > %s
           )
 
-        HAVING last_loc = %s
+        HAVING
+          (
+            last_loc = %s
+            OR (last_loc IS NULL AND %s = %s)
+          )
         ORDER BY w.last_name, w.first_name
         """,
-        (new_start_dt, new_end_dt, new_start_dt, origin),
+        (
+            new_start_dt,
+            new_end_dt,
+            new_start_dt,
+            origin,
+            origin,
+            DEFAULT_BASE,
+        ),
     )
     attendants = cursor.fetchall()
 
     return planes, pilots, attendants
+
 
 
 @admin_bp.route("/flights/new", methods=["GET", "POST"])
@@ -810,9 +856,10 @@ def admin_add_flight():
                 ):
                     return render_template("admin_add_flight.html", step=2, error=f"Flight attendant {fid} is not available at this time (overlap).", data=data)
 
+
         with db_cur() as cursor:
             plane_loc = _last_location_plane(cursor, plane_id, new_start_dt)
-            if plane_loc != origin:
+            if not ((plane_loc == origin) or (plane_loc is None and origin == DEFAULT_BASE)):
                 return render_template(
                     "admin_add_flight.html",
                     step=2,
@@ -825,7 +872,7 @@ def admin_add_flight():
 
             for pid in pilot_ids:
                 loc = _last_location_worker(cursor, int(pid), new_start_dt)
-                if loc != origin:
+                if not ((loc == origin) or (loc is None and origin == DEFAULT_BASE)):
                     return render_template(
                         "admin_add_flight.html",
                         step=2,
@@ -838,7 +885,7 @@ def admin_add_flight():
 
             for fid in fa_ids:
                 loc = _last_location_worker(cursor, int(fid), new_start_dt)
-                if loc != origin:
+                if not ((loc == origin) or (loc is None and origin == DEFAULT_BASE)):
                     return render_template(
                         "admin_add_flight.html",
                         step=2,
