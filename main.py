@@ -181,10 +181,8 @@ def sign_up_page():
     return render_template('signup.html', error=None, data={})
 
 
+# מנקה את נתוני המשתמש ומחזירה לדף הבית
 @app.route('/logout')
-'''
-מנקה את נתוני המשתמש ומחזירה לדף הבית
-'''
 def logout():
     session.clear()
     return redirect('/')
