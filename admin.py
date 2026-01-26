@@ -542,16 +542,14 @@ def _fetch_step2_lists(cursor, is_long: bool, new_start_dt: datetime, new_end_dt
 
 
 
+# יוצרת טיסה חדשה על ידי שני שלבים...
 @admin_bp.route("/flights/new", methods=["GET", "POST"])
-'''
-יוצרת טיסה חדשה על ידי שני שלבים - 
-בחירת שדות מקור ויעד, וזמן המראה
-שיבוץ צוות לטיסה, וקביעת מחיר למחלקות, ורישום הטיסה במסד הנתונים 
-'''
 def admin_add_flight():
     guard = _require_admin()
     if guard:
         return guard
+
+    DEFAULT_BASE = "TLV"
 
     from main import db_cur
 
@@ -967,11 +965,10 @@ def admin_add_flight():
         return redirect("/admin/flights?created=1")
 
 
+# מימוש של ביטול טיסה על ידי מנהל,
+# בתנאי שנותרו לפחות 72 שעות עד מועד הטיסה
 @admin_bp.route("/flights/cancel/<int:flight_id>", methods=["GET", "POST"])
-'''
-מימוש של ביטול טיסה על ידי מנהל, בתנאי ונותרו לפחות 72 שעות עד מועד הטיסה
-'''
-def admin_cancel_flight(flight_id):
+def cancel_flight(flight_id):
     guard = _require_admin()
     if guard:
         return guard
@@ -1062,11 +1059,8 @@ def admin_cancel_flight(flight_id):
 
     return redirect("/admin/flights")
 
-
+# מציג את דף הבית של ממשק משתמש מנהל
 @admin_bp.route("/", methods=["GET"])
-'''
-מציג את דף הבית של ממשק משתמש מנהל
-'''
 def admin_home():
     guard = _require_admin()
     if guard:
