@@ -49,29 +49,6 @@ def _db_error_message(e: Exception) -> str:
     return f"Database error: {msg}"
 
 
-def _overlap_exists(cursor, *, start_dt, end_dt, buffer_min, where_sql, params):
-    '''
-    בודקת חפיפה בזמנים של מטוס/חבר צוות אוויר, תוך התחשבות במרווח ביטחון
-    '''
-    padded_start = start_dt - timedelta(minutes=buffer_min)
-    padded_end = end_dt + timedelta(minutes=buffer_min)
-
-    sql = f"""
-        SELECT 1
-        FROM Flight f
-        JOIN Airway a
-          ON a.origin_airport = f.origin_airport
-         AND a.destination_airport = f.destination_airport
-        WHERE LOWER(f.status) != 'cancelled'
-          AND ({where_sql})
-          AND TIMESTAMP(f.departure_date, f.departure_time) < %s
-          AND DATE_ADD(TIMESTAMP(f.departure_date, f.departure_time), INTERVAL a.duration MINUTE) > %s
-        LIMIT 1
-    """
-    cursor.execute(sql, tuple(params) + (padded_end, padded_start))
-    return cursor.fetchone() is not None
-
-
 def is_valid_israeli_id(id_number: str) -> bool:
     '''
     פונקציה שמוודאת שהתז שהוקלד עומד בדרישות ומכילות 9 ספרות בלבד
@@ -1017,7 +994,7 @@ def cancel_flight(flight_id):
                 has_available = cursor.fetchone() is not None
             derived_status = "open" if has_available else "full"
 
-    can_cancel = (derived_status == "open")
+    can_cancel = (derived_status in ("open", "full"))
 
     if request.method == "GET":
         return render_template(

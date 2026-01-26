@@ -11,7 +11,7 @@ The system supports operational flight management, customer bookings, and a dedi
 
 ## 📌 Project Overview
 
-The project is divided into two main academic components:
+The project is divided into two academic components:
 
 1. **Database Systems Design** – relational schema design, SQL queries, constraints, and analytical reports.
 2. **Information Systems Engineering** – web application development, user interfaces, role-based access, and management dashboards.
@@ -80,13 +80,13 @@ The interface is designed to support the following reports:
 ## 📁 Repository Structure
 
 ```project/
-├── static/                 # CSS and static assets
+├── static/                 # Static assets (CSS, images)
 ├── templates/              # HTML templates (Jinja)
-│   ├── admin_*.html        # Admin / managerial pages
+│   ├── admin_*.html        # Admin interface pages
 │   └── customer-*.html     # Customer-facing pages
-├── admin.py                # Admin (manager) logic
+├── admin.py                # Admin logic
 ├── flights.py              # Customer flight & booking logic
-├── main.py                 # Application entry point
+├── main.py                 # Application entry point & order management
 ├── schema.sql               # Database schema (tables, constraints)
 ├── seed.sql                 # Initial data
 └── reports_queries.sql      # Management reports SQL queries
@@ -102,62 +102,41 @@ The system explicitly enforces real-world airline business rules and operational
 
 ### **Role-based access & separation**
 - Managers are automatically redirected from the public homepage to the admin dashboard.
-- Managers are strictly prohibited from purchasing flight tickets, either as registered users or as guests.
-- Managers cannot be assigned as flight crew:
-  - Workers with a managerial role are excluded from pilot and flight-attendant selection lists.
-  - Backend validation blocks assigning a manager to any crew role.
-- Manager login prevents invalid role configurations where a single ID exists simultaneously as **Manager** and **AirCrew**.
-
----
-
-### **Registration & guest usage rules**
-- Customer email addresses must be unique.
-- At least one phone number is required during registration; empty or duplicate phone entries are ignored.
-- Guests can retrieve an order only by providing both the order code (`order_id`) and the associated email address.
-
----
-
-### **Flight publication & lifecycle**
-- Once a flight is successfully created by a manager, it is automatically published and becomes available for customer booking.
-- Flight duration and landing time are calculated automatically based on the selected route and are not entered manually by the manager.
-- Customers and managers view different flight boards:
-  - Customers see only flights that are eligible for booking.
+- Managers cannot purchase tickets and cannot be assigned as flight crew.
+- Flight visibility is role-based:
+  - Customers see only flights that are eligible for booking  
+    (not cancelled, departure time is in the future, and at least one seat is available).
   - Managers can view all flights, including active, full, completed, and cancelled flights.
 
 ---
 
-### **Flight visibility & booking eligibility**
-- Customers can only view flights that meet all of the following conditions:
-  - Not cancelled
-  - Departure time is in the future
-  - At least one seat is available
-- Flights whose departure time has passed are not displayed to customers.
-- Operational actions (booking, crew assignment, flight cancellation) are blocked on flights that have already departed.
+### **Registration & guest usage rules**
+- For registered customers, personal details (email, passport number, and contact information) are validated server-side and must meet format and uniqueness constraints.
+- Registered customer data is persisted and reused automatically for future orders.
+- Guests may place orders and retrieve them using the order code (`order_id`) and associated email address.
 
 ---
 
-### **Search validation (server-side)**
-- Origin, destination, and departure date are mandatory search parameters.
-- Origin and destination airports must be different.
-- The system verifies that a valid route (`Airway`) exists between the selected origin and destination.
+### **Search validation**
+- Origin and destination airports are mandatory search parameters.
+- Origin and destination must be different.
+- Departure date is optional; when provided, results are filtered to that date.
 
 ---
 
-### **Seat selection & booking protection**
-- Booking is blocked for cancelled flights, past/departed flights, and fully booked flights.
-- Seat selection is allowed only from the pool of available seats for the chosen flight.
-- **Single-flight order constraint:** Each order is associated with exactly one flight.  
-  All seats included in an order must belong to the same flight, and it is not possible to combine seats from different flights within a single order.
+### **Seat selection & booking**
+- Seat selection is allowed only from the pool of seats marked as available for the selected flight.
+- **Single-flight order constraint:** each order is associated with exactly one flight; seats from different flights cannot be combined.
 - Mixed-class booking is supported within a single flight:
-  - A single order may include seats from multiple classes (Regular and Business), provided they belong to the same flight.
+  - A single order may include seats from both Regular and Business classes.
 
 ---
 
 ### **Pricing rules**
-- Pricing is defined **per flight and per class type** (e.g., Regular, Business).
+- Pricing is defined per flight and per seat class (Regular / Business).
 - Regular class pricing is mandatory for all flights.
-- Business class pricing is available **only** for aircraft classified as **Big Planes**.
-- The total order price is calculated as the sum of the prices of the selected seats, based on their class type.
+- Business class pricing is available only for flights operated by **Big Planes**.
+- The total order price is calculated as the sum of the prices of all selected seats, based on their class type.
 
 ---
 
@@ -173,47 +152,13 @@ The system explicitly enforces real-world airline business rules and operational
 
 ---
 
-### **Long vs. short flights**
-- Flights longer than **360 minutes** are classified as *long flights*.
-- Only aircraft classified as **Big Planes** may be assigned to long flights.
-- Only crew members explicitly marked as long-flight qualified may be assigned to long flights.
-
----
-
-### **Resource location & timeline-based availability (Aircraft & Crew)**
-
-To reflect real-world airline scheduling, **both aircraft and crew members (pilots & attendants) are treated as being physically located at a specific airport at any point in time**.
-
-**Key principles (per course forum clarification):**
-- A resource may be assigned **only** to a flight that departs from the airport where it is located at the departure time.
-- The system does **not** assume that a plane or crew member “moved” between flights, regardless of how much time passed.
-- No separate calendar or manual location field is maintained for resources.  
-  Instead, location is **derived dynamically from the flight timeline**.
-
-#### **How resource location is determined**
-- For a new flight with departure datetime `T` and origin airport `O`,
-  the system identifies the **last non-cancelled flight** of the resource whose **landing time is ≤ T**.
-- The resource’s derived location at time `T` is defined as the **destination airport** of that last flight.
-- **Initial assignment rule (default base):**  
-  If a resource has no previous flights, it is assumed to be **initially stationed at TLV** and may be assigned **only** to flights departing from TLV.
-- In all other cases, a resource may be assigned **only** to a flight whose origin airport matches its derived location at time `T`.
-
-#### **Availability checks (time + location)**
-When creating a new flight, resources shown to the manager must satisfy:
-1. **Time overlap prevention:** a resource cannot be assigned to overlapping flights.
-2. **Location consistency at departure:** the resource must be located at the new flight’s origin airport at departure time, unless this is its first assignment.
-
-#### **Cancelled flights behavior**
-Cancelled flights are treated as non-existent for scheduling purposes:
-- Cancelled flights do not block availability.
-- Cancelled flights do not affect derived resource location.
-- Cancelling a flight has **no cascading effect** on future flights; the system does not attempt to repair dependent scheduling chains.
-
----
-
 ### **Admin flight creation validations**
 - Flights cannot be created in the past (server-side enforcement).
 - A valid route must exist in the `Airway` table before flight creation.
+- Flights longer than **360 minutes** are classified as *long flights*.
+- Long flights have additional constraints:
+  - Only aircraft classified as **Big Planes** may be assigned.
+  - Only crew members explicitly marked as long-flight qualified may be assigned.
 - Crew requirements depend on aircraft size:
   - **Big Plane**: 3 pilots and 6 flight attendants
   - **Small Plane**: 2 pilots and 3 flight attendants
@@ -221,15 +166,28 @@ Cancelled flights are treated as non-existent for scheduling purposes:
 
 ---
 
-### **Resource creation & integrity**
-- Aircraft must be registered in the system before they can be assigned to flights.
-- Crew members must be registered and classified before being eligible for assignment.
-- Aircraft size (Small / Big) determines:
-  - Seat configuration
-  - Pricing eligibility
-  - Long-flight compatibility
-- Crew members assigned to long flights must be explicitly marked as long-flight qualified.
-- Managers are explicitly blocked from being registered as air crew members.
+### **Resource location & timeline-based availability (Aircraft & Crew)**
+
+To reflect real-world airline scheduling, **both aircraft and crew members (pilots & attendants) are treated as being physically located at a specific airport at any point in time**.
+
+#### **Availability checks (time + location)**
+When creating a new flight, resources shown to the manager must satisfy:
+
+1. **Time overlap prevention:**
+- A resource cannot be assigned to overlapping flights.
+
+2. **Location consistency at departure:**
+- A resource may be assigned **only** to a flight that departs from the airport where it is located at the departure time.
+- The system does **not** assume that a plane or crew member “moved” between flights, regardless of how much time passed.
+- Resource location is derived dynamically from the flight timeline, without maintaining a separate location field.
+- **Initial assignment rule (default base):**  
+  If a resource has no previous flights, it is assumed to be **initially stationed at TLV** and may be assigned **only** to flights departing from TLV.
+
+#### **Cancelled flights behavior**
+Cancelled flights are treated as non-existent for scheduling purposes:
+- Cancelled flights do not block availability.
+- Cancelled flights do not affect derived resource location.
+- Cancelling a flight has **no cascading effect** on future flights; the system does not attempt to repair dependent scheduling chains.
 
 ---
 
