@@ -174,14 +174,14 @@ To reflect real-world airline scheduling, **both aircraft and crew members (pilo
 When creating a new flight, resources shown to the manager must satisfy:
 
 1. **Time overlap prevention:**
- - A resource cannot be assigned to overlapping flights.
+  - A resource cannot be assigned to overlapping flights.
 
 2. **Location consistency at departure:**
- - A resource may be assigned **only** to a flight that departs from the airport where it is located at the departure time.
- - The system does **not** assume that a plane or crew member “moved” between flights, regardless of how much time passed.
- - Resource location is derived dynamically from the flight timeline, without maintaining a separate location field.
- - **Initial assignment rule (default base):**  
-   If a resource has no previous flights, it is assumed to be **initially stationed at TLV** and may be assigned **only** to flights departing from TLV.
+  - A resource may be assigned **only** to a flight that departs from the airport where it is located at the departure time.
+  - The system does **not** assume that a plane or crew member “moved” between flights, regardless of how much time passed.
+  - Resource location is derived dynamically from the flight timeline, without maintaining a separate location field.
+  - **Initial assignment rule (default base):**  
+    If a resource has no previous flights, it is assumed to be **initially stationed at TLV** and may be assigned **only** to flights departing from TLV.
 
 #### **Cancelled flights behavior**
 Cancelled flights are treated as non-existent for scheduling purposes:
