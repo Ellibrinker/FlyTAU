@@ -67,7 +67,7 @@ The interface is designed to support the following reports:
 
 > 📎 Note:
 > The interface is implemented as part of the **Information Systems Engineering** component.
-> The full SQL queries, explanations, sample outputs, and visualizations are provided separately as part of the **Database Systems Design** submission.
+> The full SQL queries, explanations, sample outputs, and visualizations are submitted separately as part of the **Database Systems Design** component.
 
 ---
 
@@ -126,7 +126,7 @@ The system explicitly enforces real-world airline business rules and operational
 
 ### **Seat selection & booking**
 - Seat selection is allowed only from the pool of seats marked as available for the selected flight.
-- **Single-flight order constraint:** each order is associated with exactly one flight; seats from different flights cannot be combined.
+- Single-flight order constraint: each order is associated with exactly one flight; seats from different flights cannot be combined.
 - Mixed-class booking is supported within a single flight:
   - A single order may include seats from both Regular and Business classes.
 
@@ -153,25 +153,21 @@ The system explicitly enforces real-world airline business rules and operational
 ---
 
 ### **Admin flight creation validations**
-- Flights cannot be created in the past (server-side enforcement).
+
+Resource lists shown to managers are pre-filtered by availability and location; all constraints are re-validated server-side before the flight is created.
+
+- Flights cannot be created in the past.
 - A valid route must exist in the `Airway` table before flight creation.
 - Flights longer than **360 minutes** are classified as *long flights*.
 - Long flights have additional constraints:
   - Only aircraft classified as **Big Planes** may be assigned.
-  - Only crew members explicitly marked as long-flight qualified may be assigned.
+  - Only crew members explicitly marked as *long-flight qualified* may be assigned.
 - Crew requirements depend on aircraft size:
   - **Big Plane**: 3 pilots and 6 flight attendants
   - **Small Plane**: 2 pilots and 3 flight attendants
 - Seat inventory must exist for the selected aircraft before a flight can be created.
 
----
-
-### **Resource location & timeline-based availability (Aircraft & Crew)**
-
-To reflect real-world airline scheduling, **both aircraft and crew members (pilots & attendants) are treated as being physically located at a specific airport at any point in time**.
-
 #### **Availability checks (time + location)**
-When creating a new flight, resources shown to the manager must satisfy:
 
 **1. Time overlap prevention:**
 - A resource cannot be assigned to overlapping flights.
