@@ -192,7 +192,7 @@ Cancelled flights are treated as non-existent for scheduling purposes:
 - Flight cancellation is blocked less than **72 hours** before departure.
 - Cancelling a flight triggers:
   - System cancellation of all active orders (full refund, total payment set to 0)
-  - Release of all flight seats back to availability
+  - Removal of all seat bookings associated with the cancelled flight
   - Release of assigned aircraft and crew for future scheduling
 
 ---
@@ -200,6 +200,8 @@ Cancelled flights are treated as non-existent for scheduling purposes:
 ### **Data consistency safeguards**
 - Invalid `FlightSeat` records (seats that do not match the flight’s aircraft) are removed automatically.
 - If `FlightSeat` records are missing for a flight, they are generated automatically from the aircraft’s seat inventory.
+- During checkout, selected seat IDs are validated server-side to ensure they belong to the requested flight, match the flight’s aircraft, and are currently marked as available.
+- Database constraints enforce uniqueness and prevent duplicates (e.g., unique seat coordinates per plane, unique seat per flight, and no duplicate items within an order).
 
 ---
 
