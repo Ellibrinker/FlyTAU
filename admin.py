@@ -10,6 +10,7 @@ admin_bp = Blueprint("admin", __name__)
 # =========================
 PLANE_BUFFER_MIN = 0
 CREW_BUFFER_MIN = 0
+DEFAULT_BASE = "TLV"
 
 
 def _require_admin():
@@ -325,9 +326,6 @@ def _fetch_step2_lists(cursor, is_long: bool, new_start_dt: datetime, new_end_dt
     - long flights: only Big planes are shown
     """
 
-    # Default base for first assignment
-    DEFAULT_BASE = "TLV"
-
     # =========================
     # Planes
     # =========================
@@ -530,8 +528,6 @@ def admin_add_flight():
     if guard:
         return guard
 
-    DEFAULT_BASE = "TLV"
-
     from main import db_cur
 
     if request.method == "GET":
@@ -616,8 +612,6 @@ def admin_add_flight():
     # STEP 2
     # =========================
     if step == 2:
-        DEFAULT_BASE = "TLV"
-
         origin = (request.form.get("origin") or "").strip()
         destination = (request.form.get("destination") or "").strip()
         dep_date = (request.form.get("departure_date") or "").strip()
