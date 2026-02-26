@@ -214,7 +214,7 @@ This project includes automated tests using **pytest** with a mocked database la
 ```bash
 pip install -r requirements.txt
 pytest -q
-
+```
 ---
 
 ## ✍️ Authors
