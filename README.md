@@ -205,6 +205,17 @@ Cancelled flights are treated as non-existent for scheduling purposes:
 
 ---
 
+## ✅ Tests
+
+This project includes automated tests using **pytest** with a mocked database layer (no real MySQL instance is required).
+
+### Run tests locally
+
+```bash
+pip install -r requirements.txt
+pytest -q
+
+---
 ## ✍️ Authors
 
 - Elli Brinker
